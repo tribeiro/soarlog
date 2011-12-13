@@ -6,10 +6,35 @@
 	objectVersion = 46;
 	objects = {
 
+/* Begin PBXFileReference section */
+		F1EE35AA1497E8BB00B29C95 /* databaseF.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = databaseF.py; sourceTree = "<group>"; };
+		F1EE35AB1497E8BB00B29C95 /* dbComF.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = dbComF.py; sourceTree = "<group>"; };
+		F1EE35AC1497E8BB00B29C95 /* filehandleF.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = filehandleF.py; sourceTree = "<group>"; };
+		F1EE35AD1497E8BB00B29C95 /* frame_infos.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = frame_infos.py; sourceTree = "<group>"; };
+		F1EE35AE1497E8BB00B29C95 /* preferences.ui */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = preferences.ui; sourceTree = "<group>"; };
+		F1EE35AF1497E8BB00B29C95 /* soar_setupF.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = soar_setupF.py; sourceTree = "<group>"; };
+		F1EE35B01497E8BB00B29C95 /* soarlog_qt4.ui */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = soarlog_qt4.ui; sourceTree = "<group>"; };
+		F1EE35B11497E8BB00B29C95 /* soarlog.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = soarlog.py; sourceTree = "<group>"; };
+		F1EE35B21497E8BB00B29C95 /* soarlogF_qt4_mt.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = soarlogF_qt4_mt.py; sourceTree = "<group>"; };
+		F1EE35B31497E8BB00B29C95 /* soarlogF_TableModel.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = soarlogF_TableModel.py; sourceTree = "<group>"; };
+		F1EE35B41497E96300B29C95 /* soarlogF_watch.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = soarlogF_watch.py; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
 /* Begin PBXGroup section */
 		F1EE35A11497E86000B29C95 = {
 			isa = PBXGroup;
 			children = (
+				F1EE35B41497E96300B29C95 /* soarlogF_watch.py */,
+				F1EE35AA1497E8BB00B29C95 /* databaseF.py */,
+				F1EE35AB1497E8BB00B29C95 /* dbComF.py */,
+				F1EE35AC1497E8BB00B29C95 /* filehandleF.py */,
+				F1EE35AD1497E8BB00B29C95 /* frame_infos.py */,
+				F1EE35AE1497E8BB00B29C95 /* preferences.ui */,
+				F1EE35AF1497E8BB00B29C95 /* soar_setupF.py */,
+				F1EE35B01497E8BB00B29C95 /* soarlog_qt4.ui */,
+				F1EE35B11497E8BB00B29C95 /* soarlog.py */,
+				F1EE35B21497E8BB00B29C95 /* soarlogF_qt4_mt.py */,
+				F1EE35B31497E8BB00B29C95 /* soarlogF_TableModel.py */,
 			);
 			sourceTree = "<group>";
 		};
