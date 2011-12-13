@@ -524,18 +524,17 @@ TableTranslate_SOI = ['FILTER1' ,\
 		'DECPANG'	,\
 		None]
 
-TableTranslate_SPARTAN = [ None ,\
+TableTranslate_SPARTAN = [ 'FILTER' ,\
+'MASK' ,\
+None ,\
+None ,\
+'TELFOCUS' ,\
 None ,\
 None ,\
 None ,\
 None ,\
 None ,\
-None ,\
-None ,\
-None ,\
-None ,\
-None ,\
-]
+None ]
 
 TableTranslate_SBIG = [ None ,\
 None ,\
