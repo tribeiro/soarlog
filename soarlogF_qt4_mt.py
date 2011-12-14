@@ -638,6 +638,10 @@ No info available
 		# Write log for each project
 		#
 		
+		timeSpentLog = '''
+Time Spent:
+===========
+'''
 		for i in range(len(proj_id)):
 			proj = proj_id[i]
 
@@ -675,11 +679,13 @@ No info available
 					nlines -= 1
 				if proj_hdr[j].find('TIME') >= 0:
 					proj_hdr[j] = 'TIME SPENT: %02.0f:%02.0f\n' % timeSpent
+					timeSpentLog += proj + ': %02.0f:%02.0f\n' % timeSpent 
 				if proj_hdr[j].find('OBJECTS') >= 0:
 					obj_list = self.getObjects(query)
-					proj_hdr[j] = 'OBJECTS: '
+					proj_hdr[j] = proj_hdr[j][:-1]
 					for iobj in range(len(obj_list)):
-						proj_hdr += obj_list[iobj] + ' '
+						proj_hdr[j] += obj_list[iobj] + ' '
+					proj_hdr[j] += '\n'
 				outlog +=  proj_hdr[j]
 				if nlines == 0:
 					break
@@ -724,11 +730,11 @@ No info available
 										 AIRMASS = frame.AIRMASS, EXPTIME = frame.EXPTIME, SEEING = frame.SEEING)
 				if frame.INSTRUME == 'Goodman Spectrograph':
 					frame2 = self.session_CID.query(self.GOODMAN_Obj).filter(self.GOODMAN_Obj.FILENAME.like(frame.FILENAME))[0]
-					logGS = '\tGRATING: {} SLIT: {} OBSTYPE: {}\n'.format(frame2.GRATING,frame2.SLIT,frame.IMAGETYP)
+					logGS = '\tGRATING: {0} SLIT: {1} OBSTYPE: {2}\n'.format(frame2.GRATING,frame2.SLIT,frame.IMAGETYP)
 					outlog+=logGS
 
 				if frame.INSTRUME == 'Spartan IR Camera' and writeFlag:
-					logSP = '\tFILTER: {} OBSTYPE: {}\n'.format(frame2.FILTER,frame.IMAGETYP)
+					logSP = '\tFILTER: {0} OBSTYPE: {1}\n'.format(frame2.FILTER,frame.IMAGETYP)
 					outlog+=logSP
 
 #				if frame.INSTRUME == 'OSIRIS':
@@ -752,8 +758,8 @@ No info available
 			#for info_id in databaseF.LogInfo[inst]:
 				
 	
-			
-		
+		outlog += '-'*63 + '\n'
+		outlog += timeSpentLog
 		return outlog
 #
 #
