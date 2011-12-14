@@ -350,25 +350,80 @@ class SoarLog(QtGui.QMainWindow):
 	#
 	#	
 	##########################################################
+
+
 #
 #
 ################################################################################################
+
+################################################################################################
+#
+#
+
 	def OpenPreferences(self):
 
 		print 'Open preferences'
-		pref_ui = uic.loadUi(os.path.join(uipath,'preferences.ui'),None)
+
+		##########################################################
+		#
+		# Set up preferences menu
+		self.pref_ui = uic.loadUi(os.path.join(uipath,'preferences.ui'),None)
+
+		self.pref_ui.tabWidget.setTabText(0,'Hide/Show')
+		self.pref_ui.tabWidget.setTabText(1,'Change Order')
+		#
+		# Set up buttons for hidin/showing
+		#
+		self.connect(self.pref_ui.push2hide, QtCore.SIGNAL('clicked()'), self.prefHideSelected)
+		self.connect(self.pref_ui.push2show, QtCore.SIGNAL('clicked()'), self.prefShowSelected)
+		#
+		# Set up table with infos on columns shown/hidden. Note that both tables
+		# will contain all entries. What I do is just to hide/show the fields as the
+		# user select which one he whants to show/hide!
+		#
+		tbHeader = self.header_CID + databaseF.frame_infos.ExtraTableHeaders
+
+		data = zip(tbHeader)
+		dataMask = np.zeros(len(tbHeader)) == 0
+
+		for i in range(len(tbHeader)):
+			dataMask[i] = self.ui.tableDB.isColumnHidden(i)
+				 
+
+		showModel = SOLogTableModel(data,["Show"] ,commitDB=None)
+		hideModel = SOLogTableModel(data,["Hide"] ,commitDB=None)
+
+		self.pref_ui.listVis.setModel(showModel)
+		self.pref_ui.listHide.setModel(hideModel)
 		
-		if pref_ui.exec_():
+		for i in range(len(tbHeader)):
+			if dataMask[i]: 
+				self.pref_ui.listVis.setRowHidden(i,True)
+			else:
+				self.pref_ui.listHide.setRowHidden(i,True)
+		#
+		# Set up table for changing order of information.
+		#
+		sortModel = SOLogTableModel(data,["Sort"] ,commitDB=None)		
+		self.pref_ui.listSort.setModel(sortModel)
+
+		if self.pref_ui.exec_():
 			print 'Changes will be performed'
+#
+# Show/hide Table columns 
+#
+			for i in range(len(tbHeader)):
+				if not self.pref_ui.listVis.isRowHidden(i):
+					self.ui.tableDB.showColumn(i)
+				if not self.pref_ui.listHide.isRowHidden(i):
+					self.ui.tableDB.hideColumn(i)
+
 		else:
 			print 'No changes made to Layout'
 
 		print '[DONE]'
 		return 0
 
-		data = [[self.header_CID[0]]]
-		for i in self.header_CID[1:] + databaseF.frame_infos.ExtraTableHeaders:
-			data.append([i])
 		
 		tableModel = SOLogTableModel(data,["Teste"] ,commitDB=None)
 		
@@ -477,11 +532,12 @@ class SoarLog(QtGui.QMainWindow):
 
 		file = open(os.path.join(self._CFGFilePath_,self._CFGFiles_['ShowInfo']),'w')
 		
-		for i in range(len(self.ShowInfoOrder)):
-			#print self.ActionArray[i].isChecked()
-			if not self.ActionArray[i].isChecked():
+		tbHeader = self.header_CID + databaseF.frame_infos.ExtraTableHeaders
+
+		for i in range(len(tbHeader)):
+			if self.ui.tableDB.isColumnHidden(i):
 				file.write('%i\n' % i)
-		
+
 		file.close()
 		
 		sys.exit(0)
@@ -650,6 +706,7 @@ Time Spent:
 			#
 			
 			timeSpent = self.calcTime(proj)
+			timeSpentLog += proj + ': %02.0f:%02.0f\n' % timeSpent
 
 			#
 			# Get proj Header
@@ -678,8 +735,7 @@ Time Spent:
 				if proj_hdr[j][0] == '-':
 					nlines -= 1
 				if proj_hdr[j].find('TIME') >= 0:
-					proj_hdr[j] = 'TIME SPENT: %02.0f:%02.0f\n' % timeSpent
-					timeSpentLog += proj + ': %02.0f:%02.0f\n' % timeSpent 
+					proj_hdr[j] = 'TIME SPENT: %02.0f:%02.0f\n' % timeSpent 
 				if proj_hdr[j].find('OBJECTS') >= 0:
 					obj_list = self.getObjects(query)
 					proj_hdr[j] = proj_hdr[j][:-1]
@@ -918,6 +974,47 @@ Time Spent:
 					lcomm2 = np.append(lcomm2,lcomm[i])
 
 		return lcomm #np.unique(lcomm2)
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+	def prefHideSelected(self):
+			
+		for i in self.pref_ui.listVis.selectedIndexes():
+
+			self.pref_ui.listVis.setRowHidden(i.row(),True)
+			self.pref_ui.listHide.setRowHidden(i.row(),False)
+		
+
+		return 0
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+
+	def prefShowSelected(self):	
+		
+		for i in self.pref_ui.listHide.selectedIndexes():
+			
+			self.pref_ui.listVis.setRowHidden(i.row(),False)
+			self.pref_ui.listHide.setRowHidden(i.row(),True)
+		
+		
+		return 0
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+
 #
 #
 ################################################################################################
