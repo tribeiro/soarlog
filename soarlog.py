@@ -44,7 +44,11 @@ if __name__ == "__main__":
 	usergui.initWatch()
 	usergui.session_CID = db.session_CID
 	usergui.Obj_CID = db.Obj_CID
-		
+	usergui.SPARTAN_Obj = db.SPARTAN_Obj
+	usergui.GOODMAN_Obj = db.GOODMAN_Obj
+	usergui.OSIRIS_Obj = db.OSIRIS_Obj
+	usergui.SOI_Obj = db.SOI_Obj
+	
 	db.reloadTable = usergui.emmitReloadTableEvent
 	db.updateTable = usergui.updateTable
 

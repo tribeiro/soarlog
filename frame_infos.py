@@ -13,7 +13,7 @@ import numpy as np
 # defines the image header parameter for instrument!
 
 _INSTRUME = {'OSIRIS':'INSTRUME','GOODMAN':'INSTRUME','SOI':'INSTRUME','SPARTAN':'INSTRUME','SBIG ST-L' : 'INSTRUME'}
-
+SPARTAN = 'Spartan IR Camera'
 
 ##################################################################################################################################
 #
@@ -657,4 +657,36 @@ def GetFrameInfos(filename):
 	hdr_out['OBSNOTES'] = ''
 	hdr_inst['FILENAME'] = filename
 	return hdr_out,hdr_inst #filename,INSTRUMENT
+#
+#
+##################################################################################################################################
+
+##################################################################################################################################
+#
+#
+
+def frameLog(dbEntry):
+	
+	temp = '''
+		{time}LT File:\t{FILENAME}
+		\tOBJECT: {OBJECT} 
+		\tNotes: {OBSNOTES}
+		\tX={AIRMASS} Exptime:{EXPTIME} s sm= {SEEING}
+		'''
+
+	#
+	# If frame is SPARTAN only keep up if this is d3
+	#
+	#	if dbEntry.INSTRUME == SPARTAN:
 		
+	
+	
+	if dbEntry.INSTRUME in dictTableHeaders.keys():
+		print dbEntry.INSTRUME
+		return '\n'
+	
+	else:
+		print 'Instrument {} not recognized'.format(dbEntry.INSTRUME)
+		return '\n'
+
+	

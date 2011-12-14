@@ -40,6 +40,19 @@ import time
 
 uipath = os.path.dirname(__file__)
 
+def LongestCommonSubstring(S1, S2):
+    M = [[0]*(1+len(S2)) for i in xrange(1+len(S1))]
+    longest, x_longest = 0, 0
+    for x in xrange(1,1+len(S1)):
+        for y in xrange(1,1+len(S2)):
+            if S1[x-1] == S2[y-1]:
+                M[x][y] = M[x-1][y-1] + 1
+                if M[x][y]>longest:
+                    longest = M[x][y]
+                    x_longest  = x
+            else:
+                M[x][y] = 0
+    return S1[x_longest-longest: x_longest]
 		
 class SoarLog(QtGui.QMainWindow):
 
@@ -594,7 +607,6 @@ No info available
 \tOBJECT: {OBJECT} 
 \tNotes: {OBSNOTES}
 \tX={AIRMASS} Exptime:{EXPTIME} s sm= {SEEING}
-
 '''
 		outlog = ''
 		
@@ -646,7 +658,16 @@ No info available
 			except IOError:
 				proj_hdr = ['--\n','--\n',proj,'\n--\n']
 				
+
+			#
+			# Frames infos
+			#
 			
+			query = self.session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+proj_id2[i]+'%'))[:]
+			obj_list = self.getObjects(query)
+
+			print obj_list
+
 			nlines = 3
 			end_hdr = 0
 			for j in range(len(proj_hdr)):
@@ -654,22 +675,22 @@ No info available
 					nlines -= 1
 				if proj_hdr[j].find('TIME') >= 0:
 					proj_hdr[j] = 'TIME SPENT: %02.0f:%02.0f\n' % timeSpent
+				if proj_hdr[j].find('OBJECTS') >= 0:
+					obj_list = self.getObjects(query)
+					proj_hdr[j] = 'OBJECTS: '
+					for iobj in range(len(obj_list)):
+						proj_hdr += obj_list[iobj] + ' '
 				outlog +=  proj_hdr[j]
 				if nlines == 0:
 					break
 
-			#
-			# Frames infos
-			#
-			
-			query = self.session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+proj_id2[i]+'%'))[:]
 		
 			hour = np.array( [ str(ff.TIMEOBS) for ff in query] )
 			day = np.array( [ str(ff.DATEOBS) for ff in query] )
 		
 			time = np.array( [ day[i]+'T'+hour[i] for i in range(len(hour)) ] )
 		
-			sumLT = -2
+			sumLT = -3
 			for i in range(len(time)):
 				if day[i].find('T') > 0:
 
@@ -678,8 +699,16 @@ No info available
 			sort = time.argsort()
 		
 			for itr in range(len(query)):
+
 				frame = query[sort[itr]]
 				time = frame.TIMEOBS
+				
+				writeFlag = True
+				frame2 = None
+				if frame.INSTRUME == 'Spartan IR Camera':
+					frame2 = self.session_CID.query(self.SPARTAN_Obj).filter(self.SPARTAN_Obj.FILENAME.like(frame.FILENAME))[0]
+					if frame2.DETSERNO != '66':
+						writeFlag = False						
 				try:
 					time = time.split(':')
 				except:
@@ -690,8 +719,31 @@ No info available
 				if hrs < 0:
 					hrs += 23
 				time = '%02i:%02i' % (hrs,int(time[1]))
-				outlog += log.format( time=time, FILENAME = os.path.basename(frame.FILENAME), OBJECT = frame.OBJECT, OBSNOTES = frame.OBSNOTES ,\
-					AIRMASS = frame.AIRMASS, EXPTIME = frame.EXPTIME, SEEING = frame.SEEING)
+				if writeFlag:
+					outlog += log.format(time=time, FILENAME = os.path.basename(frame.FILENAME), OBJECT = frame.OBJECT, OBSNOTES = frame.OBSNOTES ,\
+										 AIRMASS = frame.AIRMASS, EXPTIME = frame.EXPTIME, SEEING = frame.SEEING)
+				if frame.INSTRUME == 'Goodman Spectrograph':
+					frame2 = self.session_CID.query(self.GOODMAN_Obj).filter(self.GOODMAN_Obj.FILENAME.like(frame.FILENAME))[0]
+					logGS = '\tGRATING: {} SLIT: {} OBSTYPE: {}\n'.format(frame2.GRATING,frame2.SLIT,frame.IMAGETYP)
+					outlog+=logGS
+
+				if frame.INSTRUME == 'Spartan IR Camera' and writeFlag:
+					logSP = '\tFILTER: {} OBSTYPE: {}\n'.format(frame2.FILTER,frame.IMAGETYP)
+					outlog+=logSP
+
+#				if frame.INSTRUME == 'OSIRIS':
+#					frame2 = self.session_CID.query(self.GOODMAN_Obj).filter(self.GOODMAN_Obj.FILENAME.like(frame.FILENAME))[0]
+#					logOS = '\tGRATING: {} SLIT: {} OBSTYPE: {}\n'.format(frame2.GRATING,frame2.SLIT,frame.IMAGETYP)
+#					outlog+=logGS
+#				
+#				if frame.INSTRUME == 'SOI':
+#					frame2 = self.session_CID.query(self.SOI_Obj).filter(self.SOI_Obj.FILENAME.like(frame.FILENAME))[0]
+#					logSOI = '\tFILTER: {} OBSTYPE: {}\n'.format(frame2.FILTER1,frame.IMAGETYP)
+#					outlog+=logGS
+
+					
+				
+#outlog += databaseF.frame_infos.frameLog(frame,time)
 
 			#inst = frame.INSTRUME
 			
@@ -717,18 +769,19 @@ No info available
 		#
 		
 		file = open(self.logfile,'w')
+		print self.logfile
 		
 		#
 		# Write log header
 		#
 		
 		#hdr = 'No header\n'
-		#try:
-		hdr = subprocess.Popen(['logheader.py'],stdout=file,stderr=file)
-		hdr.wait()
-		#except:
-		#	#hdr = 'No header\n'
-		#	pass
+		try:
+			hdr = subprocess.Popen(['logheader.py'],stdout=file,stderr=file)
+			hdr.wait()
+		except:
+			hdr = 'No header\n'
+			pass
 		
 		#file.write(hdr)
 
@@ -831,3 +884,34 @@ No info available
 #
 ################################################################################################
 
+################################################################################################
+#
+#
+
+
+	def getObjects(self,qq):
+		
+		obj = np.array([])
+		for i in range(len(qq)):
+			obj = np.append(obj,qq[i].OBJECT)
+
+		uobj = np.unique(obj)
+
+		lcomm = np.array([])
+
+		for i in range(len(uobj)):
+			lcomm = np.append(lcomm,uobj[i].split(' ')[0].split('_')[0])
+
+		lcomm = np.unique(lcomm)
+		lcomm2 = np.array([])
+
+		for i in range(len(lcomm)-1):			
+			for j in range(i+1,len(lcomm)):
+				cobj = LongestCommonSubstring(lcomm[i],lcomm[j])
+				if len(cobj) >= 1 and cobj[0] != ' ':
+					lcomm2 = np.append(lcomm2,lcomm[i])
+
+		return lcomm #np.unique(lcomm2)
+#
+#
+################################################################################################
