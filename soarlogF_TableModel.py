@@ -30,7 +30,9 @@ class SOLogTableModel(QtCore.QAbstractTableModel):
 #        elif role != QtCore.Qt.DisplayRole and role != QtCore.Qt.EditRole: 
 #            return QtCore.QVariant() 
 #        return QtCore.QVariant(self.arraydata[index.row()][index.column()]) 
-	
+    def getData(self, i,j):
+        return self.arraydata[i][j]
+
     def data(self, index, role): 
         if not index.isValid(): 
             return QtCore.QVariant() 
@@ -49,17 +51,20 @@ class SOLogTableModel(QtCore.QAbstractTableModel):
         if not index.isValid():
             return QtCore.Qt.ItemIsEnabled
 		
-        ret_flags = QtCore.Qt.ItemIsSelectable | QtCore.QAbstractItemModel.flags(self, index)
+        ret_flags = QtCore.Qt.ItemIsDropEnabled |QtCore.Qt.ItemIsDragEnabled | QtCore.Qt.ItemIsSelectable | QtCore.QAbstractItemModel.flags(self, index)
         if self.isEditable(index):
 #print index.row() #returns the selected elements row
 #print index.column()
             ret_flags = ret_flags | QtCore.Qt.ItemIsEditable
         return ret_flags
 
-
+	def supportedDropActions(self):
+		return QtCore.Qt.MoveAction
+		
+				
     def setData(self, index, value, role):
         """ if a item is edited, this command is called value.toString() constains the new value cahnge here to have it evaluate stuff!"""
-		
+
         try:
             self.arraydata[index.row()][index.column()] = QtCore.QVariant(value.toString())
         except AttributeError:
@@ -97,3 +102,26 @@ class SOLogTableModel(QtCore.QAbstractTableModel):
         if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
             return QtCore.QVariant(self.headerdata[col])
         return QtCore.QVariant()
+
+    def mimeTypes(self):
+        return ['text/xml']
+		
+    def mimeData(self, indexes):
+        mimedata = QtCore.QMimeData()
+        print indexes[0].row(),indexes[0].column()
+        mimedata.setData('text/xml', self.arraydata[indexes[0].row()][indexes[0].column()])
+        self.dragIndex = indexes[0]
+        return mimedata
+		
+    def dropMimeData(self, data, action, row, column, parent):
+        self.beginMoveRows(parent, self.dragIndex.row(),self.dragIndex.row() , parent, parent.row())		
+        self.arraydata.insert(parent.row(), self.arraydata.pop(self.dragIndex.row()))
+        self.dropParent = parent
+        print 'dropMimeData %s %s %s %s' % (data.data('text/xml'), self.dragIndex.row(), row, parent.row()) 
+        self.endMoveRows()
+        return True
+
+    def dropEvent(self, event): 
+        print 'dropping'
+        #self.beginMoveRows(self.dropParent, self.dragIndex.row(),self.dragIndex.row() , self.dropParent, self.dropParent.row())		
+#self.endMoveRows()

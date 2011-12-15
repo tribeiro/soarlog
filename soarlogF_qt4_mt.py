@@ -233,99 +233,9 @@ class SoarLog(QtGui.QMainWindow):
 		self.connect(self, QtCore.SIGNAL('runQueueEvent()'), self.runQueue)
 		self.connect(self, QtCore.SIGNAL('TableDataChanged(QModelIndex,QString)'), self.CommitDBTable)
 		#self.connect(self, QtCore.SIGNAL("dataChanged(QModelIndex,QModelIndex)"), self.CommitDBTable)
-		
-		#
-		# Create submenu to show/hide columns
-		#
-		
-		self.showHideCols = self.menuEdit.addMenu('&Show/Hide Columns')
-		
-		self.showHideCID = self.showHideCols.addMenu('&Common Information DB')
-		self.showHideMTI = self.showHideCols.addMenu('&Misc Table Infos')
-								
-		self.ActionArray = []
-		
-		#
-		# Selection for CID
-		#
-		for opt_index in range(len(databaseF.frame_infos.CID.keys())):
-			opt = databaseF.frame_infos.CID.keys()[opt_index]
-			self.ActionArray.append( QtGui.QAction(opt, self,checkable = True,checked=True) )
-			self.connect(self.ActionArray[-1], QtCore.SIGNAL('triggered()'),lambda HeaderPar=opt_index : self.ShowHideCol(HeaderPar))
-			self.showHideCID.addAction(self.ActionArray[-1])
-		#
-		# Selection for ExtraTableHeader
-		#
-
-		for opt in range(len(databaseF.frame_infos.ExtraTableHeaders)):
-			self.ActionArray.append( QtGui.QAction(databaseF.frame_infos.ExtraTableHeaders[opt], self,checkable = True,checked=True) )
-			self.connect(self.ActionArray[-1], QtCore.SIGNAL('triggered()'),lambda HeaderPar=opt+len(databaseF.frame_infos.CID.keys()) : self.ShowHideCol(HeaderPar))
-			self.showHideMTI.addAction(self.ActionArray[-1])
-
-
-		#
-		# Create submenu to change header order
-		#
-		
-		self.changeHeaderOrder = self.menuEdit.addMenu('&Change Header order')
-
-		#self.changeOrderCID = self.changeHeaderOrder.addMenu('&Common Information DB')
-		#self.changeOrderMTI = self.changeHeaderOrder.addMenu('&Misc Table Infos')
 
 		header = databaseF.frame_infos.CID.keys() + databaseF.frame_infos.ExtraTableHeaders
 		self.ShowInfoOrder = range(len(header))
-		
-		#
-		# Selection for CID
-		#
-		
-		self.changeOrderArray = []
-		self.changeOrderActionMatrix = []
-		
-		for opt_index in range(len(header)):
-
-			opt = header[opt_index]
-			self.changeOrderArray.append( self.changeHeaderOrder.addMenu('&%i - %s' % (opt_index, opt)) )
-			
-			changeOrderActionArray = []
-			
-			for act_index in range(len(header)):
-				state = False
-				if act_index == opt_index:
-					state = True
-				changeOrderActionArray.append( QtGui.QAction('%i'%(act_index+1), self,checkable = True,checked=state) )
-
-			self.changeOrderActionMatrix.append(changeOrderActionArray)
-
-			for act_index in range(len(header)):	
-				self.connect(self.changeOrderActionMatrix[opt_index][act_index], QtCore.SIGNAL('triggered()'),lambda move=(opt_index,act_index): self.MoveColumn(move))
-				self.changeOrderArray[opt_index].addAction(self.changeOrderActionMatrix[opt_index][act_index])
-
-		#
-		# Load configuration for order
-		#
-
-		self.OrderInfoDict = {}
-		
-		try :
-			SavedInfoOrder = np.loadtxt(os.path.join(self._CFGFilePath_,self._CFGFiles_['OrderInfo']),dtype='int',unpack=True)
-		
-			if len(SavedInfoOrder.shape) == 1:
-				self.OrderInfoDict[SavedInfoOrder[0]] = SavedInfoOrder[1]
-			else:
-				for i in range(len(SavedInfoOrder[0])):
-					self.OrderInfoDict[SavedInfoOrder[0][i]] = SavedInfoOrder[1][i]
-
-				
-		except:
-			pass
-			
-
-		print self.OrderInfoDict
-		
-		for mv in self.OrderInfoDict.keys():
-			self.MoveColumn( (mv, self.OrderInfoDict[mv]) )
-			
 
 		#
 		# Load configuration for Show/Hide
@@ -334,17 +244,46 @@ class SoarLog(QtGui.QMainWindow):
 		try :
 			HideConfig = np.loadtxt(os.path.join(self._CFGFilePath_,self._CFGFiles_['ShowInfo']),dtype='int')
 			
-#			print HideConfig
+			#			print HideConfig
 			for i in HideConfig:
-				self.ActionArray[i].setChecked(False)
+				#self.ActionArray[i].setChecked(False)
 				self.ui.tableDB.hideColumn(i)
-			
+		
 		except TypeError:
-			self.ActionArray[HideConfig].setChecked(False)
+			#self.ActionArray[HideConfig].setChecked(False)
 			self.ui.tableDB.hideColumn(HideConfig)
 			HideConfig = np.array([HideConfig])
 		except:
 			pass
+
+		#
+		# Selection for CID
+		#
+		
+		self.changeOrderArray = []
+
+		#
+		# Load configuration for order
+		#
+
+		self.OrderInfoDict = {}
+		
+#		try :
+		SavedInfoOrder = np.loadtxt(os.path.join(self._CFGFilePath_,self._CFGFiles_['OrderInfo']),dtype='int',unpack=True)
+		ssort = SavedInfoOrder[1].argsort()
+		SavedInfoOrder[0] = SavedInfoOrder[0][ssort]
+		SavedInfoOrder[1] = SavedInfoOrder[1][ssort]
+		for i in range(len(SavedInfoOrder[0])):
+			self.MoveColumn( (SavedInfoOrder[0][i],SavedInfoOrder[1][i]))
+			print SavedInfoOrder[0][i],' --> ',SavedInfoOrder[1][i]
+		
+				
+#		except:
+#			pass
+			
+
+		print self.OrderInfoDict
+
 
 		
 	#
@@ -364,59 +303,30 @@ class SoarLog(QtGui.QMainWindow):
 
 		print 'Open preferences'
 
-		##########################################################
-		#
-		# Set up preferences menu
-		self.pref_ui = uic.loadUi(os.path.join(uipath,'preferences.ui'),None)
-
-		self.pref_ui.tabWidget.setTabText(0,'Hide/Show')
-		self.pref_ui.tabWidget.setTabText(1,'Change Order')
-		#
-		# Set up buttons for hidin/showing
-		#
-		self.connect(self.pref_ui.push2hide, QtCore.SIGNAL('clicked()'), self.prefHideSelected)
-		self.connect(self.pref_ui.push2show, QtCore.SIGNAL('clicked()'), self.prefShowSelected)
-		#
-		# Set up table with infos on columns shown/hidden. Note that both tables
-		# will contain all entries. What I do is just to hide/show the fields as the
-		# user select which one he whants to show/hide!
-		#
 		tbHeader = self.header_CID + databaseF.frame_infos.ExtraTableHeaders
-
-		data = zip(tbHeader)
-		dataMask = np.zeros(len(tbHeader)) == 0
-
-		for i in range(len(tbHeader)):
-			dataMask[i] = self.ui.tableDB.isColumnHidden(i)
-				 
-
-		showModel = SOLogTableModel(data,["Show"] ,commitDB=None)
-		hideModel = SOLogTableModel(data,["Hide"] ,commitDB=None)
-
-		self.pref_ui.listVis.setModel(showModel)
-		self.pref_ui.listHide.setModel(hideModel)
+		#pref_ui = PrefMenu([ tbHeader[i] for i in self.ShowInfoOrder],self.ui.tableDB)
+		pref_ui = PrefMenu(tbHeader, self.ShowInfoOrder,self.ui.tableDB)
 		
-		for i in range(len(tbHeader)):
-			if dataMask[i]: 
-				self.pref_ui.listVis.setRowHidden(i,True)
-			else:
-				self.pref_ui.listHide.setRowHidden(i,True)
-		#
-		# Set up table for changing order of information.
-		#
-		sortModel = SOLogTableModel(data,["Sort"] ,commitDB=None)		
-		self.pref_ui.listSort.setModel(sortModel)
-
-		if self.pref_ui.exec_():
+		pref_ui.show()
+		
+		if pref_ui.exec_():
 			print 'Changes will be performed'
+#
+# Change order of table headers
+#
+#			print [tbHeader.index(pref_ui.listSort.model().getData(i,0)) for i in range(len(tbHeader))]
+			for i in range(len(tbHeader)):
+				self.MoveColumn([tbHeader.index(pref_ui.listSort.model().getData(i,0)),i])
+
 #
 # Show/hide Table columns 
 #
 			for i in range(len(tbHeader)):
-				if not self.pref_ui.listVis.isRowHidden(i):
+				if not pref_ui.listVis.isRowHidden(i):
 					self.ui.tableDB.showColumn(i)
-				if not self.pref_ui.listHide.isRowHidden(i):
-					self.ui.tableDB.hideColumn(i)
+				if not pref_ui.listHide.isRowHidden(i):
+					self.ui.tableDB.hideColumn(i)				
+			
 
 		else:
 			print 'No changes made to Layout'
@@ -469,19 +379,12 @@ class SoarLog(QtGui.QMainWindow):
 
 		print self.ShowInfoOrder
 		
-		tmp = self.ShowInfoOrder[:index] + self.ShowInfoOrder[index+1:]
+		self.ShowInfoOrder.insert(move[1], self.ShowInfoOrder.pop(index))		
 		
-		self.ShowInfoOrder = tmp[:move[1]] + [self.ShowInfoOrder[index]] + tmp[move[1]:]
+		#tmp = self.ShowInfoOrder[:index] + self.ShowInfoOrder[index+1:]
+		
+		#self.ShowInfoOrder = tmp[:move[1]] + [self.ShowInfoOrder[index]] + tmp[move[1]:]
 				
-		for i in range(len(self.changeOrderActionMatrix)):
-		
-			for j in range(len(self.changeOrderActionMatrix[i])):
-			
-				if i == self.ShowInfoOrder[j]:
-					self.changeOrderActionMatrix[i][j].setChecked(True)
-				else:
-					self.changeOrderActionMatrix[i][j].setChecked(False)
-		
 
 		self.OrderInfoDict[move[0]] = move[1]
 		#print [self.ShowInfoOrder[i] for i in move]
@@ -977,27 +880,153 @@ Time Spent:
 #
 #
 ################################################################################################
+################################################################################################
+################################################################################################
+#
+#
+
+class PrefMenu(QtGui.QDialog):
+	
+################################################################################################
+#
+#	
+
+	def __init__(self,tbHeader,tbSort,tableDB):
+	
+		QtGui.QDialog.__init__(self)
+
+		##########################################################
+		#
+		# Set up preferences menu
+		self.pref_ui = uic.loadUi(os.path.join(uipath,'preferences.ui'),self)
+		
+		self.pref_ui.tabWidget.setTabText(0,'Hide/Show')
+		self.pref_ui.tabWidget.setTabText(1,'Change Order')
+		#
+		# Set up buttons for hidin/showing
+		#
+		self.connect(self.pref_ui.push2hide, QtCore.SIGNAL('clicked()'), self.prefHideSelected)
+		self.connect(self.pref_ui.push2show, QtCore.SIGNAL('clicked()'), self.prefShowSelected)
+		#
+		# Set up table with infos on columns shown/hidden. Note that both tables
+		# will contain all entries. What I do is just to hide/show the fields as the
+		# user select which one he whants to show/hide!
+		#
+		#tbHeader = self.header_CID + databaseF.frame_infos.ExtraTableHeaders
+		
+		data = [ [i] for i in tbHeader ]
+		
+		dataMask = np.zeros(len(tbHeader)) == 0
+		
+		for i in range(len(tbHeader)):
+			dataMask[i] = tableDB.isColumnHidden(i)
+		
+		
+		showModel = SOLogTableModel(data,["Show"] ,commitDB=self.doNothing)
+		hideModel = SOLogTableModel(data,["Hide"] ,commitDB=self.doNothing)
+		
+		self.pref_ui.listVis.setModel(showModel)
+		self.pref_ui.listHide.setModel(hideModel)
+		
+		for i in range(len(tbHeader)):
+			if dataMask[i]: 
+				self.pref_ui.listVis.setRowHidden(i,True)
+			else:
+				self.pref_ui.listHide.setRowHidden(i,True)
+		#
+		# Set up table for changing order of information.
+		#
+		sortModel = SOLogTableModel([data[i] for i in tbSort],["Sort"] ,commitDB=self.doNothing)		
+
+		self.pref_ui.listSort.setModel(sortModel)
+		self.pref_ui.listSort.setDragDropMode(QtGui.QAbstractItemView.InternalMove)
+#		self.pref_ui.listSort.setDefaultDropAction(QtCore.Qt.MoveAction)
+#		self.pref_ui.listSort.__class__.dragMoveEvent = self.dragMoveEvent
+#		self.pref_ui.listSort.__class__.dragEnterEvent = self.dragEnterEvent
+#		self.pref_ui.listSort.__class__.startDrag = self.startDrag
+#		self.pref_ui.listSort.__class__.dropEvent = sortModel.dropEvent				
+
+#
+#
+################################################################################################
+			
+################################################################################################
+#
+#
+	def dropEvent(self, event): 
+		print 'dropping'
+		
+		#		super(DragAndDropList, self).dropEvent(event) 
+		#self.itemMoved.emit(self.drag_row, self.row(self.drag_item), 
+#							self.drag_item) 
+		#self.drag_item = None 
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+			
+	def startDrag(self, supportedActions): 
+		print 'start Dragging...'
+#		self.drag_item = self.pref_ui.listSort.currentItem() 
+#		self.drag_row = self.row(self.drag_item) 
+#		super(DragAndDropList, self).startDrag(supportedActions) 
+
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+
+	def dragMoveEvent(self, event):
+		print 'start move'
+		#if event.mimeData().hasUrls:
+		#event.setDropAction(QtCore.Qt.CopyAction)
+		event.accept()
+		#else:
+		#event.ignore()
+
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+
+	def dragEnterEvent(self, event):
+		print 'enter drag'
+		if event.mimeData().hasFormat('text/plain'):
+			event.acceptProposedAction()
+
+#
+#
+################################################################################################
 
 ################################################################################################
 #
 #
 	def prefHideSelected(self):
-			
+		
 		for i in self.pref_ui.listVis.selectedIndexes():
-
+			
 			self.pref_ui.listVis.setRowHidden(i.row(),True)
 			self.pref_ui.listHide.setRowHidden(i.row(),False)
 		
-
+		
 		return 0
 #
 #
 ################################################################################################
-
+	
 ################################################################################################
 #
 #
-
+	
 	def prefShowSelected(self):	
 		
 		for i in self.pref_ui.listHide.selectedIndexes():
@@ -1014,7 +1043,8 @@ Time Spent:
 ################################################################################################
 #
 #
-
+	def doNothing(self,ii):
+		return 0
 #
 #
 ################################################################################################
