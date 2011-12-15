@@ -91,7 +91,7 @@ class SoarLog(QtGui.QMainWindow):
 		self.header_dict = { 'OSIRIS' : databaseF.frame_infos.OSIRIS_ID.keys(),\
 							 'Goodman Spectrograph' : databaseF.frame_infos.GOODMAN_ID.keys() ,\
 							  'SOI' : databaseF.frame_infos.SOI_ID.keys()}
-
+		self.__WeatherComments__ = "No info available\n"
 		#self.initDB()
 		
 		#self.AskFile2Watch()
@@ -234,6 +234,9 @@ class SoarLog(QtGui.QMainWindow):
 		self.connect(self, QtCore.SIGNAL('TableDataChanged(QModelIndex,QString)'), self.CommitDBTable)
 		#self.connect(self, QtCore.SIGNAL("dataChanged(QModelIndex,QModelIndex)"), self.CommitDBTable)
 
+		self.connect(self.ui.actionDQ, QtCore.SIGNAL('triggered()'),self.startDataQuality)
+		self.connect(self.ui.actionWI, QtCore.SIGNAL('triggered()'),self.promptWeatherComment)
+		
 		header = databaseF.frame_infos.CID.keys() + databaseF.frame_infos.ExtraTableHeaders
 		self.ShowInfoOrder = range(len(header))
 
@@ -300,8 +303,6 @@ class SoarLog(QtGui.QMainWindow):
 #
 
 	def OpenPreferences(self):
-
-		print 'Open preferences'
 
 		tbHeader = self.header_CID + databaseF.frame_infos.ExtraTableHeaders
 		#pref_ui = PrefMenu([ tbHeader[i] for i in self.ShowInfoOrder],self.ui.tableDB)
@@ -532,10 +533,26 @@ class SoarLog(QtGui.QMainWindow):
 ===============================================================
                       WEATHER CONDITIONS
 ===============================================================
-
-No info available
 '''
-		return comments
+		
+		return comments+self.__WeatherComments__+'\n'
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+	def promptWeatherComment(self):
+		
+		winfo = WeatherInfo()
+		winfo.wi_ui.weatherInfo.setPlainText(self.__WeatherComments__)
+		
+		if winfo.exec_():
+			self.__WeatherComments__ = winfo.wi_ui.weatherInfo.toPlainText()
+	
+	
+		return 0
 #
 #
 ################################################################################################
@@ -880,7 +897,24 @@ Time Spent:
 #
 #
 ################################################################################################
+
 ################################################################################################
+#
+#
+	def startDataQuality(self):
+
+		dataQuality_ui = DataQualityUI()
+		
+		dataQuality_ui.show()
+		
+		dataQuality_ui.exec_()
+
+#
+#
+################################################################################################
+# END OF CLASS SoarLog
+################################################################################################
+# START OF CLASS PrefMenu
 ################################################################################################
 #
 #
@@ -1045,6 +1079,64 @@ class PrefMenu(QtGui.QDialog):
 #
 	def doNothing(self,ii):
 		return 0
+#
+#
+################################################################################################
+
+#
+#
+################################################################################################
+# END OF CLASS SoarLog
+################################################################################################
+# START OF CLASS PrefMenu
+################################################################################################
+#
+#
+
+class DataQualityUI(QtGui.QDialog):
+	
+################################################################################################
+#
+#	
+	
+	def __init__(self):
+		
+		QtGui.QDialog.__init__(self)
+		
+		##########################################################
+		#
+		# Set up preferences menu
+		self.dq_ui = uic.loadUi(os.path.join(uipath,'dataquality.ui'),self)
+
+#
+#
+################################################################################################
+
+#
+#
+################################################################################################
+# END OF CLASS SoarLog
+################################################################################################
+# START OF CLASS PrefMenu
+################################################################################################
+#
+#
+
+class WeatherInfo(QtGui.QDialog):
+	
+	################################################################################################
+	#
+	#	
+	
+	def __init__(self):
+		
+		QtGui.QDialog.__init__(self)
+		
+		##########################################################
+		#
+		# Set up preferences menu
+		self.wi_ui = uic.loadUi(os.path.join(uipath,'getweatherinfo.ui'),self)
+
 #
 #
 ################################################################################################

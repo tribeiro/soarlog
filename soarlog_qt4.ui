@@ -41,6 +41,8 @@
     </property>
     <addaction name="actionSave_Log"/>
     <addaction name="actionPreferences"/>
+    <addaction name="actionDQ"/>
+    <addaction name="actionWI"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -89,6 +91,21 @@
   <action name="actionAdd_Frame">
    <property name="text">
     <string>Add Frame</string>
+   </property>
+  </action>
+  <action name="actionDQ">
+   <property name="text">
+    <string>Data Quality</string>
+   </property>
+  </action>
+  <action name="actionWI">
+   <property name="text">
+    <string>Weather Info</string>
+   </property>
+  </action>
+  <action name="actionWeather_Info">
+   <property name="text">
+    <string>Weather Info</string>
    </property>
   </action>
  </widget>
