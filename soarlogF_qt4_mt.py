@@ -971,14 +971,20 @@ class PrefMenu(QtGui.QDialog):
 		# Set up table for changing order of information.
 		#
 		sortModel = SOLogTableModel([data[i] for i in tbSort],["Sort"] ,commitDB=self.doNothing)		
-
+					
 		self.pref_ui.listSort.setModel(sortModel)
-		self.pref_ui.listSort.setDragDropMode(QtGui.QAbstractItemView.InternalMove)
-#		self.pref_ui.listSort.setDefaultDropAction(QtCore.Qt.MoveAction)
+		self.pref_ui.listSort.dragEnabled()
+		self.pref_ui.listSort.acceptDrops()
+		self.pref_ui.listSort.showDropIndicator()
+		self.pref_ui.listSort.setDragDropMode(QtGui.QAbstractItemView.DragDrop)
+		self.pref_ui.listSort.setDefaultDropAction(QtCore.Qt.MoveAction)
+#		self.pref_ui.listSort.setDragEnabled(True)
+#		self.pref_ui.listSort.setAcceptDrops(True)
 #		self.pref_ui.listSort.__class__.dragMoveEvent = self.dragMoveEvent
 #		self.pref_ui.listSort.__class__.dragEnterEvent = self.dragEnterEvent
 #		self.pref_ui.listSort.__class__.startDrag = self.startDrag
-#		self.pref_ui.listSort.__class__.dropEvent = sortModel.dropEvent				
+#		self.MasterDropEvent = self.pref_ui.listSort.__class__.dropEvent
+#		self.pref_ui.listSort.__class__.dropEvent = self.dropEvent				
 
 #
 #
@@ -989,7 +995,10 @@ class PrefMenu(QtGui.QDialog):
 #
 	def dropEvent(self, event): 
 		print 'dropping'
-		
+		txt = event.mimeData().data('text/xml')
+		item = QtGui.QListWidgetItem(txt,self)     #os.path.basename(url)
+		event.accept()
+
 		#		super(DragAndDropList, self).dropEvent(event) 
 		#self.itemMoved.emit(self.drag_row, self.row(self.drag_item), 
 #							self.drag_item) 
@@ -1034,9 +1043,11 @@ class PrefMenu(QtGui.QDialog):
 
 	def dragEnterEvent(self, event):
 		print 'enter drag'
-		if event.mimeData().hasFormat('text/plain'):
-			event.acceptProposedAction()
-
+		print event.mimeData().data('text/xml')
+		print event.proposedAction()
+		#if event.mimeData().hasFormat('text/plain'):
+		#	event.acceptProposedAction()
+		event.accept()
 #
 #
 ################################################################################################
