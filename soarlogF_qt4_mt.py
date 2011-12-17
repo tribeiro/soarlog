@@ -31,12 +31,14 @@ from dbComF import *
 
 import time
 
-#from pyraf.iraf import set as IrafSet
-#from pyraf.iraf import display
-#from pyraf.iraf import mscred
-#from pyraf.irafglobals import IrafError
-#IrafSet(stdimage='imt4096')
-
+try:
+	from pyraf.iraf import set as IrafSet
+	from pyraf.iraf import display
+	from pyraf.iraf import mscred
+	from pyraf.irafglobals import IrafError
+	IrafSet(stdimage='imt4096')
+except:
+	pass
 
 uipath = os.path.dirname(__file__)
 
@@ -92,6 +94,9 @@ class SoarLog(QtGui.QMainWindow):
 							 'Goodman Spectrograph' : databaseF.frame_infos.GOODMAN_ID.keys() ,\
 							  'SOI' : databaseF.frame_infos.SOI_ID.keys()}
 		self.__WeatherComments__ = "No info available\n"
+
+		self.currentSelectedItem = 0 #QtCore.QModelIndex()
+
 		#self.initDB()
 		
 		#self.AskFile2Watch()
@@ -236,7 +241,15 @@ class SoarLog(QtGui.QMainWindow):
 
 		self.connect(self.ui.actionDQ, QtCore.SIGNAL('triggered()'),self.startDataQuality)
 		self.connect(self.ui.actionWI, QtCore.SIGNAL('triggered()'),self.promptWeatherComment)
+		self.connect(self.ui.actionHideCB, QtCore.SIGNAL('triggered()'),self.HideCB)
+
+		self.connect(self.ui.addFrameComment, QtCore.SIGNAL('clicked()'),self.commitComment)
 		
+		self.connect(self.ui.tableDB,QtCore.SIGNAL("clicked(const QModelIndex&)"), self.tableItemSelected)
+		self.connect(self.ui.tableDB,QtCore.SIGNAL("doubleClicked(const QModelIndex&)"), self.displaySelected)
+
+		self.connect(self.ui.lineFrameComment,QtCore.SIGNAL('returnPressed()'),self.commitComment)
+					 
 		header = databaseF.frame_infos.CID.keys() + databaseF.frame_infos.ExtraTableHeaders
 		self.ShowInfoOrder = range(len(header))
 
@@ -894,6 +907,93 @@ Time Spent:
 					lcomm2 = np.append(lcomm2,lcomm[i])
 
 		return lcomm #np.unique(lcomm2)
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+	def HideCB(self):
+		if self.ui.coomentBarWidget.isHidden():
+			self.ui.coomentBarWidget.show()
+		else:
+			self.ui.coomentBarWidget.hide()
+
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+	def tableItemSelected(self,index):
+
+		if self.currentSelectedItem == 0:
+			self.currentSelectedItem = index
+			text = self.ui.tableDB.model().getData(index.row(),0)
+			if type(text) == type(QtCore.QVariant()):
+				text = text.toString()
+			self.ui.lineFrameComment.setText(text)		
+			return 0		
+		elif self.currentSelectedItem.row() == index.row():
+			return -1
+		else:
+			self.currentSelectedItem = index
+			text = self.ui.tableDB.model().getData(index.row(),0)
+			if type(text) == type(QtCore.QVariant()):
+				text = text.toString()
+			self.ui.lineFrameComment.setText(text)		
+			return 0
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+
+	def commitComment(self):
+		text = self.ui.lineFrameComment.text()
+		index = self.currentSelectedItem.child(self.currentSelectedItem.row(),0)
+		#print index.row(),index.column()
+
+		#print text
+		self.ui.tableDB.model().setData(index,text,QtCore.Qt.EditRole)
+#
+#
+################################################################################################
+			
+################################################################################################
+#
+#
+	def displaySelected(self,index):
+		
+		query = self.session_CID.query(self.Obj_CID).filter(self.Obj_CID.id == index.row())[0]
+		
+		frame = query.FILENAME
+		
+		if os.path.isfile(frame):
+		
+#			try:
+			if query.INSTRUME == 'SOI':
+				mscred.mscdisplay(frame,1)
+				return 0
+			elif query.INSTRUME == 'Spartan IR Camera':
+				display(frame,1)
+				return 0					
+			else:
+				display(frame,1)
+				return 0
+#			except:
+#				print 'Could not display file'
+#				pass
+		
+			return 0
+		else:
+			print 'File {0} does not exists...'.format(frame)
+			return -1
+							
 #
 #
 ################################################################################################
