@@ -339,6 +339,7 @@ class soarDB():
 		#self.wake.wait()
 		
 		#ff = ''
+		last = ''
 		while not self.Queue.empty():
 			
 			ff = self.Queue.get()
@@ -350,9 +351,9 @@ class soarDB():
 				print 'nothing to do'
 			else:
 				self.updateTable(info)
-				
+				last = ff
 		
-		self.reloadTable()
+		self.reloadTable(last)
 		
 		#self.wake.clear()
 		

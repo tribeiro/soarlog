@@ -31,14 +31,16 @@ from dbComF import *
 
 import time
 
-try:
-	from pyraf.iraf import set as IrafSet
-	from pyraf.iraf import display
-	from pyraf.iraf import mscred
-	from pyraf.irafglobals import IrafError
-	IrafSet(stdimage='imt4096')
-except:
-	pass
+import ds9 
+
+#try:
+#	from pyraf.iraf import set as IrafSet
+#	from pyraf.iraf import display
+#	from pyraf.iraf import mscred
+#	from pyraf.irafglobals import IrafError
+#	IrafSet(stdimage='imt4096')
+#except:
+#	pass
 
 uipath = os.path.dirname(__file__)
 
@@ -115,7 +117,7 @@ class SoarLog(QtGui.QMainWindow):
 	def AddSelectFrame(self):
 		
 		fn = QtGui.QFileDialog.getOpenFileName(self, 'Open file',self.dir)
-		self.Queue.put(fn)
+		self.Queue.put(str(fn))
 		self.runQueue()
 		
 		#self.AddFrame(fn)
@@ -144,13 +146,13 @@ class SoarLog(QtGui.QMainWindow):
 ################################################################################################
 #
 #
-	def reloadTable(self):
+	def reloadTable(self,frame):
 
 		print 'Signal Captured'
 							
 		#self.runQueue()
 		
-		data = self.getTableData()
+		#data = self.getTableData()
 		
 		#tm = SOLogTableModel(data,self.header_CID + databaseF.frame_infos.ExtraTableHeaders,self, commitDB=self.emmitTableDataChanged)
 		
@@ -159,27 +161,45 @@ class SoarLog(QtGui.QMainWindow):
 		#self.tm.insertRow(self.tm.rowCount(None),self.tm.rowCount(None))
 		
 		#data = self.tm.arraydata
-		
-		if self.DLF:
-			print data[-1][self.header_CID.index('FILENAME')]
-			try:
-				if data[-1][self.header_CID.index('INSTRUME')] == 'SOI':
-					mscred.mscdisplay(data[-1][self.header_CID.index('FILENAME')]+'.fits',1)
-				
-				elif data[-1][self.header_CID.index('INSTRUME')] == 'Spartan IR Camera':
-				
-					if data[-1][self.header_CID.index('FILENAME')].find('d3') > 0:
-						display(data[-1][self.header_CID.index('FILENAME')]+'.fits',1)
-				
-				else:
-					display(data[-1][self.header_CID.index('FILENAME')]+'.fits',1)
-			except:
-				print 'Could not display file'
-				pass
 
 		if self.GTLF: #self.ui.actionGot_to_last_frame:
 			scrollBar = self.ui.tableDB.verticalScrollBar();
 			scrollBar.setValue(scrollBar.maximum());
+		
+		if self.DLF and frame != -1:
+			d = None
+			_targets = ds9.ds9_targets()
+		
+			# Check if ds9 is opened
+			if len(_targets) == 0:
+				d = ds9.ds9()
+			else: 
+				d = ds9.ds9(_targets[0])
+		
+			if os.path.isfile(frame):
+			
+				query = self.session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME == frame)[0]
+				try:
+					if query.INSTRUME == 'SOI':
+					#mscred.mscdisplay(frame,1)
+						d.set('file mosaicimage iraf {0}'.format(frame))
+						return 0
+					elif query.INSTRUME == 'Spartan IR Camera':
+						d.set('file {0}'.format(frame))
+						return 0					
+					else:
+						d.set('file {0}'.format(frame))
+						#display(frame,1)
+						return 0
+				except:
+					print 'Could not display file {0}'.format(frame)
+					return -1
+			
+				return 0
+			else:
+				print 'File {0} does not exists...'.format(frame)
+				return -1
+
 
 #
 #
@@ -233,8 +253,8 @@ class SoarLog(QtGui.QMainWindow):
 		self.connect(self.ui.actionDisplay_last_frame, QtCore.SIGNAL('triggered()'), self.ChangeDLF)	
 		self.connect(self.ui.actionSave_Log,QtCore.SIGNAL('triggered()'), self.SaveLog)
 		self.connect(self.ui.actionPreferences,QtCore.SIGNAL('triggered()'),self.OpenPreferences)
-		#self.connect(self, QtCore.SIGNAL('reloadTableEvent(char*)'), self.reloadTable)
-		self.connect(self, QtCore.SIGNAL('reloadTableEvent()'), self.reloadTable)
+		self.connect(self, QtCore.SIGNAL('reloadTableEvent(char*)'), self.reloadTable)
+		#self.connect(self, QtCore.SIGNAL('reloadTableEvent()'), self.reloadTable)
 		self.connect(self, QtCore.SIGNAL('runQueueEvent()'), self.runQueue)
 		self.connect(self, QtCore.SIGNAL('TableDataChanged(QModelIndex,QString)'), self.CommitDBTable)
 		#self.connect(self, QtCore.SIGNAL("dataChanged(QModelIndex,QModelIndex)"), self.CommitDBTable)
@@ -519,9 +539,9 @@ class SoarLog(QtGui.QMainWindow):
 ################################################################################################
 #
 #
-	def emmitReloadTableEvent(self):
-		#self.emit(QtCore.SIGNAL("reloadTableEvent(char*)"),file)    
-		self.emit(QtCore.SIGNAL("reloadTableEvent()"))    
+	def emmitReloadTableEvent(self,file):
+		self.emit(QtCore.SIGNAL("reloadTableEvent(char*)"),file)    
+		#self.emit(QtCore.SIGNAL("reloadTableEvent()"))    
 
 #
 #
@@ -969,25 +989,38 @@ Time Spent:
 #
 	def displaySelected(self,index):
 		
-		query = self.session_CID.query(self.Obj_CID).filter(self.Obj_CID.id == index.row())[0]
-		
+		query = self.session_CID.query(self.Obj_CID).filter(self.Obj_CID.id == index.row()+1)[0]
+
 		frame = query.FILENAME
+
+		print index.row(),frame
+		
+		d = None
+		_targets = ds9.ds9_targets()
+		
+		# Check if ds9 is opened
+		if len(_targets) == 0:
+			d = ds9.ds9()
+		else: 
+			d = ds9.ds9(_targets[0])
 		
 		if os.path.isfile(frame):
 		
-#			try:
-			if query.INSTRUME == 'SOI':
-				mscred.mscdisplay(frame,1)
-				return 0
-			elif query.INSTRUME == 'Spartan IR Camera':
-				display(frame,1)
-				return 0					
-			else:
-				display(frame,1)
-				return 0
-#			except:
-#				print 'Could not display file'
-#				pass
+			try:
+				if query.INSTRUME == 'SOI':
+					#mscred.mscdisplay(frame,1)
+					d.set('file mosaicimage iraf {0}'.format(frame))
+					return 0
+				elif query.INSTRUME == 'Spartan IR Camera':
+					d.set('file {0}'.format(frame))
+					return 0					
+				else:
+					d.set('file {0}'.format(frame))
+					#display(frame,1)
+					return 0
+			except:
+				print 'Could not display file {0}'.format(frame)
+				return -1
 		
 			return 0
 		else:
