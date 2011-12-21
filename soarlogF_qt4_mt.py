@@ -306,18 +306,18 @@ class SoarLog(QtGui.QMainWindow):
 
 		self.OrderInfoDict = {}
 		
-#		try :
-		SavedInfoOrder = np.loadtxt(os.path.join(self._CFGFilePath_,self._CFGFiles_['OrderInfo']),dtype='int',unpack=True)
-		ssort = SavedInfoOrder[1].argsort()
-		SavedInfoOrder[0] = SavedInfoOrder[0][ssort]
-		SavedInfoOrder[1] = SavedInfoOrder[1][ssort]
-		for i in range(len(SavedInfoOrder[0])):
-			self.MoveColumn( (SavedInfoOrder[0][i],SavedInfoOrder[1][i]))
-			print SavedInfoOrder[0][i],' --> ',SavedInfoOrder[1][i]
+		try :
+			SavedInfoOrder = np.loadtxt(os.path.join(self._CFGFilePath_,self._CFGFiles_['OrderInfo']),dtype='int',unpack=True)
+			ssort = SavedInfoOrder[1].argsort()
+			SavedInfoOrder[0] = SavedInfoOrder[0][ssort]
+			SavedInfoOrder[1] = SavedInfoOrder[1][ssort]
+			for i in range(len(SavedInfoOrder[0])):
+				self.MoveColumn( (SavedInfoOrder[0][i],SavedInfoOrder[1][i]))
+				print SavedInfoOrder[0][i],' --> ',SavedInfoOrder[1][i]
 		
 				
-#		except:
-#			pass
+		except:
+			pass
 			
 
 		print self.OrderInfoDict
@@ -605,6 +605,34 @@ class SoarLog(QtGui.QMainWindow):
 #
 #
 ################################################################################################
+
+	def getProjects(self):
+		
+		fnames = np.array([ os.path.basename(str(ff.FILENAME)) for ff in query])
+		
+		for ff in range(len(fnames)):
+			id01 = fnames[ff].find('SO')
+			id02 = fnames[ff][id01:].find('_')
+			fnames[ff] = fnames[ff][id01:id01+id02]
+		
+		proj_id = np.unique(fnames)
+		
+		mask = np.array([len(proj_id[i]) > 0 for i in range(len(proj_id))])
+		
+		proj_id = proj_id[mask]
+		proj_id2 = proj_id
+		
+		for i in range(len(proj_id)):
+			id01 = proj_id[i].find('-')
+			proj_id[i] = proj_id[i][id01+1:]
+
+		nframes = []
+		for i in range(len(proj_id2)):
+			query = self.session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+proj_id2[i]+'%'))[:]
+			nframes.append(len(query))
+
+		return proj_id,proj_id2,nframes
+
 
 ################################################################################################
 #
