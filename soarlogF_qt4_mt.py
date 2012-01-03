@@ -95,7 +95,11 @@ class SoarLog(QtGui.QMainWindow):
 		self.header_dict = { 'OSIRIS' : databaseF.frame_infos.OSIRIS_ID.keys(),\
 							 'Goodman Spectrograph' : databaseF.frame_infos.GOODMAN_ID.keys() ,\
 							  'SOI' : databaseF.frame_infos.SOI_ID.keys()}
-		self.__WeatherComments__ = "No info available\n"
+		self.__FileWeatherComments__ = '.weatherComments.txt'
+		if not os.path.isfile(self.__FileWeatherComments__):
+			_file = open(self.__FileWeatherComments__,'w')
+			_file.write("No info available\n")
+		#self.__WeatherComments__ = "No info available\n"
 
 		self.currentSelectedItem = 0 #QtCore.QModelIndex()
 
@@ -569,8 +573,9 @@ class SoarLog(QtGui.QMainWindow):
                       WEATHER CONDITIONS
 ===============================================================
 '''
-		
-		return comments+self.__WeatherComments__+'\n'
+		_file = open(self.__FileWeatherComments__,'r')
+
+		return comments+_file.read()+'\n'
 #
 #
 ################################################################################################
@@ -581,10 +586,14 @@ class SoarLog(QtGui.QMainWindow):
 	def promptWeatherComment(self):
 		
 		winfo = WeatherInfo()
-		winfo.wi_ui.weatherInfo.setPlainText(self.__WeatherComments__)
+		_file = open(self.__FileWeatherComments__,'r')
+		winfo.wi_ui.weatherInfo.setPlainText(_file.read())
+		_file.close()
 		
 		if winfo.exec_():
-			self.__WeatherComments__ = winfo.wi_ui.weatherInfo.toPlainText()
+			_file = open(self.__FileWeatherComments__,'w')
+			_file.write(winfo.wi_ui.weatherInfo.toPlainText())
+			_file.close()
 	
 	
 		return 0
@@ -608,6 +617,7 @@ class SoarLog(QtGui.QMainWindow):
 
 	def getProjects(self):
 		
+		query = self.session_CID.query(self.Obj_CID).filter(self.Obj_CID.IMAGETYP.like('OBJECT'))[:]
 		fnames = np.array([ os.path.basename(str(ff.FILENAME)) for ff in query])
 		
 		for ff in range(len(fnames)):
@@ -1068,6 +1078,43 @@ Time Spent:
 
 		dataQuality_ui = DataQualityUI()
 		
+		projInfo = self.getProjects()
+		model = QtGui.QStandardItemModel()
+		# generate test data for the example here...
+
+		prj = np.append(projInfo[0],['all','Calibration'])
+		
+		for i in range(len(prj)):
+			parentItem = model.invisibleRootItem()
+			item = QtGui.QStandardItem(QtGui.QIcon(":/trolltech/styles/commonstyle/images/parentdir-32.png"), QtCore.QString(prj[i]+'/'))
+			parentItem.appendRow(item)
+			parentItem = item
+			query = None
+			if i < len(prj)-2:
+				query = self.session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+prj[i]+'%'))[:]
+				item = QtGui.QStandardItem(QtGui.QIcon(":/trolltech/styles/commonstyle/images/parentdir-32.png"), 
+										   QtCore.QString('Calibration/'))				
+				parentItem.appendRow(item)
+			
+			elif i == len(prj)-2:
+				query = self.session_CID.query(self.Obj_CID)[:]
+			else:
+				query = self.session_CID.query(self.Obj_CID).filter(self.Obj_CID.IMAGETYP != 'OBJECT')[:]
+		
+			for j in range(len(query)):
+				item = QtGui.QStandardItem(QtGui.QIcon(":/trolltech/styles/commonstyle/images/file-32.png"), 
+										   QtCore.QString(os.path.basename(query[j].FILENAME)))
+				parentItem.appendRow(item)
+
+		#self.setAnimated(True)
+
+		#model.setRootPath('/')
+		dataQuality_ui.dq_ui.columnDQ.setModel(model)
+		dataQuality_ui.dq_ui.columnDQ.setDragDropMode(QtGui.QAbstractItemView.DragDrop)
+
+		#label = QtGui.QLabel('HELLO')
+		#dataQuality_ui.dq_ui.columnDQ.setPreviewWidget(label)
+
 		dataQuality_ui.show()
 		
 		dataQuality_ui.exec_()
