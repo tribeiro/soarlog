@@ -181,25 +181,32 @@ class SoarLog(QtGui.QMainWindow):
 				d = ds9.ds9(_targets[0])
 		
 			if os.path.isfile(frame):
+				regions = d.get('regions')
+				_file = open('/tmp/ds9.reg','w')
+				_file.write(regions)
+				_file.close()
 			
 				query = self.session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME == frame)[0]
-				#try:
-				if query.INSTRUME == 'SOI':
+				try:
+					if query.INSTRUME == 'SOI':
 					#mscred.mscdisplay(frame,1)
-					d.set('file mosaicimage iraf {0}'.format(frame))
-					return 0
-				elif query.INSTRUME == 'Spartan IR Camera':
-					query2 = self.session_CID.query(self.SPARTAN_Obj).filter(self.SPARTAN_Obj.FILENAME.like(frame))[0]
-					if query2.DETSERNO == '66':
+						d.set('file mosaicimage iraf {0}'.format(frame))
+						d.set('regions /tmp/ds9.reg')
+						return 0
+					elif query.INSTRUME == 'Spartan IR Camera':
+						query2 = self.session_CID.query(self.SPARTAN_Obj).filter(self.SPARTAN_Obj.FILENAME.like(frame))[0]
+						if query2.DETSERNO == '66':
+							d.set('file {0}'.format(frame))
+							d.set('regions /tmp/ds9.reg')
+							return 0					
+					else:
 						d.set('file {0}'.format(frame))
-					return 0					
-				else:
-					d.set('file {0}'.format(frame))
-					#display(frame,1)
-					return 0
-				#except:
-					#print 'Could not display file {0}'.format(frame)
-					#return -1
+						d.set('regions /tmp/ds9.reg')
+						#display(frame,1)
+						return 0
+				except:
+					print 'Could not display file {0}'.format(frame)
+					return -1
 			
 				return 0
 			else:
@@ -1039,23 +1046,31 @@ Time Spent:
 		_targets = ds9.ds9_targets()
 		
 		# Check if ds9 is opened
+
 		if len(_targets) == 0:
 			d = ds9.ds9()
 		else: 
 			d = ds9.ds9(_targets[0])
 		
 		if os.path.isfile(frame):
-		
+			regions = d.get('regions')
+			_file = open('/tmp/ds9.reg','w')
+			_file.write(regions)
+			_file.close()
+
 			try:
 				if query.INSTRUME == 'SOI':
 					#mscred.mscdisplay(frame,1)
 					d.set('file mosaicimage iraf {0}'.format(frame))
+					d.set('regions /tmp/ds9.reg')
 					return 0
 				elif query.INSTRUME == 'Spartan IR Camera':
 					d.set('file {0}'.format(frame))
+					d.set('regions /tmp/ds9.reg')					
 					return 0					
 				else:
 					d.set('file {0}'.format(frame))
+					d.set('regions /tmp/ds9.reg')
 					#display(frame,1)
 					return 0
 			except:

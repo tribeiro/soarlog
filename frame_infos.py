@@ -583,13 +583,14 @@ def GetFrameInfos(filename):
 		#	FExists = True
 
 	except IOError:
-		print filename
+		print '[FAILED - IOError]: ',filename
 		return -1 # Could not read file for some reason
 
 	try:
 		hdulist.verify('fix')
 	except:
-		pass
+		print '[FAILED - verify]: ',filename
+		pass #return -1
 
 	hdr = hdulist[0].header
 
