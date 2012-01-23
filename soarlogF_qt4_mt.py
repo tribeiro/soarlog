@@ -76,7 +76,8 @@ class SoarLog(QtGui.QMainWindow):
 		
 		self._CFGFiles_ = { 'OrderInfo' : 'orderInfo.txt'	,\
 							'ShowInfo' : 'showPar.txt'		,\
-							'LogHeader' : 'logheader.txt'	}
+							'LogHeader' : 'logheader.txt'	,\
+							'ColumnWidth' : 'colwidth.txt'}
 		
 	#
 	#
@@ -175,14 +176,14 @@ class SoarLog(QtGui.QMainWindow):
 			_targets = ds9.ds9_targets()
 		
 			# Check if ds9 is opened
-			if len(_targets) == 0:
+			if not _targets == 0:
 				d = ds9.ds9()
 			else: 
 				d = ds9.ds9(_targets[0])
 		
 			if os.path.isfile(frame):
 				regions = d.get('regions')
-				_file = open('/tmp/ds9.reg','w')
+				_file = open(os.path.join(self._CFGFilePath_,'ds9.reg'),'w')
 				_file.write(regions)
 				_file.close()
 			
@@ -191,17 +192,17 @@ class SoarLog(QtGui.QMainWindow):
 					if query.INSTRUME == 'SOI':
 					#mscred.mscdisplay(frame,1)
 						d.set('file mosaicimage iraf {0}'.format(frame))
-						d.set('regions /tmp/ds9.reg')
+						d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
 						return 0
 					elif query.INSTRUME == 'Spartan IR Camera':
 						query2 = self.session_CID.query(self.SPARTAN_Obj).filter(self.SPARTAN_Obj.FILENAME.like(frame))[0]
 						if query2.DETSERNO == '66':
 							d.set('file {0}'.format(frame))
-							d.set('regions /tmp/ds9.reg')
+							d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
 							return 0					
 					else:
 						d.set('file {0}'.format(frame))
-						d.set('regions /tmp/ds9.reg')
+						d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
 						#display(frame,1)
 						return 0
 				except:
@@ -279,8 +280,11 @@ class SoarLog(QtGui.QMainWindow):
 		self.connect(self.ui.addFrameComment, QtCore.SIGNAL('clicked()'),self.commitComment)
 		
 		self.connect(self.ui.tableDB,QtCore.SIGNAL("clicked(const QModelIndex&)"), self.tableItemSelected)
+		self.connect(self.ui.tableDB,QtCore.SIGNAL("selectionChanged(const QItemSelection&, const QItemSelection&)"), self.tableItemSelected)
+		
 		self.connect(self.ui.tableDB,QtCore.SIGNAL("doubleClicked(const QModelIndex&)"), self.displaySelected)
-
+		#self.connect(self.ui.tableDB,QtCore.SIGNAL("columnResized()"), self.saveColumnWidth)
+		
 		self.connect(self.ui.lineFrameComment,QtCore.SIGNAL('returnPressed()'),self.commitComment)
 					 
 		header = databaseF.frame_infos.CID.keys() + databaseF.frame_infos.ExtraTableHeaders
@@ -333,7 +337,16 @@ class SoarLog(QtGui.QMainWindow):
 
 		print self.OrderInfoDict
 
+		#
+		# Load Column Width
+		#
+		colWidth = []
+		if os.path.isfile(os.path.join(self._CFGFilePath_,self._CFGFiles_['ColumnWidth'])):
+			colWidth = np.loadtxt(os.path.join(self._CFGFilePath_,self._CFGFiles_['ColumnWidth']),dtype='int',unpack=True)
 
+		for i in range(len(colWidth)):
+			if colWidth[i] > 0:
+				self.ui.tableDB.setColumnWidth(i,colWidth[i])
 		
 	#
 	#	
@@ -372,7 +385,25 @@ class SoarLog(QtGui.QMainWindow):
 				if not pref_ui.listVis.isRowHidden(i):
 					self.ui.tableDB.showColumn(i)
 				if not pref_ui.listHide.isRowHidden(i):
-					self.ui.tableDB.hideColumn(i)				
+					self.ui.tableDB.hideColumn(i)	
+
+#
+# Save changes
+#
+
+			if len(self.OrderInfoDict.keys()) > 0:
+				np.savetxt(os.path.join(self._CFGFilePath_,self._CFGFiles_['OrderInfo']),zip(self.OrderInfoDict.keys(),self.OrderInfoDict.values()),fmt='%i %i')		
+
+			file = open(os.path.join(self._CFGFilePath_,self._CFGFiles_['ShowInfo']),'w')
+
+			tbHeader = self.header_CID + databaseF.frame_infos.ExtraTableHeaders
+
+			for i in range(len(tbHeader)):
+				if self.ui.tableDB.isColumnHidden(i):
+					file.write('%i\n' % i)
+
+			file.close()
+
 			
 
 		else:
@@ -490,6 +521,8 @@ class SoarLog(QtGui.QMainWindow):
 
 		file.close()
 		
+		self.saveColumnWidth()
+		
 		sys.exit(0)
 
 #
@@ -534,6 +567,25 @@ class SoarLog(QtGui.QMainWindow):
 			# Internally, 'handler' is a callable object which on new events will be called like this: handler(new_event)
 			#print self.dir
 			wdd = wm.add_watch(self.dir, mask, rec=True)
+
+#
+#
+################################################################################################
+
+
+################################################################################################
+#
+#
+	def saveColumnWidth(self):
+		
+		tbHeader = self.header_CID + databaseF.frame_infos.ExtraTableHeaders
+		colWidth = np.zeros(len(tbHeader))	
+		for i in range(len(tbHeader)):
+			colWidth[i] = self.ui.tableDB.columnWidth(i)
+			print self.ui.tableDB.columnWidth(i)
+		np.savetxt(os.path.join(self._CFGFilePath_,self._CFGFiles_['ColumnWidth']),X=colWidth,fmt='%f')
+
+		return 0
 
 #
 #
@@ -996,22 +1048,35 @@ Time Spent:
 #
 	def tableItemSelected(self,index):
 
-		if self.currentSelectedItem == 0:
-			self.currentSelectedItem = index
-			text = self.ui.tableDB.model().getData(index.row(),0)
-			if type(text) == type(QtCore.QVariant()):
-				text = text.toString()
-			self.ui.lineFrameComment.setText(text)		
-			return 0		
-		elif self.currentSelectedItem.row() == index.row():
-			return -1
-		else:
+		print 'tableItemSelected'
+		
+		try:
+			if self.currentSelectedItem == 0:
+				self.currentSelectedItem = index
+				text = self.ui.tableDB.model().getData(index.row(),0)
+				if type(text) == type(QtCore.QVariant()):
+					text = text.toString()
+				self.ui.lineFrameComment.setText(text)		
+				return 0		
+			elif self.currentSelectedItem.row() == index.row():
+				print 'Same row'
+				return -1
+			else:
+				print 'Different row'
+				self.currentSelectedItem = index
+				text = self.ui.tableDB.model().getData(index.row(),0)
+				if type(text) == type(QtCore.QVariant()):
+					text = text.toString()
+				self.ui.lineFrameComment.setText(text)		
+				return 0
+		except:
 			self.currentSelectedItem = index
 			text = self.ui.tableDB.model().getData(index.row(),0)
 			if type(text) == type(QtCore.QVariant()):
 				text = text.toString()
 			self.ui.lineFrameComment.setText(text)		
 			return 0
+
 #
 #
 ################################################################################################
@@ -1047,14 +1112,14 @@ Time Spent:
 		
 		# Check if ds9 is opened
 
-		if len(_targets) == 0:
+		if not _targets == 0:
 			d = ds9.ds9()
 		else: 
 			d = ds9.ds9(_targets[0])
 		
 		if os.path.isfile(frame):
 			regions = d.get('regions')
-			_file = open('/tmp/ds9.reg','w')
+			_file = open(os.path.join(self._CFGFilePath_,'ds9.reg'),'w')
 			_file.write(regions)
 			_file.close()
 
@@ -1062,15 +1127,15 @@ Time Spent:
 				if query.INSTRUME == 'SOI':
 					#mscred.mscdisplay(frame,1)
 					d.set('file mosaicimage iraf {0}'.format(frame))
-					d.set('regions /tmp/ds9.reg')
+					d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
 					return 0
 				elif query.INSTRUME == 'Spartan IR Camera':
 					d.set('file {0}'.format(frame))
-					d.set('regions /tmp/ds9.reg')					
+					d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
 					return 0					
 				else:
 					d.set('file {0}'.format(frame))
-					d.set('regions /tmp/ds9.reg')
+					d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
 					#display(frame,1)
 					return 0
 			except:
