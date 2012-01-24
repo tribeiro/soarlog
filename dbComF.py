@@ -384,7 +384,7 @@ class soarDB():
 			# Pego infos Comuns
 			#
 			for info_id in np.array(self.header_CID):
-
+				info = ''
 				cmd = 'info = queryRes.%s' % (info_id)
 				try:
 					exec cmd
@@ -393,16 +393,24 @@ class soarDB():
 					info = ''
 					pass
 				
-				if info_id == 'FILENAME':
+				if info_id == 'FILENAME' and info:
 					info = os.path.basename(info).split('.fits')[0]
 
 				indata.append(str(info))
+			print '>>>',len(indata),
 			#
 			# Pego infos de instrumento
 			#
 			inst = queryRes.INSTRUME
 			
-			queryInstrument = session.query(self.obj_dict[inst]).filter(self.obj_dict[inst].FILENAME == queryRes.FILENAME)[:]
+			queryInstrument = []
+					
+			try:
+				queryInstrument = session.query(self.obj_dict[inst]).filter(self.obj_dict[inst].FILENAME == queryRes.FILENAME)[:]
+					
+			except:
+				
+				pass
 
 			if len(queryInstrument) > 0:
 				queryInstrument = queryInstrument[0]
@@ -433,7 +441,8 @@ class soarDB():
 				
 					indata.append(str(info))
 			else:
-				indata.append([' ']*len(databaseF.frame_infos.ExtraTableHeaders))
+				for i in range(len(databaseF.frame_infos.ExtraTableHeaders)):
+					indata.append([' '])
 			
 			data.append(indata)
 		
@@ -460,11 +469,11 @@ class soarDB():
 		
 		OLD_NOTES = editFrame.OBSNOTES
 		
-		print '---------------'
-		print OLD_NOTES
-		print '---------------'
-		print OBSNOTES
-		print '---------------'		
+		#print '---------------'
+		#print OLD_NOTES
+		#print '---------------'
+		#print OBSNOTES
+		#print '---------------'		
 		
 		editFrame.OBSNOTES = '%s' % OBSNOTES
 		session.commit()

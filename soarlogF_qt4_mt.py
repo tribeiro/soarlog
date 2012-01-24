@@ -245,6 +245,8 @@ class SoarLog(QtGui.QMainWindow):
 		self.tm = SOLogTableModel(self.getTableData(), self.header_CID + databaseF.frame_infos.ExtraTableHeaders,self ,commitDB=self.emmitTableDataChanged)
 		
 		self.ui.tableDB.setModel(self.tm)
+		self.ui.tableDB.keyPressEvent = self.handleKeyEvent
+		self.ui.tableDB.setSelectionMode(self.ui.tableDB.SingleSelection)
 		
 		font = QtGui.QFont("Courier New", 8)
 		self.ui.tableDB.setFont(font)
@@ -273,6 +275,7 @@ class SoarLog(QtGui.QMainWindow):
 		self.connect(self, QtCore.SIGNAL('TableDataChanged(QModelIndex,QString)'), self.CommitDBTable)
 		#self.connect(self, QtCore.SIGNAL("dataChanged(QModelIndex,QModelIndex)"), self.CommitDBTable)
 
+		self.connect(self.ui.actionAddComment, QtCore.SIGNAL('triggered()'),self.addCommentLine)
 		self.connect(self.ui.actionDQ, QtCore.SIGNAL('triggered()'),self.startDataQuality)
 		self.connect(self.ui.actionWI, QtCore.SIGNAL('triggered()'),self.promptWeatherComment)
 		self.connect(self.ui.actionHideCB, QtCore.SIGNAL('triggered()'),self.HideCB)
@@ -1048,7 +1051,7 @@ Time Spent:
 #
 	def tableItemSelected(self,index):
 
-		print 'tableItemSelected'
+		#print 'tableItemSelected'
 		
 		try:
 			if self.currentSelectedItem == 0:
@@ -1059,10 +1062,8 @@ Time Spent:
 				self.ui.lineFrameComment.setText(text)		
 				return 0		
 			elif self.currentSelectedItem.row() == index.row():
-				print 'Same row'
 				return -1
 			else:
-				print 'Different row'
 				self.currentSelectedItem = index
 				text = self.ui.tableDB.model().getData(index.row(),0)
 				if type(text) == type(QtCore.QVariant()):
@@ -1198,6 +1199,58 @@ Time Spent:
 		dataQuality_ui.show()
 		
 		dataQuality_ui.exec_()
+
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+
+	def handleKeyEvent(self,event):
+		
+		self.commitComment()
+		
+		rr = QtGui.QTableWidget.keyPressEvent(self.ui.tableDB, event)
+		
+		if event.key() == QtCore.Qt.Key_Down or event.key() == QtCore.Qt.Key_Up or event.key() == QtCore.Qt.Key_Right or event.key() == QtCore.Qt.Key_Left:
+			
+			self.tableItemSelected(self.ui.tableDB.selectedIndexes()[0])
+		
+		return rr
+		
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+	def addCommentLine(self):
+
+		session = self.session_CID
+		
+		finfos = {}
+		for hdr in databaseF.frame_infos.CID.keys():
+			finfos[hdr] = ''
+		
+		finfos['TIMEOBS'] = time.ctime().split(' ')[3]
+		finfos['INSTRUME'] = 'NOTE'
+		finfos['OBJECT'] = 'NOTE'
+		finfos['EXPTIME'] = 0.0
+		finfos['AIRMASS'] = -1.0
+
+		entry = self.Obj_CID(**finfos)
+		session.add(entry)
+		session.commit()
+
+		infos = [' ']*len(finfos)
+		for i in range(len(self.header_CID)):
+			infos[i] = finfos[self.header_CID[i]]
+
+		self.updateTable(infos)
+		self.emmitReloadTableEvent('Note')
 
 #
 #

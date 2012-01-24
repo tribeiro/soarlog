@@ -67,6 +67,7 @@
     <addaction name="actionPreferences"/>
     <addaction name="actionDQ"/>
     <addaction name="actionWI"/>
+    <addaction name="actionAddComment"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -131,6 +132,11 @@
   <action name="actionHideCB">
    <property name="text">
     <string>Show/Hide Comment Bar</string>
+   </property>
+  </action>
+  <action name="actionAddComment">
+   <property name="text">
+    <string>Add Comment</string>
    </property>
   </action>
  </widget>
