@@ -713,12 +713,16 @@ class SoarLog(QtGui.QMainWindow):
 	
 		query = self.session_CID.query(self.Obj_CID).filter(self.Obj_CID.IMAGETYP.like('OBJECT'))[:]
 		
-		log = '''
+		logFRAME = '''
 {time}LT File:\t{FILENAME}
 \tOBJECT: {OBJECT} 
 \tNotes: {OBSNOTES}
 \tX={AIRMASS} Exptime:{EXPTIME} s sm= {SEEING}
 '''
+		logNOTE = '''
+{time}LT Notes: {OBSNOTES}
+'''
+
 		outlog = ''
 		
 		#
@@ -819,7 +823,7 @@ Time Spent:
 
 				frame = query[sort[itr]]
 				time = frame.TIMEOBS
-				
+				log = logFRAME
 				writeFlag = True
 				frame2 = None
 				if frame.INSTRUME == 'Spartan IR Camera':
@@ -836,6 +840,8 @@ Time Spent:
 				if hrs < 0:
 					hrs += 23
 				time = '%02i:%02i' % (hrs,int(time[1]))
+				if frame.INSTRUME == 'NOTE':
+					log = logNOTE
 				if writeFlag:
 					outlog += log.format(time=time, FILENAME = os.path.basename(frame.FILENAME), OBJECT = frame.OBJECT, OBSNOTES = frame.OBSNOTES ,\
 										 AIRMASS = frame.AIRMASS, EXPTIME = frame.EXPTIME, SEEING = frame.SEEING)
@@ -1234,7 +1240,9 @@ Time Spent:
 		finfos = {}
 		for hdr in databaseF.frame_infos.CID.keys():
 			finfos[hdr] = ''
-		
+
+		print self.session_CID.query(self.Obj_CID.FILENAME)[-1][0]
+		finfos['FILENAME'] = os.path.basename(self.session_CID.query(self.Obj_CID.FILENAME)[-1][0]).replace('.fits','.note')
 		finfos['TIMEOBS'] = time.ctime().split(' ')[3]
 		finfos['INSTRUME'] = 'NOTE'
 		finfos['OBJECT'] = 'NOTE'
