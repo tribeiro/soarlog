@@ -250,6 +250,7 @@ class SoarLog(QtGui.QMainWindow):
 		
 		font = QtGui.QFont("Courier New", 8)
 		self.ui.tableDB.setFont(font)
+		self.ui.tableDB.setAlternatingRowColors(True)
 		#self.ui.tableDB.resizeColumnsToContents()
 		#print self.tm.rowCount(self)
 
@@ -1241,8 +1242,8 @@ Time Spent:
 		for hdr in databaseF.frame_infos.CID.keys():
 			finfos[hdr] = ''
 
-		print self.session_CID.query(self.Obj_CID.FILENAME)[-1][0]
-		finfos['FILENAME'] = os.path.basename(self.session_CID.query(self.Obj_CID.FILENAME)[-1][0]).replace('.fits','.note')
+		fselect = self.session_CID.query(self.Obj_CID.FILENAME)[:]
+		finfos['FILENAME'] = os.path.basename(fselect[-1][0]).replace('.fits','.note')
 		finfos['TIMEOBS'] = time.ctime().split(' ')[3]
 		finfos['INSTRUME'] = 'NOTE'
 		finfos['OBJECT'] = 'NOTE'
