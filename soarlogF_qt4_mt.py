@@ -86,7 +86,7 @@ class SoarLog(QtGui.QMainWindow):
 	
 		self.dir = ''
 		self.logfile = 'SOARLOG_%s.txt'
-		self.dataCalib = '/data/data_calib/2011B/SO2011B-%s.txt'
+		self.dataCalib = '/data/data_calib/2012A/SO2012A-%s.txt'
 		
 		self.AskFile2Watch()
 		
