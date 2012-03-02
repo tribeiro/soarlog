@@ -1244,7 +1244,7 @@ Time Spent:
 
 		fselect = self.session_CID.query(self.Obj_CID.FILENAME)[:]
 		finfos['FILENAME'] = os.path.basename(fselect[-1][0]).replace('.fits','.note')
-		finfos['TIMEOBS'] = time.ctime().split(' ')[3]
+		finfos['TIMEOBS'] = time.ctime().split(' ')[4]
 		finfos['INSTRUME'] = 'NOTE'
 		finfos['OBJECT'] = 'NOTE'
 		finfos['EXPTIME'] = 0.0
