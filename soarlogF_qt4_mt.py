@@ -167,11 +167,11 @@ class SoarLog(QtGui.QMainWindow):
 		
 		#data = self.tm.arraydata
 
-		if self.GTLF: #self.ui.actionGot_to_last_frame:
+		if self.ui.actionGot_to_last_frame.isChecked():
 			scrollBar = self.ui.tableDB.verticalScrollBar();
 			scrollBar.setValue(scrollBar.maximum());
 		
-		if self.DLF and frame != -1:
+		if self.ui.actionDisplay_last_frame.isChecked() and frame != -1:
 			d = None
 			_targets = ds9.ds9_targets()
 		
