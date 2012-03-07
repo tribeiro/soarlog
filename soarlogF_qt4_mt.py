@@ -193,20 +193,24 @@ class SoarLog(QtGui.QMainWindow):
 					#mscred.mscdisplay(frame,1)
 						d.set('file mosaicimage iraf {0}'.format(frame))
 						d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
+						d.set('zoom to fit')
+						d.set('scale mode zscale')
 						return 0
 					elif query.INSTRUME == 'Spartan IR Camera':
 						query2 = self.session_CID.query(self.SPARTAN_Obj).filter(self.SPARTAN_Obj.FILENAME.like(frame))[0]
 						if query2.DETSERNO == '66':
 							d.set('file {0}'.format(frame))
 							d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
+							d.set('zoom to fit')
+							d.set('scale mode zscale')
 							return 0					
 					else:
 						d.set('file {0}'.format(frame))
 						d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
+						d.set('zoom to fit')
+						d.set('scale mode zscale')
 						#display(frame,1)
 						return 0
-					d.set('zoom to fit')
-					d.set('scale mode zscale')
 				except:
 					print 'Could not display file {0}'.format(frame)
 					return -1
@@ -1138,19 +1142,22 @@ Time Spent:
 					#mscred.mscdisplay(frame,1)
 					d.set('file mosaicimage iraf {0}'.format(frame))
 					d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
+					d.set('zoom to fit')
+					d.set('scale mode zscale')
 					return 0
 				elif query.INSTRUME == 'Spartan IR Camera':
 					d.set('file {0}'.format(frame))
 					d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
+					d.set('zoom to fit')
+					d.set('scale mode zscale')
 					return 0					
 				else:
 					d.set('file {0}'.format(frame))
 					d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
 					#display(frame,1)
+					d.set('zoom to fit')
+					d.set('scale mode zscale')
 					return 0
-				d.set('zoom to fit')
-				d.set('scale mode zscale')
-
 			except:
 				print 'Could not display file {0}'.format(frame)
 				return -1
