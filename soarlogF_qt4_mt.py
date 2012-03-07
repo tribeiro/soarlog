@@ -205,6 +205,8 @@ class SoarLog(QtGui.QMainWindow):
 						d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
 						#display(frame,1)
 						return 0
+					d.set('zoom to fit')
+					d.set('scale mode zscale')
 				except:
 					print 'Could not display file {0}'.format(frame)
 					return -1
@@ -1146,6 +1148,9 @@ Time Spent:
 					d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
 					#display(frame,1)
 					return 0
+				d.set('zoom to fit')
+				d.set('scale mode zscale')
+
 			except:
 				print 'Could not display file {0}'.format(frame)
 				return -1
