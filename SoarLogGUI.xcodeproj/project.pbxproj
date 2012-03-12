@@ -23,19 +23,27 @@
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
-		F1EE35A11497E86000B29C95 = {
+		F19485F71509F9D1003098CC /* gui */ = {
 			isa = PBXGroup;
 			children = (
 				F1F70199149A8AFA00E4FD6E /* dataquality.ui */,
 				F1F7019A149A8AFA00E4FD6E /* getweatherinfo.ui */,
+				F1EE35AE1497E8BB00B29C95 /* preferences.ui */,
+				F1EE35B01497E8BB00B29C95 /* soarlog_qt4.ui */,
+			);
+			name = gui;
+			sourceTree = "<group>";
+		};
+		F1EE35A11497E86000B29C95 = {
+			isa = PBXGroup;
+			children = (
+				F19485F71509F9D1003098CC /* gui */,
 				F1EE35B41497E96300B29C95 /* soarlogF_watch.py */,
 				F1EE35AA1497E8BB00B29C95 /* databaseF.py */,
 				F1EE35AB1497E8BB00B29C95 /* dbComF.py */,
 				F1EE35AC1497E8BB00B29C95 /* filehandleF.py */,
 				F1EE35AD1497E8BB00B29C95 /* frame_infos.py */,
-				F1EE35AE1497E8BB00B29C95 /* preferences.ui */,
 				F1EE35AF1497E8BB00B29C95 /* soar_setupF.py */,
-				F1EE35B01497E8BB00B29C95 /* soarlog_qt4.ui */,
 				F1EE35B11497E8BB00B29C95 /* soarlog.py */,
 				F1EE35B21497E8BB00B29C95 /* soarlogF_qt4_mt.py */,
 				F1EE35B31497E8BB00B29C95 /* soarlogF_TableModel.py */,

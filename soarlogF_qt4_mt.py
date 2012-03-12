@@ -824,7 +824,7 @@ Time Spent:
 
 					time[i] = day[i]
 				
-			sort = time.argsort()
+			sort = np.arange(len(time)) #time.argsort()
 		
 			for itr in range(len(query)):
 
@@ -846,6 +846,7 @@ Time Spent:
 					hrs -= 23
 				if hrs < 0:
 					hrs += 23
+				
 				time = '%02i:%02i' % (hrs,int(time[1]))
 				if frame.INSTRUME == 'NOTE':
 					log = logNOTE
@@ -943,13 +944,16 @@ Time Spent:
 #
 	def calcTime(self,id):
 	
-		query = self.session_CID.query(self.Obj_CID.FILENAME,self.Obj_CID.DATEOBS,self.Obj_CID.TIMEOBS).filter(self.Obj_CID.FILENAME.like('%SO%'))[:]
+		query = self.session_CID.query(self.Obj_CID.FILENAME,self.Obj_CID.DATEOBS,self.Obj_CID.TIMEOBS,self.Obj_CID.OBJECT).filter(self.Obj_CID.FILENAME.like('%SO%')).filter(self.Obj_CID.OBJECT != "NOTE")[:]
 		
 		time_end = []
 				
 		fnames = np.array( [ str(ff.FILENAME) for ff in query] )
 		hour = np.array( [ str(ff.TIMEOBS) for ff in query] )
 		day = np.array( [ str(ff.DATEOBS) for ff in query] )
+		obj = np.array( [ str(ff.OBJECT) for ff in query] )
+		
+		print obj 
 		
 		time = np.array( [ day[i]+'T'+hour[i] for i in range(len(hour)) ] )
 		
