@@ -846,8 +846,10 @@ Time Spent:
 					hrs -= 23
 				if hrs < 0:
 					hrs += 23
-				
-				time = '%02i:%02i' % (hrs,int(time[1]))
+				try:
+					time = '%02i:%02i' % (hrs,int(time[1]))
+				except:
+					time = frame.TIMEOBS
 				if frame.INSTRUME == 'NOTE':
 					log = logNOTE
 				if writeFlag:
@@ -1260,7 +1262,7 @@ Time Spent:
 
 		fselect = self.session_CID.query(self.Obj_CID.FILENAME)[:]
 		finfos['FILENAME'] = os.path.basename(fselect[-1][0]).replace('.fits','.note')
-		finfos['TIMEOBS'] = time.ctime().split(' ')[4]
+		finfos['TIMEOBS'] = time.ctime().split(' ')[3]
 		finfos['INSTRUME'] = 'NOTE'
 		finfos['OBJECT'] = 'NOTE'
 		finfos['EXPTIME'] = 0.0
