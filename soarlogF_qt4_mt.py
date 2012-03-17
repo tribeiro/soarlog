@@ -946,7 +946,7 @@ Time Spent:
 #
 	def calcTime(self,id):
 	
-		query = self.session_CID.query(self.Obj_CID.FILENAME,self.Obj_CID.DATEOBS,self.Obj_CID.TIMEOBS,self.Obj_CID.OBJECT).filter(self.Obj_CID.FILENAME.like('%SO%')).filter(self.Obj_CID.OBJECT != "NOTE")[:]
+		query = self.session_CID.query(self.Obj_CID.FILENAME,self.Obj_CID.DATEOBS,self.Obj_CID.TIMEOBS,self.Obj_CID.OBJECT,self.Obj_CID.EXPTIME).filter(self.Obj_CID.FILENAME.like('%SO%')).filter(self.Obj_CID.OBJECT != "NOTE")[:]
 		
 		time_end = []
 				
@@ -954,6 +954,7 @@ Time Spent:
 		hour = np.array( [ str(ff.TIMEOBS) for ff in query] )
 		day = np.array( [ str(ff.DATEOBS) for ff in query] )
 		obj = np.array( [ str(ff.OBJECT) for ff in query] )
+		exptime  = np.array( [ float(ff.EXPTIME) for ff in query] )
 		
 		print obj 
 		
@@ -970,9 +971,9 @@ Time Spent:
 		fnames = fnames[sort]
 		
 		find_proj = np.array( [ i for i in range(len(fnames)) if fnames[i].find('-'+id) > 0] )
-		
-		time_start = np.append([int(find_proj[0])], np.array( [ find_proj[i] for i in range(len(find_proj)-2) if find_proj[i] != find_proj[i+1]-1 ] ) )
-		time_end = np.append( np.array( [ find_proj[i] for i in range(len(find_proj)-2,0,-1) if find_proj[i] != find_proj[i-1]+1 ] ), [int(find_proj[-1])] )
+
+		time_start = np.append([int(find_proj[0])], np.array( [ find_proj[i+1] for i in range(len(find_proj)-2) if find_proj[i] != find_proj[i+1]-1 ] ) )
+		time_end = np.append( np.array( [ find_proj[i] for i in range(len(find_proj)-2) if find_proj[i] != find_proj[i+1]-1 ] ), [int(find_proj[-1])] )
 		#print find_proj
 		
 		time_tmp = np.append(time_start , time_end  )
@@ -987,10 +988,11 @@ Time Spent:
 		
 		calcT = 0
 		try:
-			for i in range(0,len(time_tmp),2):
-		
-				dia_start,hora_start = time[time_tmp[i]].split('T')
-				dia_end,hora_end = time[time_tmp[i+1]].split('T')
+#			for i in range(0,len(time_tmp),2):
+			for i in range(len(time_start)):
+					
+				dia_start,hora_start = time[time_start[i]].split('T')
+				dia_end,hora_end = time[time_end[i]].split('T')
 			
 				ano1,mes1,dia1 = dia_start.split('-')
 				hr1,min1,sec1 = hora_start.split(':')
@@ -1001,9 +1003,10 @@ Time Spent:
 				start = float(ano1)*365.+float(mes1)*30.+float(dia1)+float(hr1)/24.+float(min1)/24./60.
 				end = float(ano2)*365.+float(mes2)*30.+float(dia2)+float(hr2)/24.+float(min2)/24./60.
 			
-				calcT += (end-start)*24.0
-				print start, end, (end-start)*24.0
-			
+				calcT += (end-start)*24.0 + exptime[time_end[i]]/60./60.
+				print start, end, (end-start)*24.0 
+				
+				
 			print id, [ time[i] for i in time_start ], [time[i] for i in time_end], '%02.0f:%02.0f' %( np.floor(calcT), (calcT-np.floor(calcT))*60)
 
 		except:
