@@ -139,7 +139,7 @@ class soarDB():
 		self.metadata.create_all(self.engine)	
 		self.Session = sessionmaker(bind=self.engine)
 
-		self.session_CID = self.Session()
+#		self.session_CID = self.Session()
 
 		self.OSIRIS_Obj = type(databaseF.OSIRIS(**databaseF.frame_infos.OSIRIS_ID))
 		self.GOODMAN_Obj = type(databaseF.GOODMAN(**databaseF.frame_infos.GOODMAN_ID))
@@ -149,25 +149,25 @@ class soarDB():
 
 		mapper(self.OSIRIS_Obj,file_table_OSIRIS)	
 		self.Session_OSIRIS = sessionmaker(bind=self.engine)
-		self.session_OSIRIS = self.Session_OSIRIS()
+#		self.session_OSIRIS = self.Session_OSIRIS()
 
 		mapper(self.SPARTAN_Obj,file_table_SPARTAN)	
 		self.Session_SPARTAN = sessionmaker(bind=self.engine)
-		self.session_SPARTAN = self.Session_SPARTAN()
+#		self.session_SPARTAN = self.Session_SPARTAN()
 
 
 		mapper(self.SBIG_Obj,file_table_SBIG)	
 		self.Session_SBIG = sessionmaker(bind=self.engine)
-		self.session_SBIG = self.Session_SBIG()
+#		self.session_SBIG = self.Session_SBIG()
 
 
 		mapper(self.GOODMAN_Obj,file_table_GOODMAN)	
 		self.Session_GOODMAN = sessionmaker(bind=self.engine)
-		self.session_GOODMAN = self.Session_GOODMAN()
+#		self.session_GOODMAN = self.Session_GOODMAN()
 
 		mapper(self.SOI_Obj,file_table_SOI)	
 		self.Session_SOI = sessionmaker(bind=self.engine)
-		self.session_SOI = self.Session_SOI()
+#		self.session_SOI = self.Session_SOI()
 
 		self.obj_dict = {'OSIRIS' : self.OSIRIS_Obj,\
 		'Goodman Spectrograph' : self.GOODMAN_Obj ,\
@@ -175,11 +175,11 @@ class soarDB():
 		'Spartan IR Camera' : self.SPARTAN_Obj,
 		'SBIG ST-L' : self.SBIG_Obj}
 		
-		self.session_dict = {'OSIRIS' : self.session_OSIRIS,\
-		'Goodman Spectrograph' : self.session_GOODMAN,\
-		'SOI' : self.session_SOI ,\
-		'Spartan IR Camera' : self.session_SPARTAN,
-		'SBIG ST-L' : self.session_SBIG}
+#		self.session_dict = {'OSIRIS' : self.session_OSIRIS,
+#		'Goodman Spectrograph' : self.session_GOODMAN,
+#		'SOI' : self.session_SOI ,
+#		'Spartan IR Camera' : self.session_SPARTAN,
+#		'SBIG ST-L' : self.session_SBIG}
 
 		#
 		# Setup Done

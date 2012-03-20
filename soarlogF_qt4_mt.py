@@ -57,14 +57,17 @@ def LongestCommonSubstring(S1, S2):
             else:
                 M[x][y] = 0
     return S1[x_longest-longest: x_longest]
+
 		
-class SoarLog(QtGui.QMainWindow):
+class SoarLog(QtGui.QMainWindow,soarDB):
 
 
 	def __init__(self,*args):
 	
 		super(SoarLog, self).__init__()
 		self.Queue = args[0]
+		soarDB.__init__(self,self.Queue)
+
 	##########################################################
 	# See if configuration directory exists. Create one 
 	# otherwise.
@@ -152,8 +155,8 @@ class SoarLog(QtGui.QMainWindow):
 #
 #
 	def reloadTable(self,frame):
-
-		print 'Signal Captured'
+	
+		#print 'Signal Captured'
 							
 		#self.runQueue()
 		
@@ -166,7 +169,9 @@ class SoarLog(QtGui.QMainWindow):
 		#self.tm.insertRow(self.tm.rowCount(None),self.tm.rowCount(None))
 		
 		#data = self.tm.arraydata
-
+		
+		session_CID = self.Session()
+		
 		if self.ui.actionGot_to_last_frame.isChecked():
 			scrollBar = self.ui.tableDB.verticalScrollBar();
 			scrollBar.setValue(scrollBar.maximum());
@@ -187,7 +192,7 @@ class SoarLog(QtGui.QMainWindow):
 				_file.write(regions)
 				_file.close()
 			
-				query = self.session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME == frame)[0]
+				query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME == frame)[0]
 				try:
 					if query.INSTRUME == 'SOI':
 					#mscred.mscdisplay(frame,1)
@@ -197,7 +202,7 @@ class SoarLog(QtGui.QMainWindow):
 						d.set('scale mode zscale')
 						return 0
 					elif query.INSTRUME == 'Spartan IR Camera':
-						query2 = self.session_CID.query(self.SPARTAN_Obj).filter(self.SPARTAN_Obj.FILENAME.like(frame))[0]
+						query2 = session_CID.query(self.SPARTAN_Obj).filter(self.SPARTAN_Obj.FILENAME.like(frame))[0]
 						if query2.DETSERNO == '66':
 							d.set('file {0}'.format(frame))
 							d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
@@ -274,7 +279,7 @@ class SoarLog(QtGui.QMainWindow):
 		self.connect(self.ui.actionAdd_Frame, QtCore.SIGNAL('triggered()'), self.AddSelectFrame)
 		self.connect(self.ui.actionGot_to_last_frame, QtCore.SIGNAL('triggered()'), self.ChangeGTLF)
 		self.connect(self.ui.actionDisplay_last_frame, QtCore.SIGNAL('triggered()'), self.ChangeDLF)	
-		self.connect(self.ui.actionSave_Log,QtCore.SIGNAL('triggered()'), self.SaveLog)
+		self.connect(self.ui.actionSave_Log,QtCore.SIGNAL('triggered()'), self.SaveLogThreaded)
 		self.connect(self.ui.actionPreferences,QtCore.SIGNAL('triggered()'),self.OpenPreferences)
 		self.connect(self, QtCore.SIGNAL('reloadTableEvent(char*)'), self.reloadTable)
 		#self.connect(self, QtCore.SIGNAL('reloadTableEvent()'), self.reloadTable)
@@ -675,7 +680,8 @@ class SoarLog(QtGui.QMainWindow):
 #
 	def GetCalibrations(self):
 	
-		query = self.session_CID.query(self.Obj_CID.FILENAME).filter(~self.Obj_CID.IMAGETYP.like('OBJECT'))[:]
+		session_CID = self.Session()
+		query = session_CID.query(self.Obj_CID.FILENAME).filter(~self.Obj_CID.IMAGETYP.like('OBJECT'))[:]
 		calib =  [str(ff[0]) for ff in query]
 		
 		return '''A total of %i calibration frames exists.
@@ -685,8 +691,9 @@ class SoarLog(QtGui.QMainWindow):
 ################################################################################################
 
 	def getProjects(self):
-		
-		query = self.session_CID.query(self.Obj_CID).filter(self.Obj_CID.IMAGETYP.like('OBJECT'))[:]
+	
+		session_CID = self.Session()
+		query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.IMAGETYP.like('OBJECT'))[:]
 		fnames = np.array([ os.path.basename(str(ff.FILENAME)) for ff in query])
 		
 		for ff in range(len(fnames)):
@@ -707,7 +714,7 @@ class SoarLog(QtGui.QMainWindow):
 
 		nframes = []
 		for i in range(len(proj_id2)):
-			query = self.session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+proj_id2[i]+'%'))[:]
+			query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+proj_id2[i]+'%'))[:]
 			nframes.append(len(query))
 
 		return proj_id,proj_id2,nframes
@@ -717,8 +724,8 @@ class SoarLog(QtGui.QMainWindow):
 #
 #
 	def GetFrameLog(self):
-	
-		query = self.session_CID.query(self.Obj_CID).filter(self.Obj_CID.IMAGETYP.like('OBJECT'))[:]
+		session_CID = self.Session()
+		query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.IMAGETYP.like('OBJECT'))[:]
 		
 		logFRAME = '''
 {time}LT File:\t{FILENAME}
@@ -790,7 +797,7 @@ Time Spent:
 			# Frames infos
 			#
 			
-			query = self.session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+proj_id2[i]+'%'))[:]
+			query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+proj_id2[i]+'%'))[:]
 			obj_list = self.getObjects(query)
 
 			print obj_list
@@ -834,7 +841,7 @@ Time Spent:
 				writeFlag = True
 				frame2 = None
 				if frame.INSTRUME == 'Spartan IR Camera':
-					frame2 = self.session_CID.query(self.SPARTAN_Obj).filter(self.SPARTAN_Obj.FILENAME.like(frame.FILENAME))[0]
+					frame2 = session_CID.query(self.SPARTAN_Obj).filter(self.SPARTAN_Obj.FILENAME.like(frame.FILENAME))[0]
 					if frame2.DETSERNO != '66':
 						writeFlag = False						
 				try:
@@ -846,45 +853,40 @@ Time Spent:
 					hrs -= 23
 				if hrs < 0:
 					hrs += 23
-				time = '%02i:%02i' % (hrs,int(time[1]))
+				try:
+					time = '%02i:%02i' % (hrs,int(time[1]))
+				except:
+					time = frame.TIMEOBS
+
 				if frame.INSTRUME == 'NOTE':
 					log = logNOTE
 				if writeFlag:
 					outlog += log.format(time=time, FILENAME = os.path.basename(frame.FILENAME), OBJECT = frame.OBJECT, OBSNOTES = frame.OBSNOTES ,\
 										 AIRMASS = frame.AIRMASS, EXPTIME = frame.EXPTIME, SEEING = frame.SEEING)
 				if frame.INSTRUME == 'Goodman Spectrograph':
-					frame2 = self.session_CID.query(self.GOODMAN_Obj).filter(self.GOODMAN_Obj.FILENAME.like(frame.FILENAME))[0]
+					frame2 = session_CID.query(self.GOODMAN_Obj).filter(self.GOODMAN_Obj.FILENAME.like(frame.FILENAME))[0]
 					logGS = '\tGRATING: {0} SLIT: {1} OBSTYPE: {2}\n'.format(frame2.GRATING,frame2.SLIT,frame.IMAGETYP)
 					outlog+=logGS
 
 				if frame.INSTRUME == 'Spartan IR Camera' and writeFlag:
 					logSP = '\tFILTER: {0} OBSTYPE: {1}\n'.format(frame2.FILTER,frame.IMAGETYP)
 					outlog+=logSP
-
-#				if frame.INSTRUME == 'OSIRIS':
-#					frame2 = self.session_CID.query(self.GOODMAN_Obj).filter(self.GOODMAN_Obj.FILENAME.like(frame.FILENAME))[0]
-#					logOS = '\tGRATING: {} SLIT: {} OBSTYPE: {}\n'.format(frame2.GRATING,frame2.SLIT,frame.IMAGETYP)
-#					outlog+=logGS
-#				
-#				if frame.INSTRUME == 'SOI':
-#					frame2 = self.session_CID.query(self.SOI_Obj).filter(self.SOI_Obj.FILENAME.like(frame.FILENAME))[0]
-#					logSOI = '\tFILTER: {} OBSTYPE: {}\n'.format(frame2.FILTER1,frame.IMAGETYP)
-#					outlog+=logGS
-
-					
-				
-#outlog += databaseF.frame_infos.frameLog(frame,time)
-
-			#inst = frame.INSTRUME
-			
-			#queryInstrument = self.session_dict[inst].query(self.obj_dict[inst]).filter(self.obj_dict[inst].FILENAME == queryRes.FILENAME)[:]
-			
-			#for info_id in databaseF.LogInfo[inst]:
 				
 	
 		outlog += '-'*63 + '\n'
 		outlog += timeSpentLog
 		return outlog
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+
+	def SaveLogThreaded(self):
+		Thread(target=self.SaveLog).start()
+
 #
 #
 ################################################################################################
@@ -943,20 +945,24 @@ Time Spent:
 #
 	def calcTime(self,id):
 	
-		query = self.session_CID.query(self.Obj_CID.FILENAME,self.Obj_CID.DATEOBS,self.Obj_CID.TIMEOBS).filter(self.Obj_CID.FILENAME.like('%SO%'))[:]
-		
+		session_CID = self.Session()
+		query = session_CID.query(self.Obj_CID.FILENAME,self.Obj_CID.DATEOBS,self.Obj_CID.TIMEOBS,self.Obj_CID.OBJECT,self.Obj_CID.EXPTIME).filter(self.Obj_CID.FILENAME.like('%SO%')).filter(self.Obj_CID.OBJECT != "NOTE")[:]		
 		time_end = []
-				
+						
 		fnames = np.array( [ str(ff.FILENAME) for ff in query] )
 		hour = np.array( [ str(ff.TIMEOBS) for ff in query] )
 		day = np.array( [ str(ff.DATEOBS) for ff in query] )
+		obj = np.array( [ str(ff.OBJECT) for ff in query] )
+		exptime  = np.array( [ float(ff.EXPTIME) for ff in query] )
+		
+		print obj 
 		
 		time = np.array( [ day[i]+'T'+hour[i] for i in range(len(hour)) ] )
 		
 		for i in range(len(time)):
-			if day[i].find('T') > 0:
-				time[i] = day[i]
-				
+				if day[i].find('T') > 0:
+						time[i] = day[i]
+						
 		sort = time.argsort()
 
 		#print time, time[sort]
@@ -964,47 +970,49 @@ Time Spent:
 		fnames = fnames[sort]
 		
 		find_proj = np.array( [ i for i in range(len(fnames)) if fnames[i].find('-'+id) > 0] )
-		
-		time_start = np.append([int(find_proj[0])], np.array( [ find_proj[i] for i in range(len(find_proj)-2) if find_proj[i] != find_proj[i+1]-1 ] ) )
-		time_end = np.append( np.array( [ find_proj[i] for i in range(len(find_proj)-2,0,-1) if find_proj[i] != find_proj[i-1]+1 ] ), [int(find_proj[-1])] )
+
+		time_start = np.append([int(find_proj[0])], np.array( [ find_proj[i+1] for i in range(len(find_proj)-2) if find_proj[i] != find_proj[i+1]-1 ] ) )
+		time_end = np.append( np.array( [ find_proj[i] for i in range(len(find_proj)-2) if find_proj[i] != find_proj[i+1]-1 ] ), [int(find_proj[-1])] )
 		#print find_proj
 		
 		time_tmp = np.append(time_start , time_end  )
 		
-#		print time_tmp
-#		print time_tmp[1]
-				
-#		time_start = time_tmp[0]
-#		time_end = time_tmp[1]
+#               print time_tmp
+#               print time_tmp[1]
+						
+#               time_start = time_tmp[0]
+#               time_end = time_tmp[1]
 		
 		time.sort()
 		
 		calcT = 0
 		try:
-			for i in range(0,len(time_tmp),2):
-		
-				dia_start,hora_start = time[time_tmp[i]].split('T')
-				dia_end,hora_end = time[time_tmp[i+1]].split('T')
-			
-				ano1,mes1,dia1 = dia_start.split('-')
-				hr1,min1,sec1 = hora_start.split(':')
-			
-				ano2,mes2,dia2 = dia_end.split('-')
-				hr2,min2,sec2 = hora_end.split(':')
-			
-				start = float(ano1)*365.+float(mes1)*30.+float(dia1)+float(hr1)/24.+float(min1)/24./60.
-				end = float(ano2)*365.+float(mes2)*30.+float(dia2)+float(hr2)/24.+float(min2)/24./60.
-			
-				calcT += (end-start)*24.0
-				print start, end, (end-start)*24.0
-			
-			print id, [ time[i] for i in time_start ], [time[i] for i in time_end], '%02.0f:%02.0f' %( np.floor(calcT), (calcT-np.floor(calcT))*60)
+#                       for i in range(0,len(time_tmp),2):
+				for i in range(len(time_start)):
+								
+						dia_start,hora_start = time[time_start[i]].split('T')
+						dia_end,hora_end = time[time_end[i]].split('T')
+				
+						ano1,mes1,dia1 = dia_start.split('-')
+						hr1,min1,sec1 = hora_start.split(':')
+				
+						ano2,mes2,dia2 = dia_end.split('-')
+						hr2,min2,sec2 = hora_end.split(':')
+				
+						start = float(ano1)*365.+float(mes1)*30.+float(dia1)+float(hr1)/24.+float(min1)/24./60.
+						end = float(ano2)*365.+float(mes2)*30.+float(dia2)+float(hr2)/24.+float(min2)/24./60.
+				
+						calcT += (end-start)*24.0 + exptime[time_end[i]]/60./60.
+						print start, end, (end-start)*24.0 
+						
+						
+				print id, [ time[i] for i in time_start ], [time[i] for i in time_end], '%02.0f:%02.0f' %( np.floor(calcT), (calcT-np.floor(calcT))*60)
 
 		except:
-			print 'Failed to obtain program time'
-			
-			
-			
+				print 'Failed to obtain program time'
+				
+				
+				
 		#print calcT
 
 		
@@ -1115,7 +1123,9 @@ Time Spent:
 #
 	def displaySelected(self,index):
 		
-		query = self.session_CID.query(self.Obj_CID).filter(self.Obj_CID.id == index.row()+1)[0]
+		session_CID = self.Session()
+
+		query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.id == index.row()+1)[0]
 
 		frame = query.FILENAME
 
@@ -1176,6 +1186,7 @@ Time Spent:
 #
 	def startDataQuality(self):
 
+		session_CID = self.Session()
 		dataQuality_ui = DataQualityUI()
 		
 		projInfo = self.getProjects()
@@ -1191,15 +1202,15 @@ Time Spent:
 			parentItem = item
 			query = None
 			if i < len(prj)-2:
-				query = self.session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+prj[i]+'%'))[:]
+				query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+prj[i]+'%'))[:]
 				item = QtGui.QStandardItem(QtGui.QIcon(":/trolltech/styles/commonstyle/images/parentdir-32.png"), 
 										   QtCore.QString('Calibration/'))				
 				parentItem.appendRow(item)
 			
 			elif i == len(prj)-2:
-				query = self.session_CID.query(self.Obj_CID)[:]
+				query = session_CID.query(self.Obj_CID)[:]
 			else:
-				query = self.session_CID.query(self.Obj_CID).filter(self.Obj_CID.IMAGETYP != 'OBJECT')[:]
+				query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.IMAGETYP != 'OBJECT')[:]
 		
 			for j in range(len(query)):
 				item = QtGui.QStandardItem(QtGui.QIcon(":/trolltech/styles/commonstyle/images/file-32.png"), 
@@ -1248,13 +1259,13 @@ Time Spent:
 #
 	def addCommentLine(self):
 
-		session = self.session_CID
+		session = self.Session()
 		
 		finfos = {}
 		for hdr in databaseF.frame_infos.CID.keys():
 			finfos[hdr] = ''
 
-		fselect = self.session_CID.query(self.Obj_CID.FILENAME)[:]
+		fselect = session.query(self.Obj_CID.FILENAME)[:]
 		finfos['FILENAME'] = os.path.basename(fselect[-1][0]).replace('.fits','.note')
 		finfos['TIMEOBS'] = time.ctime().split(' ')[4]
 		finfos['INSTRUME'] = 'NOTE'
