@@ -73,10 +73,18 @@
     <property name="title">
      <string>Edit</string>
     </property>
+    <widget class="QMenu" name="menuDs9_commands">
+     <property name="title">
+      <string>ds9 commands</string>
+     </property>
+     <addaction name="actionZoom_to_fit"/>
+     <addaction name="actionZscale"/>
+    </widget>
     <addaction name="actionGot_to_last_frame"/>
     <addaction name="actionDisplay_last_frame"/>
     <addaction name="actionAdd_Frame"/>
     <addaction name="actionHideCB"/>
+    <addaction name="menuDs9_commands"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -137,6 +145,28 @@
   <action name="actionAddComment">
    <property name="text">
     <string>Add Comment</string>
+   </property>
+  </action>
+  <action name="actionZoom_to_fit">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Zoom-to-fit</string>
+   </property>
+  </action>
+  <action name="actionZscale">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Zscale</string>
    </property>
   </action>
  </widget>
