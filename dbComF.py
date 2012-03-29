@@ -13,7 +13,9 @@ application for in-site automated production of observations log.
 Ribeiro, T. 2011.
 '''
 
-from sqlalchemy import create_engine, Column, Table, MetaData, ForeignKey, Integer
+import pyfits
+
+from sqlalchemy import create_engine, Column, Table, MetaData, ForeignKey, Integer, String
 from sqlalchemy import distinct
 
 from sqlalchemy.orm import mapper,sessionmaker
@@ -22,7 +24,7 @@ import databaseF
 
 import numpy as np
 
-import os
+import os,sys
 
 import Queue
 
@@ -45,14 +47,7 @@ class soarDB():
 		'''
 			Set up database.
 		'''
-	
-	
-#		threading.Thread.__init__(self)
-		self.Queue = None
-#		self.wake = threading.Event()
 		
-#		self.local = threading.local()
-			
 		#####################################################
 		# Setup database
 		#
@@ -62,140 +57,53 @@ class soarDB():
 		
 		self.Queue = queue
 
-
-		self.engine = create_engine('sqlite:///soarlog.db' )
+		self.dbname = 'soarlog.db'
+		
+		self.engine = create_engine('sqlite:///{0}'.format(self.dbname) )
 
 		self.metadata = MetaData()
 	
 		#
-		# Creating a mapper for CID
+		# Creating a mapper for tvDB
 		#
-		file_table_CID = Table('SoarLogDB',self.metadata,Column('id', Integer, primary_key=True))
+		file_table_TVDB = Table('SoarLogTVDB',self.metadata,Column('id', Integer, primary_key=True))
 	
-		for keys in databaseF.frame_infos.CID.keys():
+		for keys in databaseF.frame_infos.tvDB.keys():
 		
-			file_table_CID.append_column(databaseF.frame_infos.CID[keys])
+			file_table_TVDB.append_column(databaseF.frame_infos.tvDB[keys])
 	
-		#self.metadata.create_all(self.engine)	
-		#file_table.drop(engine)
-
-		#
-		# Creating a mapper for OSIRIS information DB
-		#
-	
-		file_table_OSIRIS = Table('OSIRIS_DB',self.metadata,Column('id', Integer, primary_key=True))
-	
-		for keys in databaseF.frame_infos.OSIRIS_ID.keys():
+		self.Obj_CID = type(databaseF.FrameUI(**databaseF.frame_infos.tvDB))
 		
-			file_table_OSIRIS.append_column(databaseF.frame_infos.OSIRIS_ID[keys])
-
 		#
-		# Creating a mapper for SPARTAN information DB
+		# Creating a mapper for supported instruments
 		#
-	
-		file_table_SPARTAN = Table('SPARTAN_DB',self.metadata,Column('id', Integer, primary_key=True))
-	
-		for keys in databaseF.frame_infos.SPARTAN_ID.keys():
 		
-			file_table_SPARTAN.append_column(databaseF.frame_infos.SPARTAN_ID[keys])
-
-		#
-		# Creating a mapper for GOODMAN information DB
-		#
-
-		file_table_GOODMAN = Table('GOODMAN_DB',self.metadata,Column('id', Integer, primary_key=True))
-	
-		for keys in databaseF.frame_infos.GOODMAN_ID.keys():
+		self.file_table_INSTRUMENTS = {}
+		self.Obj_INSTRUMENTS = {}
 		
-			file_table_GOODMAN.append_column(databaseF.frame_infos.GOODMAN_ID[keys])
-
-
-		#
-		# Creating a mapper for SOI information DB
-		#
-
-		file_table_SOI = Table('SOI_DB',self.metadata,Column('id', Integer, primary_key=True))
+		for _inst in databaseF.frame_infos.instTemplates.keys():
 	
-		for keys in databaseF.frame_infos.SOI_ID.keys():
+			self.file_table_INSTRUMENTS[_inst] = Table(_inst,self.metadata,Column('id', Integer, primary_key=True))
+			
+			instTemplate = pyfits.getheader(databaseF.frame_infos.instTemplates[_inst])
+			
+			for keys in instTemplate.keys():
 		
-			file_table_SOI.append_column(databaseF.frame_infos.SOI_ID[keys])
+				self.file_table_INSTRUMENTS[_inst].append_column(Column(keys,String))
+
+			self.Obj_INSTRUMENTS[_inst] = type(databaseF.FrameUI(**instTemplate))
 
 
-		#
-		# Creating a mapper for SBIG information DB
-		#
-
-		file_table_SBIG = Table('SBIG_DB',self.metadata,Column('id', Integer, primary_key=True))
 	
-		for keys in databaseF.frame_infos.SBIG_ID.keys():
-		
-			file_table_SBIG.append_column(databaseF.frame_infos.SBIG_ID[keys])
-
-
-		self.Obj_CID = type(databaseF.CommonFrame(**databaseF.frame_infos.CID))
-	
-		mapper(self.Obj_CID,file_table_CID)
+		mapper(self.Obj_CID,file_table_TVDB)
 	
 		self.metadata.create_all(self.engine)	
 		self.Session = sessionmaker(bind=self.engine)
-
-#		self.session_CID = self.Session()
-
-		self.OSIRIS_Obj = type(databaseF.OSIRIS(**databaseF.frame_infos.OSIRIS_ID))
-		self.GOODMAN_Obj = type(databaseF.GOODMAN(**databaseF.frame_infos.GOODMAN_ID))
-		self.SOI_Obj = type(databaseF.SOI(**databaseF.frame_infos.SOI_ID))
-		self.SPARTAN_Obj = type(databaseF.SPARTAN(**databaseF.frame_infos.SPARTAN_ID))
-		self.SBIG_Obj = type(databaseF.SBIG(**databaseF.frame_infos.SBIG_ID))
-
-		mapper(self.OSIRIS_Obj,file_table_OSIRIS)	
-		self.Session_OSIRIS = sessionmaker(bind=self.engine)
-#		self.session_OSIRIS = self.Session_OSIRIS()
-
-		mapper(self.SPARTAN_Obj,file_table_SPARTAN)	
-		self.Session_SPARTAN = sessionmaker(bind=self.engine)
-#		self.session_SPARTAN = self.Session_SPARTAN()
-
-
-		mapper(self.SBIG_Obj,file_table_SBIG)	
-		self.Session_SBIG = sessionmaker(bind=self.engine)
-#		self.session_SBIG = self.Session_SBIG()
-
-
-		mapper(self.GOODMAN_Obj,file_table_GOODMAN)	
-		self.Session_GOODMAN = sessionmaker(bind=self.engine)
-#		self.session_GOODMAN = self.Session_GOODMAN()
-
-		mapper(self.SOI_Obj,file_table_SOI)	
-		self.Session_SOI = sessionmaker(bind=self.engine)
-#		self.session_SOI = self.Session_SOI()
-
-		self.obj_dict = {'OSIRIS' : self.OSIRIS_Obj,\
-		'Goodman Spectrograph' : self.GOODMAN_Obj ,\
-		'SOI' : self.SOI_Obj ,\
-		'Spartan IR Camera' : self.SPARTAN_Obj,
-		'SBIG ST-L' : self.SBIG_Obj}
-		
-#		self.session_dict = {'OSIRIS' : self.session_OSIRIS,
-#		'Goodman Spectrograph' : self.session_GOODMAN,
-#		'SOI' : self.session_SOI ,
-#		'Spartan IR Camera' : self.session_SPARTAN,
-#		'SBIG ST-L' : self.session_SBIG}
-
 		#
 		# Setup Done
 		#####################################################	
 
-		self.header_CID = databaseF.frame_infos.CID.keys()
-		self.header_dict = { 'OSIRIS' : databaseF.frame_infos.OSIRIS_ID.keys(),\
-							 'Goodman Spectrograph' : databaseF.frame_infos.GOODMAN_ID.keys() ,\
-							  'SOI' : databaseF.frame_infos.SOI_ID.keys(),\
-							  'Spartan IR Camera' : databaseF.frame_infos.SPARTAN_ID.keys()}
-
-		self.file_table_CID = file_table_CID
-		self.file_table_dict = {	'OSIRIS'	:	file_table_OSIRIS	,\
-							'SOI'		:	file_table_SOI		,\
-							'Goodman Spectrograph'	:	file_table_GOODMAN ,\
-							'Spartan IR Camera' : file_table_SPARTAN}
+		self.file_table_CID = file_table_TVDB
 							
 #		self.setDaemon(True)
 
@@ -220,7 +128,7 @@ class soarDB():
 		
 		session = self.Session()
 
-		query = session.query(self.Obj_CID.FILENAME).filter(self.Obj_CID.FILENAME == str(filename))[:]
+		query = session.query(self.Obj_CID.FILENAME).filter(self.Obj_CID.FILENAME == os.path.basename(str(filename)))[:]
 		if len(query) > 0:
 			print 'File %s already in database...' % (str(filename))
 			return -1
@@ -231,74 +139,17 @@ class soarDB():
 			print '# Could not read file %s... ' %(filename)
 			return -1
 		else:
-			entry_CID = self.Obj_CID(**infos[0])
+			entry_CID = self.Obj_CID(**infos[1])
 			
 			session.add(entry_CID)
-			#session_CID.commit()
-			
-			
-			instKey = infos[0]['INSTRUME']
-			#mapper(self.obj_dict[instKey],self.file_table_dict[instKey])	
-			#Session_Inst = sessionmaker(bind=self.engine)
 
-			entry = self.obj_dict[instKey](**infos[1])
-			session.add(entry)
+#			instKey = infos[0]['INSTRUME']
+
+#			entry = self.Obj_INSTRUMENTS[instKey](**infos[1])
+#			session.add(entry)
 			session.commit()
-			
-			infos = []
 		
-			#
-			# Pego infos Comuns
-			#
-			for info_id in np.array(self.header_CID):
-
-				cmd = 'info = entry_CID.%s' % (info_id)
-				try:
-					exec cmd
-
-				except AttributeError,KeyError:
-					info = ''
-					pass
-				
-				if info_id == 'FILENAME':
-					info = os.path.basename(info).split('.fits')[0]
-
-				infos.append(str(info))
-			#
-			# Pego infos de instrumento
-			#
-			inst = instKey
-			
-			queryInstrument = entry
-
-			for itr_info_id in range(len(databaseF.frame_infos.ExtraTableHeaders)):
-
-				info_id = databaseF.frame_infos.dictTableHeaders[inst][itr_info_id]
-				
-				info = ''
-				
-				if info_id:
-						
-					cmd = ''
-						
-					if type(info_id) == type('aa'):
-						cmd = 'info = queryInstrument.%s' % (info_id)
-					if type(info_id) == type(['aa']):
-						for itr_info in range(len(info_id)):
-							cmd += 'info += queryInstrument.%s\n' % (info_id[itr_info])
-					if type(info_id) == type(function):
-						cmd = ''
-						info = info_id(queryInstrument)
-								
-					try:
-						exec cmd
-					except AttributeError,KeyError:
-						pass
-				
-				infos.append(str(info))
-			
-
-			return infos
+		return 0
 #
 #
 ################################################################################################

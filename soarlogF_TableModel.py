@@ -1,5 +1,5 @@
 
-from PyQt4 import QtCore,QtGui,uic
+from PyQt4 import QtCore,QtGui,uic,QtSql
 import operator
 
 class SOLogTableModel(QtCore.QAbstractTableModel): 

@@ -28,12 +28,12 @@ class FrameUI(object):
 		instHDR argument. 
 	'''
 	
-	def __init__(self,template,instHDR='INSTRUME'):
+	def __init__(self,**template):
 		
-		hdr = pyfits.getheader()
+		#hdr = pyfits.getheader()
 		
-		for info in hdr.keys():
-			self.__dict__[info] = hdr[info]
+		for info in template.keys():
+			self.__dict__[info] = template[info]
 #
 # End of class
 #

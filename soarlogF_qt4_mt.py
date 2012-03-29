@@ -72,7 +72,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 	# See if configuration directory exists. Create one 
 	# otherwise.
 	#
-		self._CFGFilePath_ = os.path.join(os.path.expanduser('~/'),'.soarlogGUI')
+		self._CFGFilePath_ = os.path.join(os.path.expanduser('~/'),'.soarlogGUI_v2')
 	
 		if not os.path.exists(self._CFGFilePath_):
 			os.mkdir(self._CFGFilePath_)
@@ -95,7 +95,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		
 		self.logfile= self.logfile % (self.dir.split('/')[-1])
 					
-		self.header_CID = databaseF.frame_infos.CID.keys()
+		self.header_CID = databaseF.frame_infos.tvDB.keys()
 		self.header_dict = { 'OSIRIS' : databaseF.frame_infos.OSIRIS_ID.keys(),\
 							 'Goodman Spectrograph' : databaseF.frame_infos.GOODMAN_ID.keys() ,\
 							  'SOI' : databaseF.frame_infos.SOI_ID.keys()}
@@ -123,10 +123,21 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 #
 #
 	def AddSelectFrame(self):
+		        
+
+		fn = QtGui.QFileDialog.getOpenFileNames(self, 'Open file',self.dir)
 		
-		fn = QtGui.QFileDialog.getOpenFileName(self, 'Open file',self.dir)
-		self.Queue.put(str(fn))
+		ff =  [str(i) for i in fn]
+		
+		for f in ff:
+			self.Queue.put(f)
+		
 		self.runQueue()
+
+#		self.model.select()
+
+#		self.model.insertRows(self.model.rowCount(),1)		
+#		self.model.select()
 		
 		#self.AddFrame(fn)
 		
@@ -155,23 +166,11 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 #
 #
 	def reloadTable(self,frame):
-	
-		#print 'Signal Captured'
-							
-		#self.runQueue()
-		
-		#data = self.getTableData()
-		
-		#tm = SOLogTableModel(data,self.header_CID + databaseF.frame_infos.ExtraTableHeaders,self, commitDB=self.emmitTableDataChanged)
-		
-		#self.ui.tableDB.setModel(tm)
-
-		#self.tm.insertRow(self.tm.rowCount(None),self.tm.rowCount(None))
-		
-		#data = self.tm.arraydata
 		
 		session_CID = self.Session()
 		
+		self.model.select()
+				
 		if self.ui.actionGot_to_last_frame.isChecked():
 			scrollBar = self.ui.tableDB.verticalScrollBar();
 			scrollBar.setValue(scrollBar.maximum());
@@ -192,7 +191,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 				_file.write(regions)
 				_file.close()
 			
-				query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME == frame)[0]
+				query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME == os.path.basename(frame))[0]
 				try:
 					if query.INSTRUME == 'SOI':
 					#mscred.mscdisplay(frame,1)
@@ -243,28 +242,25 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 	##########################################################
 	# Set tab for CID
 	#
-			
-		#self.ShowInfoOrder = range(len(self.header_CID))
+
+		db = QtSql.QSqlDatabase('QSQLITE')
+		db.setDatabaseName(self.dbname)
+		db.open()
+
+		model = QtSql.QSqlTableModel(self, db)
+		model.setTable("SoarLogTVDB")
+		model.select()
+		self.model = model
 		
-		#print len(list(np.array(self.header_CID)[self.ShowInfoOrder])), list(np.array(self.header_CID)[self.ShowInfoOrder])
-		#print len(self.header_CID),self.header_CID
-		
-		#self.header_CID
-		
-		#self.tm = SOLogTableModel(self.getCIDdata(),[self.header_CID[i] for i in self.ShowInfoOrder ],self, commitDB=self.emmitTableDataChanged)
-		
-		self.tm = SOLogTableModel(self.getTableData(), self.header_CID + databaseF.frame_infos.ExtraTableHeaders,self ,commitDB=self.emmitTableDataChanged)
-		
-		self.ui.tableDB.setModel(self.tm)
-		self.ui.tableDB.keyPressEvent = self.handleKeyEvent
-		self.ui.tableDB.setSelectionMode(self.ui.tableDB.SingleSelection)
+		self.ui.tableDB.setModel(model)
 		
 		font = QtGui.QFont("Courier New", 8)
 		self.ui.tableDB.setFont(font)
 		self.ui.tableDB.setAlternatingRowColors(True)
-		#self.ui.tableDB.resizeColumnsToContents()
-		#print self.tm.rowCount(self)
-
+		
+		self.ui.tableDB.keyPressEvent = self.handleKeyEvent
+		self.ui.tableDB.setSelectionMode(self.ui.tableDB.SingleSelection)
+		
 	#
 	#	
 	##########################################################
@@ -378,7 +374,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 
 	def OpenPreferences(self):
 
-		tbHeader = self.header_CID + databaseF.frame_infos.ExtraTableHeaders
+		tbHeader = self.header_CID
 		#pref_ui = PrefMenu([ tbHeader[i] for i in self.ShowInfoOrder],self.ui.tableDB)
 		pref_ui = PrefMenu(tbHeader, self.ShowInfoOrder,self.ui.tableDB)
 		
@@ -1092,8 +1088,9 @@ Time Spent:
 				self.ui.lineFrameComment.setText(text)		
 				return 0
 		except:
-			self.currentSelectedItem = index
-			text = self.ui.tableDB.model().getData(index.row(),0)
+			self.currentSelectedItem = self.model.createIndex(index.row(),index.column())
+			newIndex = self.model.createIndex(index.row(),17)
+			text = self.model.data(newIndex)
 			if type(text) == type(QtCore.QVariant()):
 				text = text.toString()
 			self.ui.lineFrameComment.setText(text)		
@@ -1109,11 +1106,8 @@ Time Spent:
 
 	def commitComment(self):
 		text = self.ui.lineFrameComment.text()
-		index = self.currentSelectedItem.child(self.currentSelectedItem.row(),0)
-		#print index.row(),index.column()
-
-		#print text
-		self.ui.tableDB.model().setData(index,text,QtCore.Qt.EditRole)
+		index = self.model.createIndex(self.currentSelectedItem.row(),17)
+		self.model.setData(index,text)
 #
 #
 ################################################################################################
@@ -1127,7 +1121,7 @@ Time Spent:
 
 		query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.id == index.row()+1)[0]
 
-		frame = query.FILENAME
+		frame = os.path.join(query.PATH,query.FILENAME)
 
 		print index.row(),frame
 		
