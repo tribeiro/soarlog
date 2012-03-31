@@ -2,6 +2,25 @@
 from PyQt4 import QtCore,QtGui,uic,QtSql
 import operator
 
+class myQSqlTableModel(QtSql.QSqlTableModel):
+
+	def __init__(self,parent,db):
+		QtSql.QSqlTableModel.__init__(self,parent,db)
+
+		#self.oldflags = self.flags
+		
+	def flags(self,index):
+		
+		if not index.isValid():
+			return QtCore.Qt.ItemIsEnabled
+
+		ret_flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable 
+
+		if index.column() == 17:
+			return ret_flags | QtCore.Qt.ItemIsEditable
+
+		return ret_flags
+
 class SOLogTableModel(QtCore.QAbstractTableModel): 
 
     def __init__(self, datain, headerdata, parent=None, *args,**argv): 

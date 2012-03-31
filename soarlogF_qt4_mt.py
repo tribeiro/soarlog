@@ -247,9 +247,11 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		db.setDatabaseName(self.dbname)
 		db.open()
 
-		model = QtSql.QSqlTableModel(self, db)
+		model = myQSqlTableModel(self, db) #QtSql.QSqlQueryModel(self) #
 		model.setTable("SoarLogTVDB")
 		model.select()
+#		model.flags = myFlags
+#		model.setQuery("SELECT * FROM SoarLogTVDB");
 		self.model = model
 		
 		self.ui.tableDB.setModel(model)
@@ -299,7 +301,8 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		self.connect(self.ui.lineFrameComment,QtCore.SIGNAL('returnPressed()'),self.commitComment)
 					 
 		header = databaseF.frame_infos.CID.keys() + databaseF.frame_infos.ExtraTableHeaders
-		self.ShowInfoOrder = range(len(header))
+
+		self.ShowInfoOrder = range(len(self.header_CID)+1)
 
 		#
 		# Load configuration for Show/Hide
@@ -374,20 +377,22 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 
 	def OpenPreferences(self):
 
-		tbHeader = self.header_CID
+		tbHeader = ['id'] + self.header_CID
 		#pref_ui = PrefMenu([ tbHeader[i] for i in self.ShowInfoOrder],self.ui.tableDB)
 		pref_ui = PrefMenu(tbHeader, self.ShowInfoOrder,self.ui.tableDB)
 		
 		pref_ui.show()
 		
 		if pref_ui.exec_():
-			print 'Changes will be performed'
+#			print 'Changes will be performed'
 #
 # Change order of table headers
 #
 #			print [tbHeader.index(pref_ui.listSort.model().getData(i,0)) for i in range(len(tbHeader))]
+
 			for i in range(len(tbHeader)):
-				self.MoveColumn([tbHeader.index(pref_ui.listSort.model().getData(i,0)),i])
+#				print i,tbHeader.index(pref_ui.listSort.model().getData(i,0))
+				self.MoveColumn([ tbHeader.index(pref_ui.listSort.model().getData(i,0)),i ])
 
 #
 # Show/hide Table columns 
@@ -593,7 +598,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		colWidth = np.zeros(len(tbHeader))	
 		for i in range(len(tbHeader)):
 			colWidth[i] = self.ui.tableDB.columnWidth(i)
-			print self.ui.tableDB.columnWidth(i)
+#			print self.ui.tableDB.columnWidth(i)
 		np.savetxt(os.path.join(self._CFGFilePath_,self._CFGFiles_['ColumnWidth']),X=colWidth,fmt='%f')
 
 		return 0
@@ -656,14 +661,30 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 	def promptWeatherComment(self):
 		
 		winfo = WeatherInfo()
-		_file = open(self.__FileWeatherComments__,'r')
-		winfo.wi_ui.weatherInfo.setPlainText(_file.read())
-		_file.close()
 		
+		session = self.Session()
+		query = session.query(self.Obj_WC.Comment)[:]
+		if len(query) == 0:
+			info = self.Obj_WC(**{'Comment':"No weather comment."})
+			session.add(info)
+			session.commit()
+			winfo.wi_ui.weatherInfo.setPlainText("No weather comment.")
+		else:
+			winfo.wi_ui.weatherInfo.setPlainText(query[0].Comment)
+			
 		if winfo.exec_():
-			_file = open(self.__FileWeatherComments__,'w')
-			_file.write(winfo.wi_ui.weatherInfo.toPlainText())
-			_file.close()
+#			print winfo.wi_ui.weatherInfo.toPlainText()
+
+			query = session.query(self.Obj_WC)[0]
+			print query.Comment
+			query.Comment = str(winfo.wi_ui.weatherInfo.toPlainText())
+			print query.Comment
+
+			session.flush()			
+			session.commit()
+#			_file = open(self.__FileWeatherComments__,'w')
+#			_file.write(winfo.wi_ui.weatherInfo.toPlainText())
+#			_file.close()
 	
 	
 		return 0
@@ -1108,6 +1129,8 @@ Time Spent:
 		text = self.ui.lineFrameComment.text()
 		index = self.model.createIndex(self.currentSelectedItem.row(),17)
 		self.model.setData(index,text)
+		self.model.submitAll()
+
 #
 #
 ################################################################################################
@@ -1234,8 +1257,12 @@ Time Spent:
 
 	def handleKeyEvent(self,event):
 		
-		self.commitComment()
-		
+		#self.commitComment()
+
+		if self.ui.tableDB.selectedIndexes()[0].column() == 17:
+			print self.model.data(self.ui.tableDB.selectedIndexes()[0]).toString()
+			self.ui.lineFrameComment.setText( self.model.data(self.ui.tableDB.selectedIndexes()[0]).toString() )
+			
 		rr = QtGui.QTableWidget.keyPressEvent(self.ui.tableDB, event)
 		
 		if event.key() == QtCore.Qt.Key_Down or event.key() == QtCore.Qt.Key_Up or event.key() == QtCore.Qt.Key_Right or event.key() == QtCore.Qt.Key_Left:

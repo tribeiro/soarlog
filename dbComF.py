@@ -71,9 +71,36 @@ class soarDB():
 		for keys in databaseF.frame_infos.tvDB.keys():
 		
 			file_table_TVDB.append_column(databaseF.frame_infos.tvDB[keys])
+
+		class FrameUI(object):
+			def __init__(self,**template):
+				for info in template.keys():
+					self.__dict__[info] = template[info]
 	
-		self.Obj_CID = type(databaseF.FrameUI(**databaseF.frame_infos.tvDB))
+		self.Obj_CID = type(FrameUI(**databaseF.frame_infos.tvDB))
+
+		mapper(self.Obj_CID,file_table_TVDB)
 		
+		#
+		# Creating a mapper for weather comment
+		#
+		self.file_table_WC = Table('weatherComment',self.metadata,Column('id', Integer, primary_key=True))
+	
+		self.file_table_WC.append_column(Column('Comment',String))
+	
+		wc_dict = {'Comment' : ''}
+
+		class FrameWC(object):
+			def __init__(self,**template):
+				for info in template.keys():
+					self.__dict__[info] = template[info]
+		
+		self.Obj_WC = type(FrameWC(**wc_dict))
+
+		self.Obj_WC.__name__ = self.Obj_WC.__name__ + '_Comment'
+#		wc_obj = type(self.Obj_WC)
+		mapper(self.Obj_WC,self.file_table_WC)
+
 		#
 		# Creating a mapper for supported instruments
 		#
@@ -91,11 +118,13 @@ class soarDB():
 		
 				self.file_table_INSTRUMENTS[_inst].append_column(Column(keys,String))
 
-			self.Obj_INSTRUMENTS[_inst] = type(databaseF.FrameUI(**instTemplate))
+			class FrameINST(object):
+				def __init__(self,**template):
+					for info in template.keys():
+						self.__dict__[info] = template[info]
 
-
-	
-		mapper(self.Obj_CID,file_table_TVDB)
+			self.Obj_INSTRUMENTS[_inst] = type(FrameINST(**instTemplate))
+			mapper(self.Obj_INSTRUMENTS[_inst],self.file_table_INSTRUMENTS[_inst])
 	
 		self.metadata.create_all(self.engine)	
 		self.Session = sessionmaker(bind=self.engine)
@@ -143,10 +172,10 @@ class soarDB():
 			
 			session.add(entry_CID)
 
-#			instKey = infos[0]['INSTRUME']
+			instKey = infos[0]['INSTRUME']
 
-#			entry = self.Obj_INSTRUMENTS[instKey](**infos[1])
-#			session.add(entry)
+			entry = self.Obj_INSTRUMENTS[instKey](**infos[1])
+			session.add(entry)
 			session.commit()
 		
 		return 0
