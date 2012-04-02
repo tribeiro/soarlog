@@ -84,9 +84,12 @@ def GOODMAN_SPCONF(query):
 # defines the image header parameter for instrument!
 
 _INSTRUME = {'OSIRIS':'INSTRUME','GOODMAN':'INSTRUME','SOI':'INSTRUME','SPARTAN':'INSTRUME','SBIG ST-L' : 'INSTRUME'}
-instTemplates = {'Goodman Spectrograph' : os.path.join(os.path.dirname(sys.argv[0]),'Resources/goodmanTemplate.fits'),
-'OSIRIS' : : os.path.join(os.path.dirname(sys.argv[0]),'Resources/osirisTemplate.fits'),
-'SOI' : : os.path.join(os.path.dirname(sys.argv[0]),'Resources/soiTemplate.fits')}
+
+instTemplates = {'Goodman Spectrograph' : os.path.join(os.path.dirname(__file__),'Resources/goodmanTemplate.fits'),
+'OSIRIS' : os.path.join(os.path.dirname(__file__),'Resources/osirisTemplate.fits'),
+'SOI' : os.path.join(os.path.dirname(__file__),'Resources/soiTemplate.fits'),
+'SPARTAN' : os.path.join(os.path.dirname(__file__),'Resources/spartanTemplate.fits')}
+
 SPARTAN = 'Spartan IR Camera'
 
 ##################################################################################################################################

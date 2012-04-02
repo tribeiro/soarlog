@@ -90,6 +90,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		self.logfile = 'SOARLOG_{0}.txt'
 		self.dataCalib = '/data/data_calib/2012A/SO2012A-%s.txt'
 		self.dbname = 'soarlog_{0}.db'
+		self.CommentColumn = 17
 		self.AskFile2Watch()
 				
 		self.logfile = self.logfile.format(self.dir.split('/')[-1])
@@ -1110,7 +1111,7 @@ Time Spent:
 				return 0
 		except:
 			self.currentSelectedItem = self.model.createIndex(index.row(),index.column())
-			newIndex = self.model.createIndex(index.row(),17)
+			newIndex = self.model.createIndex(index.row(),self.CommentColumn)
 			text = self.model.data(newIndex)
 			if type(text) == type(QtCore.QVariant()):
 				text = text.toString()
@@ -1127,7 +1128,7 @@ Time Spent:
 
 	def commitComment(self):
 		text = self.ui.lineFrameComment.text()
-		index = self.model.createIndex(self.currentSelectedItem.row(),17)
+		index = self.model.createIndex(self.currentSelectedItem.row(),self.CommentColumn)
 		self.model.setData(index,text)
 		self.model.submitAll()
 
@@ -1146,8 +1147,6 @@ Time Spent:
 
 		frame = os.path.join(query.PATH,query.FILENAME)
 
-		print index.row(),frame
-		
 		d = None
 		_targets = ds9.ds9_targets()
 		
@@ -1259,8 +1258,7 @@ Time Spent:
 		
 		#self.commitComment()
 
-		if self.ui.tableDB.selectedIndexes()[0].column() == 17:
-			print self.model.data(self.ui.tableDB.selectedIndexes()[0]).toString()
+		if self.ui.tableDB.selectedIndexes()[0].column() == self.CommentColumn:
 			self.ui.lineFrameComment.setText( self.model.data(self.ui.tableDB.selectedIndexes()[0]).toString() )
 			
 		rr = QtGui.QTableWidget.keyPressEvent(self.ui.tableDB, event)
