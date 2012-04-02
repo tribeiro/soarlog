@@ -66,7 +66,6 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 	
 		super(SoarLog, self).__init__()
 		self.Queue = args[0]
-		soarDB.__init__(self,self.Queue)
 
 	##########################################################
 	# See if configuration directory exists. Create one 
@@ -88,13 +87,15 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 	##########################################################
 	
 		self.dir = ''
-		self.logfile = 'SOARLOG_%s.txt'
+		self.logfile = 'SOARLOG_{0}.txt'
 		self.dataCalib = '/data/data_calib/2012A/SO2012A-%s.txt'
-		
+		self.dbname = 'soarlog_{0}.db'
 		self.AskFile2Watch()
-		
-		self.logfile= self.logfile % (self.dir.split('/')[-1])
-					
+				
+		self.logfile = self.logfile.format(self.dir.split('/')[-1])
+		self.dbname  = self.dbname.format(self.dir.split('/')[-1])
+		soarDB.__init__(self,self.Queue)
+									
 		self.header_CID = databaseF.frame_infos.tvDB.keys()
 		self.header_dict = { 'OSIRIS' : databaseF.frame_infos.OSIRIS_ID.keys(),\
 							 'Goodman Spectrograph' : databaseF.frame_infos.GOODMAN_ID.keys() ,\
@@ -881,8 +882,8 @@ Time Spent:
 					outlog += log.format(time=time, FILENAME = os.path.basename(frame.FILENAME), OBJECT = frame.OBJECT, OBSNOTES = frame.OBSNOTES ,\
 										 AIRMASS = frame.AIRMASS, EXPTIME = frame.EXPTIME, SEEING = frame.SEEING)
 				if frame.INSTRUME == 'Goodman Spectrograph':
-					frame2 = session_CID.query(self.GOODMAN_Obj).filter(self.GOODMAN_Obj.FILENAME.like(frame.FILENAME))[0]
-					logGS = '\tGRATING: {0} SLIT: {1} OBSTYPE: {2}\n'.format(frame2.GRATING,frame2.SLIT,frame.IMAGETYP)
+					#frame2 = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like(frame.FILENAME))[0]
+					logGS = '\tGRATING: {0} SLIT: {1} OBSTYPE: {2}\n'.format(frame.GRATING,frame.SLIT,frame.IMAGETYP)
 					outlog+=logGS
 
 				if frame.INSTRUME == 'Spartan IR Camera' and writeFlag:
@@ -918,7 +919,6 @@ Time Spent:
 		#
 		
 		file = open(self.logfile,'w')
-		print self.logfile
 		
 		#
 		# Write log header

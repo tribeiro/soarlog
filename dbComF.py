@@ -38,6 +38,8 @@ def function():
 #class soarDB(threading.Thread):
 class soarDB():
 
+	dbname = 'soarlog.db'
+
 ################################################################################################
 #
 #
@@ -56,8 +58,6 @@ class soarDB():
 		#
 		
 		self.Queue = queue
-
-		self.dbname = 'soarlog.db'
 		
 		self.engine = create_engine('sqlite:///{0}'.format(self.dbname) )
 
@@ -151,7 +151,6 @@ class soarDB():
 
 			print '# - Filename is empty ...', filename
 			return -1
-		print filename
 		
 		# Checa se esta no banco de dados
 		
@@ -159,7 +158,7 @@ class soarDB():
 
 		query = session.query(self.Obj_CID.FILENAME).filter(self.Obj_CID.FILENAME == os.path.basename(str(filename)))[:]
 		if len(query) > 0:
-			print 'File %s already in database...' % (str(filename))
+			#print 'File %s already in database...' % (str(filename))
 			return -1
 			
 		infos = databaseF.frame_infos.GetFrameInfos(str(filename))
@@ -217,9 +216,9 @@ class soarDB():
 	def run(self,*args):
 
 		#self.wake.wait()
-		
+		session = self.Session()
 		#ff = ''
-		last = ''
+		
 		while not self.Queue.empty():
 			
 			ff = self.Queue.get()
@@ -227,11 +226,8 @@ class soarDB():
 #			time.sleep(1.0)
 			info = self.AddFrame(ff)
 
-			if type(info) == type(-1):
-				print 'nothing to do'
-			else:
-				self.updateTable(info)
-				last = ff
+		query = session.query(self.Obj_CID)[-1]
+		last = os.path.join(query.PATH,query.FILENAME)
 		
 		self.reloadTable(last)
 		
