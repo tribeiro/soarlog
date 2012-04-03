@@ -685,7 +685,7 @@ def GetFrameInfos(filename):
 	FExists = False
 	
 	try:
-		hdulist = pyfits.open(filename,ignore_missing_end=True)
+		hdulist = pyfits.open(filename,ignore_missing_end=True)		
 	except IOError:
 		print '[FAILED - IOError]: ',filename
 		return -1 # Could not read file for some reason

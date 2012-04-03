@@ -6,7 +6,7 @@ class myQSqlTableModel(QtSql.QSqlTableModel):
 
 	def __init__(self,parent,db):
 		QtSql.QSqlTableModel.__init__(self,parent,db)
-
+		self.EditableColumns = [17]
 		#self.oldflags = self.flags
 		
 	def flags(self,index):
@@ -16,10 +16,14 @@ class myQSqlTableModel(QtSql.QSqlTableModel):
 
 		ret_flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable 
 
-		if index.column() == 17:
+		if index.column() in self.EditableColumns:
 			return ret_flags | QtCore.Qt.ItemIsEditable
 
 		return ret_flags
+	
+	def changeEditableColumns(self,edlist):
+		if type(edlist) == type(self.EditableColumns):
+			self.EditableColumns = edlist
 
 class SOLogTableModel(QtCore.QAbstractTableModel): 
 

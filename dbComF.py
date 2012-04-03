@@ -114,6 +114,8 @@ class soarDB():
 			
 			instTemplate = pyfits.getheader(databaseF.frame_infos.instTemplates[_inst])
 			
+			self.file_table_INSTRUMENTS[_inst].append_column(Column('FILENAME',String))
+							
 			for keys in instTemplate.keys():
 		
 				self.file_table_INSTRUMENTS[_inst].append_column(Column(keys,String))

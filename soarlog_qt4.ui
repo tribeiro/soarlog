@@ -77,6 +77,7 @@
     <addaction name="actionDisplay_last_frame"/>
     <addaction name="actionAdd_Frame"/>
     <addaction name="actionHideCB"/>
+    <addaction name="actionEnable_Disable_Table_Edit"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -137,6 +138,14 @@
   <action name="actionAddComment">
    <property name="text">
     <string>Add Comment</string>
+   </property>
+  </action>
+  <action name="actionEnable_Disable_Table_Edit">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Enable/Disable Table Edit</string>
    </property>
   </action>
  </widget>

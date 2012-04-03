@@ -15,7 +15,7 @@ Ribeiro, T. 2011.
 
 #from soarlogF_GUI import *
 from soarlogF_TableModel import *
-import sys,os
+import sys,os,shutil
 
 import thread
 
@@ -91,6 +91,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		self.dataCalib = '/data/data_calib/2012A/SO2012A-%s.txt'
 		self.dbname = 'soarlog_{0}.db'
 		self.CommentColumn = 17
+		self.ExtraEditableColumns = [1,13,17]
 		self.AskFile2Watch()
 				
 		self.logfile = self.logfile.format(self.dir.split('/')[-1])
@@ -171,7 +172,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		
 		session_CID = self.Session()
 		
-		self.model.select()
+		#self.model.select()
 				
 		if self.ui.actionGot_to_last_frame.isChecked():
 			scrollBar = self.ui.tableDB.verticalScrollBar();
@@ -255,6 +256,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 #		model.flags = myFlags
 #		model.setQuery("SELECT * FROM SoarLogTVDB");
 		self.model = model
+		self.model.changeEditableColumns([self.CommentColumn])
 		
 		self.ui.tableDB.setModel(model)
 		
@@ -291,8 +293,11 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		self.connect(self.ui.actionDQ, QtCore.SIGNAL('triggered()'),self.startDataQuality)
 		self.connect(self.ui.actionWI, QtCore.SIGNAL('triggered()'),self.promptWeatherComment)
 		self.connect(self.ui.actionHideCB, QtCore.SIGNAL('triggered()'),self.HideCB)
+		self.connect(self.ui.actionEnable_Disable_Table_Edit, QtCore.SIGNAL('triggered()'),self.enableDisableTableEdit)
 
 		self.connect(self.ui.addFrameComment, QtCore.SIGNAL('clicked()'),self.commitComment)
+
+		self.connect(self.model, QtCore.SIGNAL('beforeUpdate(int,QSqlRecord&)'),self.actBeforeUpdate)
 		
 		self.connect(self.ui.tableDB,QtCore.SIGNAL("clicked(const QModelIndex&)"), self.tableItemSelected)
 		self.connect(self.ui.tableDB,QtCore.SIGNAL("selectionChanged(const QItemSelection&, const QItemSelection&)"), self.tableItemSelected)
@@ -372,6 +377,68 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 #
 #
 ################################################################################################
+
+################################################################################################
+#
+#
+	def enableDisableTableEdit(self):
+		
+		if self.actionEnable_Disable_Table_Edit.isChecked():
+			self.model.changeEditableColumns(self.ExtraEditableColumns)
+		else:
+			self.model.changeEditableColumns([self.CommentColumn])
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+
+	def AddFrame(self,filename):
+	
+		if not filename:
+
+			print '# - Filename is empty ...', filename
+			return -1
+		
+		# Checa se esta no banco de dados
+		
+		session = self.Session()
+
+		query = session.query(self.Obj_CID.FILENAME).filter(self.Obj_CID.FILENAME == os.path.basename(str(filename)))[:]
+		if len(query) > 0:
+			#print 'File %s already in database...' % (str(filename))
+			return -1
+			
+		infos = databaseF.frame_infos.GetFrameInfos(str(filename))
+
+		if infos == -1:
+			print '# Could not read file %s... ' %(filename)
+			return -1
+		else:
+			#entry_CID = self.Obj_CID(**infos[1])
+			#session.add(entry_CID)
+			#print 'aqui'
+			record = QtSql.QSqlRecord()
+			keys = infos[1].keys()
+			for i in range(len(keys)):
+				record.insert(i,QtSql.QSqlField(keys[i]))
+				record.setValue(keys[i], infos[1][keys[i]])
+				
+			#self.model.insertRows(self.model.rowCount(),1)		
+			self.model.insertRecord(-1,record)
+			
+			instKey = infos[0]['INSTRUME']
+			entry = self.Obj_INSTRUMENTS[instKey](**infos[1])
+			session.add(entry)
+			session.commit()
+		
+		return 0
+#
+#
+################################################################################################
+
 
 ################################################################################################
 #
@@ -1257,9 +1324,9 @@ Time Spent:
 	def handleKeyEvent(self,event):
 		
 		#self.commitComment()
-
-		if self.ui.tableDB.selectedIndexes()[0].column() == self.CommentColumn:
-			self.ui.lineFrameComment.setText( self.model.data(self.ui.tableDB.selectedIndexes()[0]).toString() )
+		if len(self.ui.tableDB.selectedIndexes()) > 0:
+			if self.ui.tableDB.selectedIndexes()[0].column() == self.CommentColumn:
+				self.ui.lineFrameComment.setText( self.model.data(self.ui.tableDB.selectedIndexes()[0]).toString() )
 			
 		rr = QtGui.QTableWidget.keyPressEvent(self.ui.tableDB, event)
 		
@@ -1269,6 +1336,32 @@ Time Spent:
 		
 		return rr
 		
+
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+	def actBeforeUpdate(self,index,record):
+		
+		session = self.Session()
+		rr = session.query(self.Obj_CID).filter(self.Obj_CID.id==index+1)[0]
+		
+		for i in range(record.count()):
+			if not record.field(i).isNull():
+				if record.field(i).name() == 'FILENAME':
+					if os.path.join(str(rr.PATH),str(rr.FILENAME)) != os.path.join(str(rr.PATH),str(record.field(i).value().toString())):
+						shutil.copy(os.path.join(str(rr.PATH),str(rr.FILENAME)),os.path.join(str(rr.PATH),str(record.field(i).value().toString())))
+				elif record.field(i).name() == 'OBJECT':
+					hdu = pyfits.open(os.path.join(str(rr.PATH),str(rr.FILENAME)),mode='update')
+					#hdu.verify('fix')
+					hdu[0].header.update('OBJECT', str(record.field(i).value().toString()))
+					#pyfits.writeto(os.path.join(str(rr.PATH),str(rr.FILENAME)),hdu[0].data,hdu[0].header)
+					hdu.close(output_verify='silentfix')
+
+					#print record.field(i).name(),':',rr.FILENAME,'-> ',record.field(i).value().toString()
 #
 #
 ################################################################################################
