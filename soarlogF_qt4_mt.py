@@ -97,6 +97,8 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		self.logfile = self.logfile.format(self.dir.split('/')[-1])
 		self.dbname  = self.dbname.format(self.dir.split('/')[-1])
 		soarDB.__init__(self,self.Queue)
+		
+		self.dqStatus = ['','OK','WARN','FAIL']
 									
 		self.header_CID = databaseF.frame_infos.tvDB.keys()
 		self.header_dict = { 'OSIRIS' : databaseF.frame_infos.OSIRIS_ID.keys(),\
@@ -428,7 +430,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 				
 			#self.model.insertRows(self.model.rowCount(),1)		
 			self.model.insertRecord(-1,record)
-			
+
 			instKey = infos[0]['INSTRUME']
 			entry = self.Obj_INSTRUMENTS[instKey](**infos[1])
 			session.add(entry)
@@ -779,7 +781,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 	def getProjects(self):
 	
 		session_CID = self.Session()
-		query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.IMAGETYP.like('OBJECT'))[:]
+		query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%SO%'))[:]
 		fnames = np.array([ os.path.basename(str(ff.FILENAME)) for ff in query])
 		
 		for ff in range(len(fnames)):
@@ -1270,15 +1272,17 @@ Time Spent:
 	def startDataQuality(self):
 
 		session_CID = self.Session()
-		dataQuality_ui = DataQualityUI()
+		self.dataQuality_ui = DataQualityUI()
 		
 		projInfo = self.getProjects()
 		model = QtGui.QStandardItemModel()
 		# generate test data for the example here...
 
-		prj = np.append(projInfo[0],['all','Calibration'])
+		prj = np.append([''],projInfo[0])#np.append(projInfo[0],['all','Calibration'])
 		
 		for i in range(len(prj)):
+			self.dataQuality_ui.comboBox.addItem(prj[i])
+			
 			parentItem = model.invisibleRootItem()
 			item = QtGui.QStandardItem(QtGui.QIcon(":/trolltech/styles/commonstyle/images/parentdir-32.png"), QtCore.QString(prj[i]+'/'))
 			parentItem.appendRow(item)
@@ -1300,23 +1304,142 @@ Time Spent:
 										   QtCore.QString(os.path.basename(query[j].FILENAME)))
 				parentItem.appendRow(item)
 
+		
+		#self.dataQuality_ui.buttonBox.addButton()
+		
+		self.connect(self.dataQuality_ui.buttonBox, QtCore.SIGNAL('clicked(QAbstractButton*)'), self.commitDataQuality)
+		self.connect(self.dataQuality_ui.comboBox, QtCore.SIGNAL('currentIndexChanged(int)'), self.readDQProject)
+		
 		#self.setAnimated(True)
 
 		#model.setRootPath('/')
-		dataQuality_ui.dq_ui.columnDQ.setModel(model)
-		dataQuality_ui.dq_ui.columnDQ.setDragDropMode(QtGui.QAbstractItemView.DragDrop)
+		#dataQuality_ui.dq_ui.columnDQ.setModel(model)
+		#dataQuality_ui.dq_ui.columnDQ.setDragDropMode(QtGui.QAbstractItemView.DragDrop)
 
 		#label = QtGui.QLabel('HELLO')
 		#dataQuality_ui.dq_ui.columnDQ.setPreviewWidget(label)
-
-		dataQuality_ui.show()
 		
-		dataQuality_ui.exec_()
+		self.ui.tableDB.setSelectionMode(self.ui.tableDB.ExtendedSelection)
+
+		self.dataQuality_ui.show()
+		
+		self.dataQuality_ui.exec_()
+		
+		self.ui.tableDB.setSelectionMode(self.ui.tableDB.SingleSelection)
 
 #
 #
 ################################################################################################
 
+################################################################################################
+#
+#
+	def commitDataQuality(self):
+	
+		session = self.Session()
+		query = session.query(self.Obj_DQ).filter(self.Obj_DQ.PID == str(self.dataQuality_ui.comboBox.currentText()))[:]
+
+		if len(query) == 0:
+			
+			dqinf = {'TYPE'		: '',\
+					'SEMESTER'	: '',\
+					'PID'		: str(self.dataQuality_ui.comboBox.currentText()),\
+					'DATASET'	: '',\
+					'DQNOTE'	: '',\
+					'BIAS'		: str( self.dataQuality_ui.comboBias.currentIndex() ),\
+					'DARK'		: str( self.dataQuality_ui.comboDark.currentIndex() ),\
+					'FLATFIELD'	: str( self.dataQuality_ui.comboFlatField.currentIndex() ),\
+					'BIASNOTE'	: str( self.dataQuality_ui.lineEditBias.text() )	,\
+					'DARKNOTE'	: str( self.dataQuality_ui.lineEditDark.text() )			,\
+					'FLATFIELDNOTE'	: str( self.dataQuality_ui.lineEditFlatField.text() )	,\
+					'FROMDB'	: ''
+					}
+			info = self.Obj_DQ(**dqinf)
+			session.add(info)
+		else:
+			
+			query[0].BIAS = str( self.dataQuality_ui.comboBias.currentIndex() )
+			query[0].DARK = str( self.dataQuality_ui.comboDark.currentIndex() )
+			query[0].FLATFIELD = str( self.dataQuality_ui.comboFlatField.currentIndex() )
+			query[0].BIASNOTE = self.dataQuality_ui.lineEditBias.text() 
+			query[0].DARKNOTE = self.dataQuality_ui.lineEditDark.text() 
+			query[0].FLATFIELDNOTE = self.dataQuality_ui.lineEditFlatField.text() 
+			
+		session.commit()
+
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+
+	def readDQProject(self,action):
+	
+		if not self.dataQuality_ui.tabWidget.isEnabled():
+			self.dataQuality_ui.tabWidget.setEnabled(True)
+			self.setUpCalibrationDQ()
+		
+		session_CID = self.Session()
+		query = session_CID.query(self.Obj_DQ).filter(self.Obj_DQ.PID == str(self.dataQuality_ui.comboBox.currentText()))[:]
+
+		if len(query) > 0:
+			self.dataQuality_ui.comboBias.setCurrentIndex( int( query[0].BIAS) )
+			self.dataQuality_ui.comboDark.setCurrentIndex( int( query[0].DARK) )
+			self.dataQuality_ui.comboFlatField.setCurrentIndex( int( query[0].FLATFIELD) )
+			self.dataQuality_ui.lineEditBias.setText( str( query[0].BIASNOTE) )
+			self.dataQuality_ui.lineEditDark.setText( str( query[0].DARKNOTE) )
+			self.dataQuality_ui.lineEditFlatField.setText( str( query[0].FLATFIELDNOTE) )
+		else:
+			self.dataQuality_ui.comboBias.setCurrentIndex( 0 )
+			self.dataQuality_ui.comboDark.setCurrentIndex( 0 )
+			self.dataQuality_ui.comboFlatField.setCurrentIndex( 0 )
+			self.dataQuality_ui.lineEditBias.setText( '' )
+			self.dataQuality_ui.lineEditDark.setText( '' )
+			self.dataQuality_ui.lineEditFlatField.setText( '' )
+				
+		print len(query),str(self.dataQuality_ui.comboBox.currentText())
+
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+	def setUpCalibrationDQ(self):
+		
+		self.dataQuality_ui.label.setText('1) Select the calibration files for this\nproject and select type.\n')
+		
+		for status in self.dqStatus:
+			self.dataQuality_ui.comboBias.addItem(status)
+			self.dataQuality_ui.comboDark.addItem(status)
+			self.dataQuality_ui.comboFlatField.addItem(status)
+
+		self.dataQuality_ui.comboBias.setCurrentIndex(0)
+		self.dataQuality_ui.comboDark.setCurrentIndex(0)
+		self.dataQuality_ui.comboFlatField.setCurrentIndex(0)
+
+		
+		self.dataQuality_ui.fromDB.setEnabled(False)
+		self.dataQuality_ui.comboFromDB.setEnabled(False)
+		self.dataQuality_ui.lineEditFromDB.setEnabled(False)
+		
+		self.connect(self.dataQuality_ui.Bias, QtCore.SIGNAL('clicked()'), self.test)
+		self.connect(self.dataQuality_ui.Dark, QtCore.SIGNAL('clicked()'), self.test)
+		self.connect(self.dataQuality_ui.FlatField, QtCore.SIGNAL('clicked()'), self.test)
+#
+#
+################################################################################################
+
+	def test(self):
+	
+		indexes = self.ui.tableDB.selectedIndexes()
+		
+		for i in range(len(indexes)):
+			print indexes[i].row()
+		
 ################################################################################################
 #
 #

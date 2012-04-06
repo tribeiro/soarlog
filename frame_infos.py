@@ -1,5 +1,5 @@
 
-from sqlalchemy import Column,Integer,String
+from sqlalchemy import Column,Integer,String,TEXT
 from sqlalchemy import FLOAT as REAL
 import pyfits
 import time,os,sys
@@ -110,7 +110,7 @@ CID = { 'FILENAME' : Column('FILENAME',String)	,\
 		'RA' : Column('RA',String)				,\
 		'DEC' : Column('DEC',String)			,\
 		'EQUINOX': Column('EQUINOX',String)		,\
-		'OBSNOTES' :Column('OBSNOTES',String)	,\
+		'OBSNOTES' :Column('OBSNOTES',TEXT)	,\
 		'SEEING' : Column('SEEING',String)		}
 
 #
@@ -122,7 +122,7 @@ CID = { 'FILENAME' : Column('FILENAME',String)	,\
 # Table View Database
 
 tvDB = { 'FILENAME' : Column('FILENAME',String)	,\
-		'PATH' : Column('PATH',String)	,\
+		'PATH' : Column('PATH',String)			,\
 		'OBJECT' : Column('OBJECT',String)		,\
 		'IMAGETYP' : Column('IMAGETYP',String)	,\
 		'TIMEOBS' : Column('TIMEOBS',String)	,\
@@ -141,14 +141,37 @@ tvDB = { 'FILENAME' : Column('FILENAME',String)	,\
 		'FILTER' : Column('FILTER',String)		,\
 		'FILTER2': Column('FILTER2',String)		,\
 		'SLIT': Column('SLIT',String)			,\
-		'GRATING' : Column('GRATING',String)		,\
+		'GRATING' : Column('GRATING',String)	,\
 		'FOCUS'	: Column('FOCUS',String)		,\
 		'CAM_ANGLE': Column('CAM_ANGLE',String)	,\
 		'GRT_ANGLE'	: Column('GRT_ANGLE',String),\
 		'RON_MODE'	: Column('RON_MODE',String)	,\
 		'BINNING'	: Column('BINNING',String)	,\
 		'PA'	: Column('PA',String)			,\
-		'SP_CONF' : Column('SP_CONF',String)		}
+		'SP_CONF' : Column('SP_CONF',String)	}
+
+
+#
+#
+##################################################################################################################################		
+
+##################################################################################################################################
+#
+# data Quality Database. It is related to tvDB and and instrument db.
+
+dataQualityDB = {	'TYPE'		: Column('TYPE',String)			,\
+					'SEMESTER'	: Column('SEMESTER',String)		,\
+					'PID'		: Column('PID',String)			,\
+					'DATASET'	: Column('DATASET',String)		,\
+					'DQNOTE'	: Column('DQNOTE',TEXT)			,\
+					'BIAS'		: Column('BIAS',String)			,\
+					'DARK'		: Column('DARK',String)			,\
+					'FLATFIELD'	: Column('FLATFIELD',String)	,\
+					'BIASNOTE'	: Column('BIASNOTE',TEXT)			,\
+					'DARKNOTE'	: Column('DARKNOTE',TEXT)			,\
+					'FLATFIELDNOTE'	: Column('FLATFIELDNOTE',TEXT)	,\
+					'FROMDB'	: Column('FROMDB',String)
+					}
 
 
 #
@@ -191,7 +214,7 @@ OSIRIS_TRANSLATE_CID = { 'FILENAME' : 'FILENAME'	,\
 		'RA' : 'RA'				,\
 		'DEC' : 'DEC'			,\
 		'EQUINOX': 'EQUINOX'	,\
-		'SEEING' : None}
+		'SEEING' : 'SEEING'}
 		#,\
 		#'SEEING' : 'SEEING'	
 		#}

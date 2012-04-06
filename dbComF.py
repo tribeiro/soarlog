@@ -17,6 +17,7 @@ import pyfits
 
 from sqlalchemy import create_engine, Column, Table, MetaData, ForeignKey, Integer, String
 from sqlalchemy import distinct
+from sqlalchemy.ext.declarative import declarative_base
 
 from sqlalchemy.orm import mapper,sessionmaker
 
@@ -62,6 +63,8 @@ class soarDB():
 		self.engine = create_engine('sqlite:///{0}'.format(self.dbname) )
 
 		self.metadata = MetaData()
+		
+		self.Base = declarative_base()
 	
 		#
 		# Creating a mapper for tvDB
@@ -76,10 +79,17 @@ class soarDB():
 			def __init__(self,**template):
 				for info in template.keys():
 					self.__dict__[info] = template[info]
+#				for foreignRelation in databaseF.frame_infos.instTemplates.keys():
+#					self.__dict__[foreignRelation.replace(' ','')] = databaseF.relationship(	foreignRelation, uselist=False,
+#																								backref='SoarLogTVDB')
+#				dqId = Column(Integer, ForeignKey('dataQualityDB.id'))
+#				dataQualityDB = relationship("dataQualityDB")
 	
 		self.Obj_CID = type(FrameUI(**databaseF.frame_infos.tvDB))
 
-		mapper(self.Obj_CID,file_table_TVDB)
+		mapper(	self.Obj_CID,file_table_TVDB)#, properties=relation)	
+		
+#				properties={'addresses' : relationship(Address, backref='user', order_by=address.c.id)})
 		
 		#
 		# Creating a mapper for weather comment
@@ -107,10 +117,13 @@ class soarDB():
 		
 		self.file_table_INSTRUMENTS = {}
 		self.Obj_INSTRUMENTS = {}
+		relation = {}
 		
 		for _inst in databaseF.frame_infos.instTemplates.keys():
 	
-			self.file_table_INSTRUMENTS[_inst] = Table(_inst,self.metadata,Column('id', Integer, primary_key=True))
+			self.file_table_INSTRUMENTS[_inst] = Table(	_inst.replace(' ',''),self.metadata,
+														Column('id', Integer, primary_key=True),
+														Column('frame_id',Integer, ForeignKey('SoarLogTVDB.id', onupdate="CASCADE", ondelete="CASCADE")))
 			
 			instTemplate = pyfits.getheader(databaseF.frame_infos.instTemplates[_inst])
 			
@@ -124,10 +137,34 @@ class soarDB():
 				def __init__(self,**template):
 					for info in template.keys():
 						self.__dict__[info] = template[info]
+					frame_id = Column('frame_id',Integer, ForeignKey('SoarLogTVDB.id'))
 
 			self.Obj_INSTRUMENTS[_inst] = type(FrameINST(**instTemplate))
-			mapper(self.Obj_INSTRUMENTS[_inst],self.file_table_INSTRUMENTS[_inst])
+			
+			#'addresses' : relationship(Address, backref='user', order_by=address.c.id)
+
+			mapper(	self.Obj_INSTRUMENTS[_inst],self.file_table_INSTRUMENTS[_inst]) 
+
+		#
+		# Creating a mapper for Data Quality
+		#
+
+		self.file_table_DQ = Table('SoarDataQuality',self.metadata,Column('id', Integer, primary_key=True))
+		
+		for keys in databaseF.frame_infos.dataQualityDB.keys():
+			print keys
+			self.file_table_DQ.append_column(databaseF.frame_infos.dataQualityDB[keys])
+
+		class dataQualityUI(object):
+			def __init__(self,**template):
+				for info in template.keys():
+					self.__dict__[info] = template[info]
 	
+		self.Obj_DQ = type(dataQualityUI(**databaseF.frame_infos.dataQualityDB))
+
+		mapper(self.Obj_DQ,self.file_table_DQ)#, properties=relation)	
+
+		
 		self.metadata.create_all(self.engine)	
 		self.Session = sessionmaker(bind=self.engine)
 		#
