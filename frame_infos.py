@@ -157,7 +157,7 @@ tvDB = { 'FILENAME' : Column('FILENAME',String)	,\
 
 ##################################################################################################################################
 #
-# data Quality Database. It is related to tvDB and and instrument db.
+# data Quality Database. It is related to tvDB and instrument db.
 
 dataQualityDB = {	'TYPE'		: Column('TYPE',String)			,\
 					'SEMESTER'	: Column('SEMESTER',String)		,\
@@ -173,6 +173,22 @@ dataQualityDB = {	'TYPE'		: Column('TYPE',String)			,\
 					'FROMDB'	: Column('FROMDB',String)
 					}
 
+
+#
+#
+##################################################################################################################################		
+
+##################################################################################################################################
+#
+# Project file database. This database stores the files related to each project. The db stores information on file location, file
+# name and type (calibration[BIAS, DARK, FLAT-FIELD, WAVELENGHT]/day-ligth-calibration[BIAS, DARK, FLAT-FIELD, WAVELENGHT]/
+# observatarions[TARGET,STANDARD].
+
+projectFilesDB = {	'PID'		:	Column('PID',String)		,
+					'TYPE'		:	Column('TYPE',Integer)		,
+					'SUBTYPE'	:	Column('SUBTYPE',Integer)	,
+					'FILENAME'	:	Column('FILENAME',String)	,
+					'PATH'		:	Column('PATH',String)		}
 
 #
 #
@@ -779,8 +795,9 @@ def GetFrameInfos(filename):
 				if type(PARTICULAR_DB[key]) == type(GOODMAN_RDMODE):
 					hdr_inst[key] = PARTICULAR_DB[key](hdr)
 			except:
-				print '--> Exception',sys.exc_info()[0]
+				print '--> Exception',sys.exc_info()[1]
 				hdr_inst[key] = ''
+				pass
 			
 	hdr_out['FILENAME'] = filename
 	hdr_inst['OBSNOTES'] = ''
