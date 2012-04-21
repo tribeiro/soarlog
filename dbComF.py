@@ -30,7 +30,7 @@ import os,sys
 import Queue
 
 #import thread,time
-from threading import Thread
+from threading import Thread,enumerate
 
 def function():
 	return -1
@@ -173,8 +173,8 @@ class soarDB():
 
 		self.file_table_CID = file_table_TVDB
 		
-		self.rthread = Thread(target=self.run, args=("Thread No:1",2))
-							
+		self.rthread = None
+		
 #		self.setDaemon(True)
 
 
@@ -241,12 +241,17 @@ class soarDB():
 #
 	def runQueue(self):
 	
-#		thread.start_new_thread(self.run,("Thread No:1",2))
-
-		self.rthread.start()
-
+		threadList = enumerate()
 		
-		#self.reloadTable()
+		for tthread in threadList:
+			if tthread.getName() == "SoarDBrunQueue":
+				return -1
+
+		self.rthread = Thread(target=self.run, args=("SoarDBrunQueue",2))
+		
+		if not self.rthread.isAlive():
+			self.rthread.start()
+
 #
 #
 ################################################################################################
@@ -267,11 +272,11 @@ class soarDB():
 #			time.sleep(1.0)
 			info = self.AddFrame(ff)
 
-		query = session.query(self.Obj_CID)[-1]
-		last = os.path.join(query.PATH,query.FILENAME)
+		query = session.query(self.Obj_CID)[::]
+		last = os.path.join(query[-1].PATH,query[-1].FILENAME)
 		
 		self.reloadTable(last)
-		
+				
 		#self.wake.clear()
 		
 		#self.run()
