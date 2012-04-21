@@ -41,37 +41,37 @@ def GOODMAN_SPCONF(query):
 	grtAng = [  5. ,   7. ,  10. ,  12. ,  16.3,  18.7,  20.2,  22.2,  24.8, 27.4,  30.1]
 	camAng = [ 11. ,  17. ,  20. ,  27. ,  29.5,  34.4,  39.4,  44.4,  49.6, 54.8,  60.2]
 	
-	if grt == '600' and ( np.abs(float(query['CAM_ANGLE']) - camAng[1]) < 1.0 or np.abs(float(query['GRT_ANGLE']) - grtAng[1]) < 1.0):
+	if grt == '600' and ( np.abs(float(query['CAM_ANG']) - camAng[1]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[1]) < 1.0):
 		
 		spcfg = 'b'
 
-	elif grt == '600' and ( np.abs(float(query['CAM_ANGLE']) - camAng[2]) < 1.0 or np.abs(float(query['GRT_ANGLE']) - grtAng[2]) < 1.0):
+	elif grt == '600' and ( np.abs(float(query['CAM_ANG']) - camAng[2]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[2]) < 1.0):
 		
 		spcfg = 'm'
 
-	elif grt == '600' and ( np.abs(float(query['CAM_ANGLE']) - camAng[3]) < 1.0 or np.abs(float(query['GRT_ANGLE']) - grtAng[3]) < 1.0):
+	elif grt == '600' and ( np.abs(float(query['CAM_ANG']) - camAng[3]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[3]) < 1.0):
 		
 		spcfg = 'r'
 
-	elif grt == '1200' and ( np.abs(float(query['CAM_ANGLE']) - camAng[4]) < 1.0 or np.abs(float(query['GRT_ANGLE']) - grtAng[4]) < 1.0):
+	elif grt == '1200' and ( np.abs(float(query['CAM_ANG']) - camAng[4]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[4]) < 1.0):
 			spcfg = 'm1'
 
-	elif grt == '1200' and ( np.abs(float(query['CAM_ANGLE']) - camAng[5]) < 1.0 or np.abs(float(query['GRT_ANGLE']) - grtAng[5]) < 1.0):
+	elif grt == '1200' and ( np.abs(float(query['CAM_ANG']) - camAng[5]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[5]) < 1.0):
 			spcfg = 'm2'
 
-	elif grt == '1200' and ( np.abs(float(query['CAM_ANGLE']) - camAng[6]) < 1.0 or np.abs(float(query['GRT_ANGLE']) - grtAng[6]) < 1.0):
+	elif grt == '1200' and ( np.abs(float(query['CAM_ANG']) - camAng[6]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[6]) < 1.0):
 			spcfg = 'm3'
 
-	elif grt == '1200' and ( np.abs(float(query['CAM_ANGLE']) - camAng[7]) < 1.0 or np.abs(float(query['GRT_ANGLE']) - grtAng[7]) < 1.0):
+	elif grt == '1200' and ( np.abs(float(query['CAM_ANG']) - camAng[7]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[7]) < 1.0):
 			spcfg = 'm4'
 
-	elif grt == '1200' and ( np.abs(float(query['CAM_ANGLE']) - camAng[8]) < 1.0 or np.abs(float(query['GRT_ANGLE']) - grtAng[8]) < 1.0):
+	elif grt == '1200' and ( np.abs(float(query['CAM_ANG']) - camAng[8]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[8]) < 1.0):
 			spcfg = 'm5'
 
-	elif grt == '1200' and ( np.abs(float(query['CAM_ANGLE']) - camAng[9]) < 1.0 or np.abs(float(query['GRT_ANGLE']) - grtAng[9]) < 1.0):
+	elif grt == '1200' and ( np.abs(float(query['CAM_ANG']) - camAng[9]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[9]) < 1.0):
 			spcfg = 'm6'
 
-	elif grt == '1200' and ( np.abs(float(query['CAM_ANGLE']) - camAng[10]) < 1.0 or np.abs(float(query['GRT_ANGLE']) - grtAng[10]) < 1.0):
+	elif grt == '1200' and ( np.abs(float(query['CAM_ANG']) - camAng[10]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[10]) < 1.0):
 			spcfg = 'm7'
 	
 	else:
