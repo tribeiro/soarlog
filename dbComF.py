@@ -274,10 +274,12 @@ class soarDB():
 		while not self.Queue.empty():
 			
 			ff = self.Queue.get()
+			logging.debug('--> Working on {0}'.format(ff))
 #			print ff
 #			time.sleep(1.0)
 			info = self.AddFrame(ff)
-
+			logging.debug('Done')
+			
 		logging.debug('Ended queue. Preparing reloadTable')
 
 		query = session.query(self.Obj_CID)[::]

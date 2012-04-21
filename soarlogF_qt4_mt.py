@@ -66,7 +66,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 	
 		super(SoarLog, self).__init__()
 		self.Queue = args[0]
-
+		self.recordQueue = args[1]
 	##########################################################
 	# See if configuration directory exists. Create one 
 	# otherwise.
@@ -292,6 +292,8 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		#self.connect(self, QtCore.SIGNAL('reloadTableEvent()'), self.reloadTable)
 		self.connect(self, QtCore.SIGNAL('runQueueEvent()'), self.runQueue)
 		self.connect(self, QtCore.SIGNAL('TableDataChanged(QModelIndex,QString)'), self.CommitDBTable)
+		
+		self.connect(self, QtCore.SIGNAL('insertRecord()'), self.insertRecord)
 		#self.connect(self, QtCore.SIGNAL("dataChanged(QModelIndex,QModelIndex)"), self.CommitDBTable)
 
 		self.connect(self.ui.actionAddComment, QtCore.SIGNAL('triggered()'),self.addCommentLine)
@@ -432,7 +434,10 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 				record.setValue(keys[i], infos[1][keys[i]])
 				
 			#self.model.insertRows(self.model.rowCount(),1)		
-			self.model.insertRecord(-1,record)
+			
+			self.recordQueue.put(record)
+			self.emit(QtCore.SIGNAL("insertRecord()"))
+			#self.model.insertRecord(-1,record)
 
 			instKey = infos[0]['INSTRUME']
 			entry = self.Obj_INSTRUMENTS[instKey](**infos[1])
@@ -444,6 +449,13 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 #
 ################################################################################################
 
+	def insertRecord(self):
+	
+		while not self.recordQueue.empty():
+			
+			record = self.recordQueue.get()
+
+			self.model.insertRecord(-1,record)
 
 ################################################################################################
 #

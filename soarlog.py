@@ -17,13 +17,14 @@ Ribeiro, T., June 2011.
 from soarlogF_qt4_mt import *
 
 MasterQueue = Queue.Queue()
+recordQueue = Queue.Queue()
 
 if __name__ == "__main__":
 
 	
 	root = QtGui.QApplication(sys.argv)
 	
-	usergui = SoarLog(MasterQueue)
+	usergui = SoarLog(MasterQueue,recordQueue)
 	
 	usergui.initGUI()
 		
