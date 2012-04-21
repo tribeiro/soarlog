@@ -173,7 +173,7 @@ class soarDB():
 
 		self.file_table_CID = file_table_TVDB
 		
-		self.threadRuning = False
+		self.rthread = Thread(target=self.run, args=("Thread No:1",2))
 							
 #		self.setDaemon(True)
 
@@ -243,9 +243,7 @@ class soarDB():
 	
 #		thread.start_new_thread(self.run,("Thread No:1",2))
 
-		if not self.threadRuning:
-			self.threadRuning = True
-			Thread(target=self.run, args=("Thread No:1",2)).start()
+		self.rthread.start()
 
 		
 		#self.reloadTable()
@@ -273,7 +271,6 @@ class soarDB():
 		last = os.path.join(query.PATH,query.FILENAME)
 		
 		self.reloadTable(last)
-		self.threadRuning = False
 		
 		#self.wake.clear()
 		
