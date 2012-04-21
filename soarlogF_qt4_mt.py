@@ -186,7 +186,10 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		
 			# Check if ds9 is opened
 			if not _targets == 0:
-				d = ds9.ds9()
+				try:
+					d = ds9.ds9()
+				except:
+					return -1
 			else: 
 				d = ds9.ds9(_targets[0])
 		

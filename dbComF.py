@@ -31,6 +31,11 @@ import Queue
 
 #import thread,time
 from threading import Thread,enumerate
+import logging
+
+logging.basicConfig(level=logging.DEBUG,
+                    format='[%(levelname)s] (%(threadName)-10s) %(message)s',
+                    )
 
 def function():
 	return -1
@@ -247,7 +252,7 @@ class soarDB():
 			if tthread.getName() == "SoarDBrunQueue":
 				return -1
 
-		self.rthread = Thread(target=self.run, args=("SoarDBrunQueue",2))
+		self.rthread = Thread(target=self.run,name="SoarDBrunQueue")
 		
 		if not self.rthread.isAlive():
 			self.rthread.start()
@@ -264,7 +269,8 @@ class soarDB():
 		#self.wake.wait()
 		session = self.Session()
 		#ff = ''
-		
+
+		logging.debug('Starting queue on thread {0}'.format(self.rthread.getName()))		
 		while not self.Queue.empty():
 			
 			ff = self.Queue.get()
@@ -272,11 +278,15 @@ class soarDB():
 #			time.sleep(1.0)
 			info = self.AddFrame(ff)
 
+		logging.debug('Ended queue. Preparing reloadTable')
+
 		query = session.query(self.Obj_CID)[::]
 		last = os.path.join(query[-1].PATH,query[-1].FILENAME)
 		
 		self.reloadTable(last)
-				
+
+		logging.debug('Thread done.')
+						
 		#self.wake.clear()
 		
 		#self.run()
