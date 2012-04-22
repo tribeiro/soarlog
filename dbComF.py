@@ -247,16 +247,9 @@ class soarDB():
 #
 	def runQueue(self):
 	
-		threadList = threading.enumerate()
+		rthread = threading.Thread(target=self.run)
 		
-		for tthread in threadList:
-			if tthread.getName() == "SoarDBrunQueue":
-				return -1
-
-		self.rthread = threading.Thread(target=self.run,name="SoarDBrunQueue")
-		
-		if not self.rthread.isAlive():
-			self.rthread.start()
+		rthread.start()
 
 #
 #
@@ -271,7 +264,7 @@ class soarDB():
 		session = self.Session()
 		#ff = ''
 
-		logging.debug('Starting queue on thread {0}'.format(self.rthread.getName()))		
+		logging.debug('Starting queue')
 		while not self.Queue.empty():
 			
 			ff = self.Queue.get()
