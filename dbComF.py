@@ -30,7 +30,8 @@ import os,sys
 import Queue
 
 #import thread,time
-from threading import Thread,enumerate
+#from threading import Thread
+import threading 
 import logging
 
 logging.basicConfig(level=logging.DEBUG,
@@ -246,13 +247,13 @@ class soarDB():
 #
 	def runQueue(self):
 	
-		threadList = enumerate()
+		threadList = threading.enumerate()
 		
 		for tthread in threadList:
 			if tthread.getName() == "SoarDBrunQueue":
 				return -1
 
-		self.rthread = Thread(target=self.run,name="SoarDBrunQueue")
+		self.rthread = threading.Thread(target=self.run,name="SoarDBrunQueue")
 		
 		if not self.rthread.isAlive():
 			self.rthread.start()
