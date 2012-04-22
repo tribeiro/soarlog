@@ -735,7 +735,10 @@ def GetFrameInfos(filename):
 		#print '[FAILED - verify]: ',filename
 		pass #return -1
 
-	hdr = hdulist[0].header
+	try:
+		hdr = hdulist[0].header
+	except:
+		return -1
 
 	hdulist.close()
 		
