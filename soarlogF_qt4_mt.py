@@ -67,6 +67,8 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		super(SoarLog, self).__init__()
 		self.Queue = args[0]
 		self.recordQueue = args[1]
+		self.commitLock = threading.RLock()
+
 	##########################################################
 	# See if configuration directory exists. Create one 
 	# otherwise.
@@ -441,8 +443,18 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 
 			instKey = infos[0]['INSTRUME']
 			entry = self.Obj_INSTRUMENTS[instKey](**infos[1])
-			session.add(entry)
-			session.commit()
+
+			self.commitLock.acquire()
+
+			try:
+				session.add(entry)
+				session.commit()
+			except:
+				logging.debug(sys.exc_info()[1])
+				logging.debug('Could not commit to instrument specific database. Will do it later.')
+				pass
+			finally:
+				self.commitLock.release()
 		
 		return 0
 #
@@ -450,12 +462,22 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 ################################################################################################
 
 	def insertRecord(self):
-	
-		while not self.recordQueue.empty():
-			
-			record = self.recordQueue.get()
 
-			self.model.insertRecord(-1,record)
+
+		
+		while not self.recordQueue.empty():
+		
+			self.commitLock.acquire()			
+
+			try:
+			
+				record = self.recordQueue.get()
+				self.model.insertRecord(-1,record)
+				
+			finally:
+			
+				self.commitLock.release()
+			
 
 ################################################################################################
 #
