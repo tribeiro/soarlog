@@ -52,6 +52,7 @@ try:
 					fname = fname[1:findex]+'.fits'
 			
 			except ValueError:
+				logging.debug(sys.exc_info()[1])
 				 # File is not a fits, stop process
 				return -1
 

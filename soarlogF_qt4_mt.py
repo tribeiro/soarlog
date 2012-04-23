@@ -68,7 +68,8 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		self.Queue = args[0]
 		self.recordQueue = args[1]
 		self.commitLock = threading.RLock()
-
+		self.emmitFileEventLock = threading.RLock()
+		
 	##########################################################
 	# See if configuration directory exists. Create one 
 	# otherwise.
@@ -261,6 +262,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		model = myQSqlTableModel(self, db) #QtSql.QSqlQueryModel(self) #
 		model.setTable("SoarLogTVDB")
 		model.select()
+		model.setEditStrategy(QtSql.QSqlTableModel.OnManualSubmit)
 #		model.flags = myFlags
 #		model.setQuery("SELECT * FROM SoarLogTVDB");
 		self.model = model
@@ -409,9 +411,10 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 
 	def AddFrame(self,filename):
 	
+		logging.debug('AddFrame received {0}'.format(filename))
+		
 		if not filename:
-
-			print '# - Filename is empty ...', filename
+			logging.debug('Filename is empty ...')
 			return -1
 		
 		# Checa se esta no banco de dados
@@ -420,13 +423,13 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 
 		query = session.query(self.Obj_CID.FILENAME).filter(self.Obj_CID.FILENAME == os.path.basename(str(filename)))[:]
 		if len(query) > 0:
-			#print 'File %s already in database...' % (str(filename))
+			logging.debug('File {0} already in database...' % (str(filename)))
 			return -1
 			
 		infos = databaseF.frame_infos.GetFrameInfos(str(filename))
 
 		if infos == -1:
-			print '# Could not read file %s... ' %(filename)
+			logging.debug(' Could not read file {0}... '.format(filename))
 			return -1
 		else:
 			#entry_CID = self.Obj_CID(**infos[1])
@@ -464,23 +467,36 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 #
 ################################################################################################
 
+################################################################################################
+#
+#
 	def insertRecord(self):
-
-
 		
-		while not self.recordQueue.empty():
+		self.commitLock.acquire()			
 		
-			self.commitLock.acquire()			
+		lqueue = self.recordQueue.qsize()
 
-			try:
+		if lqueue == 0:
+			self.commitLock.release()
+			return -1
+
+		try:
+			self.model.submitAll()
+			while not self.recordQueue.empty():
+	
 			
 				record = self.recordQueue.get()
+				logging.debug('Inserting {} to main database'.format( record.value('FILENAME').toString() ))
 				self.model.insertRecord(-1,record)
-				
-			finally:
+
+			logging.debug('Submiting changes to database ({0} new entries).'.format(lqueue))
+			self.model.submitAll()
 			
-				self.commitLock.release()
-			
+		finally:
+			self.commitLock.release()
+#
+#
+################################################################################################
 
 ################################################################################################
 #

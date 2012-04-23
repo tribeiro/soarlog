@@ -65,6 +65,7 @@ class soarDB():
 		#
 		
 		self.Queue = queue
+		self.initThreadLock = threading.RLock()
 		
 		self.engine = create_engine('sqlite:///{0}'.format(self.dbname) )
 
@@ -247,10 +248,10 @@ class soarDB():
 #
 	def runQueue(self):
 	
-		rthread = threading.Thread(target=self.run)
-		
-		rthread.start()
-
+		if self.initThreadLock.acquire(False):
+			rthread = threading.Thread(target=self.run)
+			rthread.start()
+			self.initThreadLock.release()
 #
 #
 ################################################################################################
@@ -260,33 +261,36 @@ class soarDB():
 #
 	def run(self,*args):
 
-		#self.wake.wait()
-		session = self.Session()
-		#ff = ''
-
-		logging.debug('Starting queue')
-		while not self.Queue.empty():
-			
-			ff = self.Queue.get()
-			logging.debug('--> Working on {0}'.format(ff))
-#			print ff
-#			time.sleep(1.0)
-			info = self.AddFrame(ff)
-			logging.debug('Done')
-			
-		logging.debug('Ended queue. Preparing reloadTable')
-
-		query = session.query(self.Obj_CID)[::]
-		last = os.path.join(query[-1].PATH,query[-1].FILENAME)
+		self.initThreadLock.acquire()
 		
-		self.reloadTable(last)
+		try:
+			#self.wake.wait()
+			session = self.Session()
+			#ff = ''
 
-		logging.debug('Thread done.')
-						
-		#self.wake.clear()
-		
-		#self.run()
+			logging.debug('Starting queue')
+			fframe = ''
+			while not self.Queue.empty():
+				
+				fframe = self.Queue.get()
+				logging.debug('--> Working on {0}'.format(fframe))
+				info = self.AddFrame(fframe)
+				logging.debug('Done')
+				
+			logging.debug('Ended queue. Preparing reloadTable')
 
+			#query = session.query(self.Obj_CID)[::]
+			#last = os.path.join(query[-1].PATH,query[-1].FILENAME)
+			
+			self.reloadTable(fframe)
+
+			logging.debug('Thread done.')
+							
+			#self.wake.clear()
+			
+			#self.run()
+		finally:
+			self.initThreadLock.release()
 		
 #
 #
