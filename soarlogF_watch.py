@@ -4,6 +4,7 @@ import os
 from sqlalchemy import create_engine, Column, Table, MetaData, ForeignKey, Integer
 from sqlalchemy.orm import mapper,sessionmaker
 import Queue
+import logging
 
 try:
 
