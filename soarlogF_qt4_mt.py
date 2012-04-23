@@ -423,7 +423,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 
 		query = session.query(self.Obj_CID.FILENAME).filter(self.Obj_CID.FILENAME == os.path.basename(str(filename)))[:]
 		if len(query) > 0:
-			logging.debug('File {0} already in database...' % (str(filename)))
+			logging.debug('File {0} already in database...'.format(str(filename)))
 			return -1
 			
 		infos = databaseF.frame_infos.GetFrameInfos(str(filename))
