@@ -1,6 +1,6 @@
 
 import databaseF
-import os
+import sys,os
 from sqlalchemy import create_engine, Column, Table, MetaData, ForeignKey, Integer
 from sqlalchemy.orm import mapper,sessionmaker
 import Queue
