@@ -90,6 +90,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 	
 		self.dir = ''
 		self.logfile = 'SOARLOG_{0}.txt'
+		self.semester_ID = 'SO2012A-{0}'
 		self.dataCalib = '/data/data_calib/2012A/SO2012A-%s.txt'
 		self.dbname = 'soarlog_{0}.db'
 		self.CommentColumn = 17
@@ -298,14 +299,16 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		self.connect(self, QtCore.SIGNAL('insertRecord()'), self.insertRecord)
 		#self.connect(self, QtCore.SIGNAL("dataChanged(QModelIndex,QModelIndex)"), self.CommitDBTable)
 
-		self.connect(self.ui.actionAddComment, QtCore.SIGNAL('triggered()'),self.addCommentLine)
+		self.connect(self.ui.actionAddComment, QtCore.SIGNAL('triggered()'),self.askForCommentLinePID)
 		self.connect(self.ui.actionDQ, QtCore.SIGNAL('triggered()'),self.startDataQuality)
 		self.connect(self.ui.actionWI, QtCore.SIGNAL('triggered()'),self.promptWeatherComment)
 		self.connect(self.ui.actionHideCB, QtCore.SIGNAL('triggered()'),self.HideCB)
 		self.connect(self.ui.actionEnable_Disable_Table_Edit, QtCore.SIGNAL('triggered()'),self.enableDisableTableEdit)
 
 		self.connect(self.ui.addFrameComment, QtCore.SIGNAL('clicked()'),self.commitComment)
-
+		
+		self.connect(self.ui.addNoteButton, QtCore.SIGNAL('clicked()'),self.askForCommentLinePID)
+		
 		self.connect(self.model, QtCore.SIGNAL('beforeUpdate(int,QSqlRecord&)'),self.actBeforeUpdate)
 		
 		self.connect(self.ui.tableDB,QtCore.SIGNAL("clicked(const QModelIndex&)"), self.tableItemSelected)
@@ -956,7 +959,7 @@ Time Spent:
 
 					time[i] = day[i]
 				
-			sort = time.argsort()
+			sort = range(len(query))#time.argsort()
 		
 			for itr in range(len(query)):
 
@@ -1010,7 +1013,7 @@ Time Spent:
 #
 
 	def SaveLogThreaded(self):
-		Thread(target=self.SaveLog).start()
+		threading.Thread(target=self.SaveLog).start()
 
 #
 #
@@ -1529,33 +1532,85 @@ Time Spent:
 ################################################################################################
 #
 #
-	def addCommentLine(self):
+	def askForCommentLinePID(self):
+
+
+		class askPID_UI(QtGui.QDialog):
+	
+		########################################################################################
+		#
+		#	
+	
+			def __init__(self):
+		
+				QtGui.QDialog.__init__(self)
+		
+				##########################################################
+				#
+				# Set up preferences menu
+				self.pid_ui = uic.loadUi(os.path.join(uipath,'askPID.ui'),self)
+
+		#
+		#
+		########################################################################################
+
+		self.pid_ui = askPID_UI()
+		self.connect(self.pid_ui.buttonBox, QtCore.SIGNAL('accepted()'), self.handleCommentLine)
+		self.connect(self.pid_ui.buttonBox, QtCore.SIGNAL('rejected()'), self.closePIDUI)		
+		
+		self.pid_ui.show()
+		
+		self.pid_ui.exec_()
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+	def closePIDUI(self):
+	
+		self.pid_ui.close()
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+	def handleCommentLine(self):
+	
+		if len(self.pid_ui.lineEdit.text()) == 3:
+			#print self.semester_ID.format(self.pid_ui.lineEdit.text())
+			self.addCommentLine(self.semester_ID.format(self.pid_ui.lineEdit.text()))
+		self.pid_ui.close()
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+	def addCommentLine(self,filename):
 
 		session = self.Session()
 		
-		finfos = {}
-		for hdr in databaseF.frame_infos.CID.keys():
-			finfos[hdr] = ''
+		record = QtSql.QSqlRecord()
+		keys = databaseF.frame_infos.tvDB.keys()
+		
+		for i in range(len(keys)):
+			record.insert(i,QtSql.QSqlField(keys[i]))
+			record.setValue(keys[i], '')
+			
 
-		fselect = session.query(self.Obj_CID.FILENAME)[:]
-		finfos['FILENAME'] = os.path.basename(fselect[-1][0]).replace('.fits','.note')
-		finfos['TIMEOBS'] = time.ctime().split(' ')[4]
-		finfos['INSTRUME'] = 'NOTE'
-		finfos['OBJECT'] = 'NOTE'
-		finfos['EXPTIME'] = 0.0
-		finfos['AIRMASS'] = -1.0
+		record.setValue('FILENAME', filename) #os.path.basename(fselect[-1][0]).replace('.fits','.note')
+		record.setValue('TIMEOBS', time.strftime('%H:%M:%S',time.gmtime()))
+		record.setValue('INSTRUME', 'NOTE')
+		record.setValue('OBJECT', 'NOTE')
+		record.setValue('EXPTIME', 0.0)
+		record.setValue('AIRMASS', -1.0)
 
-		entry = self.Obj_CID(**finfos)
-		session.add(entry)
-		session.commit()
-
-		infos = [' ']*len(finfos)
-		for i in range(len(self.header_CID)):
-			infos[i] = finfos[self.header_CID[i]]
-
-		self.updateTable(infos)
-		self.emmitReloadTableEvent('Note')
-
+		self.model.insertRecord(-1,record)
 #
 #
 ################################################################################################
