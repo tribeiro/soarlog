@@ -486,7 +486,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 	
 			
 				record = self.recordQueue.get()
-				logging.debug('Inserting {} to main database'.format( record.value('FILENAME').toString() ))
+				logging.debug('Inserting {0} to main database'.format( record.value('FILENAME').toString() ))
 				self.model.insertRecord(-1,record)
 
 			logging.debug('Submiting changes to database ({0} new entries).'.format(lqueue))
