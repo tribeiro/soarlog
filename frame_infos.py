@@ -741,7 +741,7 @@ def GetFrameInfos(filename):
 		try:
 			hdr = hdulist[0].header
 		except:
-			raise
+			return -1
 	except:
 		return -1
 
