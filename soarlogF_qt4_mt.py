@@ -93,7 +93,9 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		self.logfile = 'SOARLOG_{0}.txt'
 		self.semester_ID = 'SO2012A-{0}'
 		self.dataCalib = '/data/data_calib/2012A/SO2012A-%s.txt'
+		self.dataStorage = '/data/data_{SID}/{PID}'
 		self.dbname = 'soarlog_{0}.db'
+		self.masterDBName = '.soarMaster.db' # master database.
 		self.CommentColumn = 17
 		self.ExtraEditableColumns = [1,13,17]
 		self.AskFile2Watch()
@@ -849,6 +851,9 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		
 		mask = np.array([len(proj_id[i]) > 0 for i in range(len(proj_id))])
 		
+		if len(mask) == 0:
+			return [],[],0
+		
 		proj_id = proj_id[mask]
 		proj_id2 = proj_id
 		
@@ -1366,6 +1371,8 @@ Time Spent:
 		self.connect(self.dataQuality_ui.buttonBox, QtCore.SIGNAL('clicked(QAbstractButton*)'), self.commitDataQuality)
 		self.connect(self.dataQuality_ui.comboBox, QtCore.SIGNAL('currentIndexChanged(int)'), self.readDQProject)
 		
+		self.dataQuality_ui.lineEditSemesterID.setText(self.semester_ID[:-4])
+		self.dataQuality_ui.lineEditPathToData.setText(self.dataStorage.format(SID=self.semester_ID[:-4],PID=self.semester_ID.format('123')))
 		#self.setAnimated(True)
 
 		#model.setRootPath('/')

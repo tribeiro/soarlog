@@ -46,6 +46,7 @@ def function():
 class soarDB():
 
 	dbname = 'soarlog.db'
+	masterDBName = '.soarMaster.db'
 
 ################################################################################################
 #

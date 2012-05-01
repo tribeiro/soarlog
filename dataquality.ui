@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>361</width>
-    <height>388</height>
+    <width>406</width>
+    <height>437</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -30,10 +30,16 @@
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
          <widget class="QLabel" name="label">
+          <property name="layoutDirection">
+           <enum>Qt::LeftToRight</enum>
+          </property>
           <property name="text">
            <string>
 Select a project to start Data Quality.
 </string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
           </property>
          </widget>
         </item>
@@ -45,9 +51,56 @@ Select a project to start Data Quality.
        <property name="enabled">
         <bool>false</bool>
        </property>
+       <property name="layoutDirection">
+        <enum>Qt::LeftToRight</enum>
+       </property>
        <property name="currentIndex">
         <number>0</number>
        </property>
+       <widget class="QWidget" name="tab_5">
+        <attribute name="title">
+         <string>Configuration</string>
+        </attribute>
+        <layout class="QGridLayout" name="gridLayout_6">
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineEditSemesterID"/>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_2">
+           <property name="text">
+            <string>Semester ID</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="lineEditPathToData"/>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label_3">
+           <property name="text">
+            <string>Path to store
+data</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QPushButton" name="pushButton">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="layoutDirection">
+            <enum>Qt::RightToLeft</enum>
+           </property>
+           <property name="text">
+            <string>Browse</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
        <widget class="QWidget" name="tab">
         <attribute name="title">
          <string>Calibration</string>
@@ -136,13 +189,13 @@ Select a project to start Data Quality.
        </widget>
        <widget class="QWidget" name="tab_3">
         <attribute name="title">
-         <string>Query</string>
+         <string>Misc</string>
         </attribute>
-        <layout class="QVBoxLayout" name="verticalLayout_4">
-         <item>
+        <layout class="QGridLayout" name="gridLayout_5">
+         <item row="0" column="1">
           <widget class="QLineEdit" name="queryDB"/>
          </item>
-         <item>
+         <item row="0" column="2">
           <widget class="QPushButton" name="runQueryDB">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
@@ -156,6 +209,64 @@ Select a project to start Data Quality.
            <property name="text">
             <string>Filter</string>
            </property>
+          </widget>
+         </item>
+         <item row="1" column="1" colspan="2">
+          <widget class="QGroupBox" name="groupBox">
+           <property name="title">
+            <string>Calibration for another project</string>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_8">
+            <item row="1" column="0">
+             <widget class="QToolButton" name="toolButton">
+              <property name="text">
+               <string>Bias</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QToolButton" name="toolButton_2">
+              <property name="text">
+               <string>Dark</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="QToolButton" name="toolButton_3">
+              <property name="text">
+               <string>Flat Field</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QComboBox" name="comboBox_2"/>
+            </item>
+            <item row="2" column="1">
+             <widget class="QComboBox" name="comboBox_3"/>
+            </item>
+            <item row="3" column="1">
+             <widget class="QComboBox" name="comboBox_4"/>
+            </item>
+            <item row="1" column="2">
+             <widget class="QLineEdit" name="lineEdit"/>
+            </item>
+            <item row="2" column="2">
+             <widget class="QLineEdit" name="lineEdit_2"/>
+            </item>
+            <item row="3" column="2">
+             <widget class="QLineEdit" name="lineEdit_3"/>
+            </item>
+            <item row="0" column="0">
+             <widget class="QLabel" name="label_4">
+              <property name="text">
+               <string>Project ID</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLineEdit" name="lineEdit_4"/>
+            </item>
+           </layout>
           </widget>
          </item>
         </layout>

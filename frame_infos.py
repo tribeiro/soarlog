@@ -358,7 +358,7 @@ SOI_TRANSLATE_CID = {'FILENAME' : 'FILENAME'  ,\
 		'RA' : 'RA'				,\
 		'DEC' : 'DEC'			,\
 		'EQUINOX': 'RADECEQ'	,\
-		'SEEING' : 'SEEING'		
+		'SEEING' : 'DIMMSEE'		
 }
 				
 SOI_TV = {		'FILTER'	:	'FILTER1'		,
@@ -370,7 +370,7 @@ SOI_TV = {		'FILTER'	:	'FILTER1'		,
 				'GRT_ANGLE'	:	None			,
 				'RON_MODE'	:	None			,
 				'BINNING'	:	'CCDSUM'		,
-				'PA'		:	'DECPANG'		,
+				'PA'		:	'DECPANGL'		,
 				'SP_CONF'	:	None			 }
 
 #
@@ -736,7 +736,12 @@ def GetFrameInfos(filename):
 		pass #return -1
 
 	try:
-		hdr = hdulist[0].header
+		hdr = hdulist[1].header
+	except IndexError:
+		try:
+			hdr = hdulist[0].header
+		except:
+			raise
 	except:
 		return -1
 
