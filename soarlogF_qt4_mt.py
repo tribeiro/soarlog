@@ -204,8 +204,11 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 				_file = open(os.path.join(self._CFGFilePath_,'ds9.reg'),'w')
 				_file.write(regions)
 				_file.close()
-			
-				query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME == os.path.basename(frame))[0]
+				
+				try:
+					query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME == os.path.basename(frame))[0]
+				except:
+					return -1
 				try:
 					if query.INSTRUME == 'SOI':
 					#mscred.mscdisplay(frame,1)
