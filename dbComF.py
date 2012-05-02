@@ -273,11 +273,11 @@ class soarDB():
 			fframe = ''
 			while not self.Queue.empty():
 				
-				frame = self.Queue.get()
-				logging.debug('--> Working on {0}'.format(frame))
+				cframe = self.Queue.get()
+				logging.debug('--> Working on {0}'.format(cframe))
 				info = self.AddFrame(fframe)
 				if info == 0:
-					fframe = frame
+					fframe = cframe
 				logging.debug('Done')
 				
 			logging.debug('Ended queue. Preparing reloadTable')
