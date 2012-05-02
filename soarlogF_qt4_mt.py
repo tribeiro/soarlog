@@ -774,9 +774,11 @@ class SoarLog(QtGui.QMainWindow,soarDB):
                       WEATHER CONDITIONS
 ===============================================================
 '''
-		_file = open(self.__FileWeatherComments__,'r')
+		#_file = open(self.__FileWeatherComments__,'r')
+		session = self.Session()
+		query = session.query(self.Obj_WC.Comment)[:]
 
-		return comments+_file.read()+'\n'
+		return comments+query[0].Comment+'\n'
 #
 #
 ################################################################################################
