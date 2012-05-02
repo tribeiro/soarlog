@@ -96,8 +96,8 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		self.dataStorage = '/data/data_{SID}/{PID}'
 		self.dbname = 'soarlog_{0}.db'
 		self.masterDBName = '.soarMaster.db' # master database.
-		self.CommentColumn = 17
-		self.ExtraEditableColumns = [1,13,17]
+		self.CommentColumn = 16
+		self.ExtraEditableColumns = [1,13,16]
 		self.AskFile2Watch()
 				
 		self.logfile = self.logfile.format(self.dir.split('/')[-1])
@@ -107,6 +107,9 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		self.dqStatus = ['','OK','WARN','FAIL']
 									
 		self.header_CID = databaseF.frame_infos.tvDB.keys()
+		for i in range(len(self.header_CID)):
+			print i,self.header_CID[i]
+		
 		self.header_dict = { 'OSIRIS' : databaseF.frame_infos.OSIRIS_ID.keys(),\
 							 'Goodman Spectrograph' : databaseF.frame_infos.GOODMAN_ID.keys() ,\
 							  'SOI' : databaseF.frame_infos.SOI_ID.keys()}
@@ -259,28 +262,26 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 	##########################################################
 	# Set tab for CID
 	#
-
-		db = QtSql.QSqlDatabase('QSQLITE')
-		db.setDatabaseName(self.dbname)
-		db.open()
-
-		model = myQSqlTableModel(self, db) #QtSql.QSqlQueryModel(self) #
-		model.setTable("SoarLogTVDB")
-		model.select()
-		model.setEditStrategy(QtSql.QSqlTableModel.OnManualSubmit)
-#		model.flags = myFlags
-#		model.setQuery("SELECT * FROM SoarLogTVDB");
-		self.model = model
-		self.model.changeEditableColumns([self.CommentColumn])
+			
+		#self.ShowInfoOrder = range(len(self.header_CID))
 		
-		self.ui.tableDB.setModel(model)
+		#print len(list(np.array(self.header_CID)[self.ShowInfoOrder])), list(np.array(self.header_CID)[self.ShowInfoOrder])
+		#print len(self.header_CID),self.header_CID
+		
+		#self.header_CID
+		
+		#self.tm = SOLogTableModel(self.getCIDdata(),[self.header_CID[i] for i in self.ShowInfoOrder ],self, commitDB=self.emmitTableDataChanged)
+		
+		self.tm = SOLogTableModel(self.getTableData(), databaseF.frame_infos.tvDB.keys(),self ,commitDB=self.emmitTableDataChanged)
+		
+		self.ui.tableDB.setModel(self.tm)
+		self.ui.tableDB.keyPressEvent = self.handleKeyEvent
+		self.ui.tableDB.setSelectionMode(self.ui.tableDB.SingleSelection)
 		
 		font = QtGui.QFont("Courier New", 8)
 		self.ui.tableDB.setFont(font)
-		self.ui.tableDB.setAlternatingRowColors(True)
-		
-		self.ui.tableDB.keyPressEvent = self.handleKeyEvent
-		self.ui.tableDB.setSelectionMode(self.ui.tableDB.SingleSelection)
+		#self.ui.tableDB.resizeColumnsToContents()
+		#print self.tm.rowCount(self)
 		
 	#
 	#	
@@ -316,7 +317,6 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		
 		self.connect(self.ui.addNoteButton, QtCore.SIGNAL('clicked()'),self.askForCommentLinePID)
 		
-		self.connect(self.model, QtCore.SIGNAL('beforeUpdate(int,QSqlRecord&)'),self.actBeforeUpdate)
 		
 		self.connect(self.ui.tableDB,QtCore.SIGNAL("clicked(const QModelIndex&)"), self.tableItemSelected)
 		self.connect(self.ui.tableDB,QtCore.SIGNAL("selectionChanged(const QItemSelection&, const QItemSelection&)"), self.tableItemSelected)
@@ -326,9 +326,9 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		
 		self.connect(self.ui.lineFrameComment,QtCore.SIGNAL('returnPressed()'),self.commitComment)
 					 
-		header = databaseF.frame_infos.CID.keys() + databaseF.frame_infos.ExtraTableHeaders
+		header = databaseF.frame_infos.tvDB
 
-		self.ShowInfoOrder = range(len(self.header_CID)+1)
+		self.ShowInfoOrder = range(len(self.header_CID))
 
 		#
 		# Load configuration for Show/Hide
@@ -437,27 +437,14 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 			logging.debug(' Could not read file {0}... '.format(filename))
 			return -1
 		else:
-			#entry_CID = self.Obj_CID(**infos[1])
-			#session.add(entry_CID)
-			#print 'aqui'
-			record = QtSql.QSqlRecord()
-			keys = infos[1].keys()
-			for i in range(len(keys)):
-				record.insert(i,QtSql.QSqlField(keys[i]))
-				record.setValue(keys[i], infos[1][keys[i]])
-				
-			#self.model.insertRows(self.model.rowCount(),1)		
-			
-			self.recordQueue.put(record)
-			self.emit(QtCore.SIGNAL("insertRecord()"))
-			#self.model.insertRecord(-1,record)
-
+			self.commitLock.acquire()
 			instKey = infos[0]['INSTRUME']
 			entry = self.Obj_INSTRUMENTS[instKey](**infos[1])
-			#entry_CID = self.Obj_CID(**infos[1])
-			
-			self.commitLock.acquire()
-
+			entry_CID = self.Obj_CID(**infos[1])
+			iinfo = ['']*len(self.header_CID)
+			for i in range(len(iinfo)):
+				iinfo[i] = infos[1][self.header_CID[i]]
+			self.updateTable(iinfo)
 			try:
 				session.add(entry_CID)
 				session.add(entry)
@@ -511,7 +498,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 
 	def OpenPreferences(self):
 
-		tbHeader = ['id'] + self.header_CID
+		tbHeader = self.header_CID
 		#pref_ui = PrefMenu([ tbHeader[i] for i in self.ShowInfoOrder],self.ui.tableDB)
 		pref_ui = PrefMenu(tbHeader, self.ShowInfoOrder,self.ui.tableDB)
 		
@@ -546,7 +533,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 
 			file = open(os.path.join(self._CFGFilePath_,self._CFGFiles_['ShowInfo']),'w')
 
-			tbHeader = self.header_CID + databaseF.frame_infos.ExtraTableHeaders
+			tbHeader = self.header_CID# + databaseF.frame_infos.ExtraTableHeaders
 
 			for i in range(len(tbHeader)):
 				if self.ui.tableDB.isColumnHidden(i):
@@ -663,7 +650,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 
 		file = open(os.path.join(self._CFGFilePath_,self._CFGFiles_['ShowInfo']),'w')
 		
-		tbHeader = self.header_CID + databaseF.frame_infos.ExtraTableHeaders
+		tbHeader = self.header_CID# + databaseF.frame_infos.ExtraTableHeaders
 
 		for i in range(len(tbHeader)):
 			if self.ui.tableDB.isColumnHidden(i):
@@ -728,7 +715,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 #
 	def saveColumnWidth(self):
 		
-		tbHeader = self.header_CID + databaseF.frame_infos.ExtraTableHeaders
+		tbHeader = self.header_CID# + databaseF.frame_infos.ExtraTableHeaders
 		colWidth = np.zeros(len(tbHeader))	
 		for i in range(len(tbHeader)):
 			colWidth[i] = self.ui.tableDB.columnWidth(i)
@@ -1230,7 +1217,7 @@ Time Spent:
 		try:
 			if self.currentSelectedItem == 0:
 				self.currentSelectedItem = index
-				text = self.ui.tableDB.model().getData(index.row(),0)
+				text = self.ui.tableDB.model().getData(index.row(),self.CommentColumn)
 				if type(text) == type(QtCore.QVariant()):
 					text = text.toString()
 				self.ui.lineFrameComment.setText(text)		
@@ -1239,7 +1226,7 @@ Time Spent:
 				return -1
 			else:
 				self.currentSelectedItem = index
-				text = self.ui.tableDB.model().getData(index.row(),0)
+				text = self.ui.tableDB.model().getData(index.row(),self.CommentColumn)
 				if type(text) == type(QtCore.QVariant()):
 					text = text.toString()
 				self.ui.lineFrameComment.setText(text)		
@@ -1263,9 +1250,10 @@ Time Spent:
 
 	def commitComment(self):
 		text = self.ui.lineFrameComment.text()
-		index = self.model.createIndex(self.currentSelectedItem.row(),self.CommentColumn)
-		self.model.setData(index,text)
-		self.model.submitAll()
+		index = self.currentSelectedItem.child(self.currentSelectedItem.row(),self.CommentColumn)#self.model.createIndex(self.currentSelectedItem.row(),self.CommentColumn)
+		self.ui.tableDB.model().setData(index,text,QtCore.Qt.EditRole)
+#		self.model.setData(index,text)
+#		self.model.submitAll()
 
 #
 #
@@ -1517,7 +1505,11 @@ Time Spent:
 		#self.commitComment()
 		if len(self.ui.tableDB.selectedIndexes()) > 0:
 			if self.ui.tableDB.selectedIndexes()[0].column() == self.CommentColumn:
-				self.ui.lineFrameComment.setText( self.model.data(self.ui.tableDB.selectedIndexes()[0]).toString() )
+				try:
+					self.ui.lineFrameComment.setText( self.ui.tableDB.model().getData(self.ui.tableDB.selectedIndexes()[0].row(),self.CommentColumn).toString() )
+				except AttributeError:
+					self.ui.lineFrameComment.setText( self.ui.tableDB.model().getData(self.ui.tableDB.selectedIndexes()[0].row(),self.CommentColumn) )
+					
 			
 		rr = QtGui.QTableWidget.keyPressEvent(self.ui.tableDB, event)
 		
@@ -1620,25 +1612,32 @@ Time Spent:
 #
 #
 	def addCommentLine(self,filename):
-
+		
 		session = self.Session()
 		
-		record = QtSql.QSqlRecord()
+		finfos = {}
 		keys = databaseF.frame_infos.tvDB.keys()
-		
+		for hdr in keys:
+			finfos[hdr] = ''
+
+		finfos['FILENAME'] = filename
+		finfos['TIMEOBS'] = time.strftime('%H:%M:%S',time.gmtime())
+		finfos['INSTRUME'] = 'NOTE'
+		finfos['OBJECT'] = 'NOTE'
+		finfos['EXPTIME'] = 0.0
+		finfos['AIRMASS'] = -1.0
+
+		entry = self.Obj_CID(**finfos)
+		session.add(entry)
+		session.commit()
+
+		infos = [' ']*len(finfos)
 		for i in range(len(keys)):
-			record.insert(i,QtSql.QSqlField(keys[i]))
-			record.setValue(keys[i], '')
-			
+			infos[i] = finfos[keys[i]]
 
-		record.setValue('FILENAME', filename) #os.path.basename(fselect[-1][0]).replace('.fits','.note')
-		record.setValue('TIMEOBS', time.strftime('%H:%M:%S',time.gmtime()))
-		record.setValue('INSTRUME', 'NOTE')
-		record.setValue('OBJECT', 'NOTE')
-		record.setValue('EXPTIME', 0.0)
-		record.setValue('AIRMASS', -1.0)
+		self.updateTable(infos)
+		self.emmitReloadTableEvent('Note')
 
-		self.model.insertRecord(-1,record)
 #
 #
 ################################################################################################

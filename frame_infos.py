@@ -783,6 +783,9 @@ def GetFrameInfos(filename):
 	#
 	# Build info for TableViewDatabase (tvDB)
 	#
+	for key in tvDB.keys():
+		hdr_inst[key] = ''
+	
 	for key in TRANSLATE_CID.keys():
 		if key != 'FILENAME':
 		
