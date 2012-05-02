@@ -221,7 +221,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 						d.set('scale mode zscale')
 						return 0
 					elif query.INSTRUME == 'Spartan IR Camera':
-						query2 = session_CID.query(self.SPARTAN_Obj).filter(self.SPARTAN_Obj.FILENAME.like(frame))[0]
+						query2 = session_CID.query(self.Obj_INSTRUMENTS['Spartan IR Camera']).filter(self.Obj_INSTRUMENTS['Spartan IR Camera'].FILENAME.like(frame))[0]
 						if query2.DETSERNO == '66':
 							d.set('file {0}'.format(frame))
 							d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
@@ -236,7 +236,8 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 						#display(frame,1)
 						return 0
 				except:
-					print 'Could not display file {0}'.format(frame)
+					logging.debug(sys.exc_info()[1])
+					logging.debug('Could not display file {0}'.format(frame))
 					return -1
 			
 				return 0
@@ -983,7 +984,7 @@ Time Spent:
 				writeFlag = True
 				frame2 = None
 				if frame.INSTRUME == 'Spartan IR Camera':
-					frame2 = session_CID.query(self.SPARTAN_Obj).filter(self.SPARTAN_Obj.FILENAME.like(frame.FILENAME))[0]
+					frame2 = session_CID.query(self.Obj_INSTRUMENTS['Spartan IR Camera']).filter(self.Obj_INSTRUMENTS['Spartan IR Camera'].FILENAME.like(frame.FILENAME))[0]
 					if frame2.DETSERNO != '66':
 						writeFlag = False						
 				try:
