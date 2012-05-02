@@ -441,12 +441,15 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		else:
 			self.commitLock.acquire()
 			instKey = infos[0]['INSTRUME']
-			entry = self.Obj_INSTRUMENTS[instKey](**infos[1])
+			
+			entry = self.Obj_INSTRUMENTS[instKey](**infos[0])
 			entry_CID = self.Obj_CID(**infos[1])
+			
 			iinfo = ['']*len(self.header_CID)
 			for i in range(len(iinfo)):
 				iinfo[i] = infos[1][self.header_CID[i]]
 			self.updateTable(iinfo)
+			
 			try:
 				session.add(entry_CID)
 				session.add(entry)
