@@ -280,6 +280,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		
 		font = QtGui.QFont("Courier New", 8)
 		self.ui.tableDB.setFont(font)
+		self.ui.tableDB.setAlternatingRowColors(True)
 		#self.ui.tableDB.resizeColumnsToContents()
 		#print self.tm.rowCount(self)
 		
