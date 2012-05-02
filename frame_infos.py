@@ -88,7 +88,7 @@ _INSTRUME = {'OSIRIS':'INSTRUME','GOODMAN':'INSTRUME','SOI':'INSTRUME','SPARTAN'
 instTemplates = {'Goodman Spectrograph' : os.path.join(os.path.dirname(__file__),'Resources/goodmanTemplate.fits'),
 'OSIRIS' : os.path.join(os.path.dirname(__file__),'Resources/osirisTemplate.fits'),
 'SOI' : os.path.join(os.path.dirname(__file__),'Resources/soiTemplate.fits'),
-'SPARTAN' : os.path.join(os.path.dirname(__file__),'Resources/spartanTemplate.fits')}
+'Spartan IR Camera' : os.path.join(os.path.dirname(__file__),'Resources/spartanTemplate.fits')}
 
 SPARTAN = 'Spartan IR Camera'
 
