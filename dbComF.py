@@ -275,7 +275,7 @@ class soarDB():
 				
 				cframe = self.Queue.get()
 				logging.debug('--> Working on {0}'.format(cframe))
-				info = self.AddFrame(fframe)
+				info = self.AddFrame(cframe)
 				if info == 0:
 					fframe = cframe
 				logging.debug('Done')
