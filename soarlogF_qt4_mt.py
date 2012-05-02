@@ -221,7 +221,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 						d.set('scale mode zscale')
 						return 0
 					elif query.INSTRUME == 'Spartan IR Camera':
-						query2 = session_CID.query(self.Obj_INSTRUMENTS['Spartan IR Camera']).filter(self.Obj_INSTRUMENTS['Spartan IR Camera'].FILENAME.like(frame))[0]
+						query2 = session_CID.query(self.Obj_INSTRUMENTS['Spartan IR Camera']).filter(self.Obj_INSTRUMENTS['Spartan IR Camera'].FILENAME.like(os.path.basename(frame)))[0]
 						if query2.DETSERNO == '66':
 							d.set('file {0}'.format(frame))
 							d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
