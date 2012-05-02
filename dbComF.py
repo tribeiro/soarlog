@@ -273,9 +273,11 @@ class soarDB():
 			fframe = ''
 			while not self.Queue.empty():
 				
-				fframe = self.Queue.get()
-				logging.debug('--> Working on {0}'.format(fframe))
+				frame = self.Queue.get()
+				logging.debug('--> Working on {0}'.format(frame))
 				info = self.AddFrame(fframe)
+				if info == 0:
+					fframe = frame
 				logging.debug('Done')
 				
 			logging.debug('Ended queue. Preparing reloadTable')
@@ -326,57 +328,7 @@ class soarDB():
 					info = ''
 					pass
 				
-				if info_id == 'FILENAME' and info:
-					info = os.path.basename(info).split('.fits')[0]
-
 				indata.append(str(info))
-			print '>>>',len(indata),
-			#
-			# Pego infos de instrumento
-			#
-			inst = queryRes.INSTRUME
-			
-			queryInstrument = []
-					
-			try:
-				queryInstrument = session.query(self.obj_dict[inst]).filter(self.obj_dict[inst].FILENAME == queryRes.FILENAME)[:]
-					
-			except:
-				
-				pass
-
-			if len(queryInstrument) > 0:
-				queryInstrument = queryInstrument[0]
-				
-				for itr_info_id in range(len(databaseF.frame_infos.ExtraTableHeaders)):
-
-					info_id = databaseF.frame_infos.dictTableHeaders[inst][itr_info_id]
-				
-					info = ''
-				
-					if info_id:
-						
-						cmd = ''
-						
-						if type(info_id) == type('aa'):
-							cmd = 'info = queryInstrument.%s' % (info_id)
-						if type(info_id) == type(['aa']):
-							for itr_info in range(len(info_id)):
-								cmd += 'info += queryInstrument.%s\n' % (info_id[itr_info])
-						if type(info_id) == type(function):
-							cmd = ''
-							info = info_id(queryInstrument)
-								
-						try:
-							exec cmd
-						except AttributeError,KeyError:
-							pass
-				
-					indata.append(str(info))
-			else:
-				for i in range(len(databaseF.frame_infos.ExtraTableHeaders)):
-					indata.append([' '])
-			
 			data.append(indata)
 		
 #		data.append([''])
