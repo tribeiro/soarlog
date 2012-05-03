@@ -1239,9 +1239,8 @@ Time Spent:
 				self.ui.lineFrameComment.setText(text)		
 				return 0
 		except:
-			self.currentSelectedItem = self.ui.tableDB.model.createIndex(index.row(),index.column())
-			newIndex = self.ui.tableDB.model.createIndex(index.row(),self.CommentColumn)
-			text = self.ui.tableDB.model.data(newIndex)
+			self.currentSelectedItem = index
+			text = self.ui.tableDB.model().getData(index.row(),self.CommentColumn)
 			if type(text) == type(QtCore.QVariant()):
 				text = text.toString()
 			self.ui.lineFrameComment.setText(text)		
