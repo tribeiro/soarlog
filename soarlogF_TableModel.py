@@ -36,6 +36,7 @@ class SOLogTableModel(QtCore.QAbstractTableModel):
         self.arraydata = datain
         self.headerdata = headerdata
         self.commitDB = argv['commitDB']
+	self.EditableColumns = [16]
 #		self._parent = parent
 #		self._children = []
 
@@ -65,11 +66,33 @@ class SOLogTableModel(QtCore.QAbstractTableModel):
 		
     def isEditable(self, index):
         """ Return true if the index is editable. """
-        if self.headerdata[index.column()] == 'OBSNOTES':
-	        return True
-        else:
-	        return False
+	if index.column() in self.EditableColumns:
+		return True
+	else:
+		return False
+	
+#        if self.headerdata[index.column()] == 'OBSNOTES':
+#	        return True
+#        else:
+#	        return False
+
 		
+    def flagsOLD(self,index):
+		
+        if not index.isValid():
+            return QtCore.Qt.ItemIsEnabled
+
+        ret_flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable 
+
+        if index.column() in self.EditableColumns:
+            return ret_flags | QtCore.Qt.ItemIsEditable
+
+        return ret_flags
+
+    def changeEditableColumns(self,edlist):
+        if type(edlist) == type(self.EditableColumns):
+            self.EditableColumns = edlist
+
     def flags(self, index):  #function is called to chaeck if itmes are changable etc, index is a PyQt4.QtCore.QModelIndex object
         if not index.isValid():
             return QtCore.Qt.ItemIsEnabled
@@ -143,6 +166,7 @@ class SOLogTableModel(QtCore.QAbstractTableModel):
         print 'dropMimeData %s %s %s %s' % (data.data('text/xml'), self.dragIndex.row(), row, parent.row()) 
         self.endMoveRows()
         return True
+
 
     def dropEvent(self, event): 
         print 'dropping'

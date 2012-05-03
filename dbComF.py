@@ -352,15 +352,26 @@ class soarDB():
 		
 		editFrame = session.query(self.Obj_CID).filter(self.Obj_CID.id == index.row()+1)[0]
 		
-		OLD_NOTES = editFrame.OBSNOTES
-		
+		#OLD_NOTES = editFrame.OBSNOTES
+		#
 		#print '---------------'
 		#print OLD_NOTES
 		#print '---------------'
 		#print OBSNOTES
 		#print '---------------'		
-		
-		editFrame.OBSNOTES = '%s' % OBSNOTES
+		if index.column() == 16:
+			editFrame.OBSNOTES = '{0}'.format(OBSNOTES)
+		if index.column() == 0:
+			editFrame.OBJECT = '{0}'.format(OBSNOTES)
+			logging.debug(os.path.join(str(editFrame.PATH),str(editFrame.FILENAME)))
+			hdu = pyfits.open(os.path.join(str(editFrame.PATH),str(editFrame.FILENAME)),mode='update')
+			#hdu.verify('fix')
+			hdu[0].header.update('OBJECT', '{0}'.format(OBSNOTES))
+			#pyfits.writeto(os.path.join(str(rr.PATH),str(rr.FILENAME)),hdu[0].data,hdu[0].header)
+			hdu.close(output_verify='silentfix')
+			
+		if index.column() == 13:
+			editFrame.FILENAME = '{0}'.format(OBSNOTES)
 		session.commit()
 		
 #

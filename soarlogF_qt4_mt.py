@@ -97,7 +97,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		self.dbname = 'soarlog_{0}.db'
 		self.masterDBName = '.soarMaster.db' # master database.
 		self.CommentColumn = 16
-		self.ExtraEditableColumns = [1,13,16]
+		self.ExtraEditableColumns = [0,12,16]
 		self.AskFile2Watch()
 				
 		self.logfile = self.logfile.format(self.dir.split('/')[-1])
@@ -405,9 +405,9 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 	def enableDisableTableEdit(self):
 		
 		if self.actionEnable_Disable_Table_Edit.isChecked():
-			self.model.changeEditableColumns(self.ExtraEditableColumns)
+			self.ui.tableDB.model().changeEditableColumns(self.ExtraEditableColumns)
 		else:
-			self.model.changeEditableColumns([self.CommentColumn])
+			self.ui.tableDB.model().changeEditableColumns([self.CommentColumn])
 #
 #
 ################################################################################################
@@ -989,9 +989,13 @@ Time Spent:
 				writeFlag = True
 				frame2 = None
 				if frame.INSTRUME == 'Spartan IR Camera':
-					frame2 = session_CID.query(self.Obj_INSTRUMENTS['Spartan IR Camera']).filter(self.Obj_INSTRUMENTS['Spartan IR Camera'].FILENAME.like(frame.FILENAME))[0]
-					if frame2.DETSERNO != '66':
-						writeFlag = False						
+					try:
+						frame2 = session_CID.query(self.Obj_INSTRUMENTS['Spartan IR Camera']).filter(self.Obj_INSTRUMENTS['Spartan IR Camera'].FILENAME.like(os.path.join(frame.PATH,frame.FILENAME)))[0]
+						if frame2.DETSERNO != '66':
+							writeFlag = False						
+					except:
+						logging.debug('Error {0} on frame {1}...'.format(sys.exc_info()[1],frame.FILENAME))
+						writeFlag = False
 				try:
 					time = time.split(':')
 				except:
@@ -1537,7 +1541,7 @@ Time Spent:
 		
 		session = self.Session()
 		rr = session.query(self.Obj_CID).filter(self.Obj_CID.id==index+1)[0]
-		
+		loggin.debug('acting before update...')
 		for i in range(record.count()):
 			if not record.field(i).isNull():
 				if record.field(i).name() == 'FILENAME':
@@ -1549,7 +1553,7 @@ Time Spent:
 					hdu[0].header.update('OBJECT', str(record.field(i).value().toString()))
 					#pyfits.writeto(os.path.join(str(rr.PATH),str(rr.FILENAME)),hdu[0].data,hdu[0].header)
 					hdu.close(output_verify='silentfix')
-
+					
 					#print record.field(i).name(),':',rr.FILENAME,'-> ',record.field(i).value().toString()
 #
 #
