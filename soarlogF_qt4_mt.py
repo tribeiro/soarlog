@@ -217,22 +217,28 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 					#mscred.mscdisplay(frame,1)
 						d.set('file mosaicimage iraf {0}'.format(frame))
 						d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
-						d.set('zoom to fit')
-						d.set('scale mode zscale')
+						if self.ui.actionZoom_to_fit.isChecked():
+							d.set('zoom to fit')
+						if self.ui.actionZscale.isChecked():
+							d.set('scale mode zscale')
 						return 0
 					elif query.INSTRUME == 'Spartan IR Camera':
 						query2 = session_CID.query(self.Obj_INSTRUMENTS['Spartan IR Camera']).filter(self.Obj_INSTRUMENTS['Spartan IR Camera'].FILENAME.like(frame))[0]
 						if query2.DETSERNO == '66':
 							d.set('file {0}'.format(frame))
 							d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
+						if self.ui.actionZoom_to_fit.isChecked():
 							d.set('zoom to fit')
+						if self.ui.actionZscale.isChecked():
 							d.set('scale mode zscale')
 							return 0					
 					else:
 						d.set('file {0}'.format(frame))
 						d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
-						d.set('zoom to fit')
-						d.set('scale mode zscale')
+						if self.ui.actionZoom_to_fit.isChecked():
+							d.set('zoom to fit')
+						if self.ui.actionZscale.isChecked():
+							d.set('scale mode zscale')
 						#display(frame,1)
 						return 0
 				except:
@@ -1301,21 +1307,27 @@ Time Spent:
 					#mscred.mscdisplay(frame,1)
 					d.set('file mosaicimage iraf {0}'.format(frame))
 					d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
-					d.set('zoom to fit')
-					d.set('scale mode zscale')
+					if self.ui.actionZoom_to_fit.isChecked():
+						d.set('zoom to fit')
+					if self.ui.actionZscale.isChecked():
+						d.set('scale mode zscale')
 					return 0
 				elif query.INSTRUME == 'Spartan IR Camera':
 					d.set('file {0}'.format(frame))
 					d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
-					d.set('zoom to fit')
-					d.set('scale mode zscale')
+					if self.ui.actionZoom_to_fit.isChecked():
+						d.set('zoom to fit')
+					if self.ui.actionZscale.isChecked():
+						d.set('scale mode zscale')
 					return 0					
 				else:
 					d.set('file {0}'.format(frame))
 					d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
 					#display(frame,1)
-					d.set('zoom to fit')
-					d.set('scale mode zscale')
+					if self.ui.actionZoom_to_fit.isChecked():
+						d.set('zoom to fit')
+					if self.ui.actionZscale.isChecked():
+						d.set('scale mode zscale')
 					return 0
 			except:
 				print 'Could not display file {0}'.format(frame)
