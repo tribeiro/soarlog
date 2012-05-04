@@ -232,6 +232,18 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 						if self.ui.actionZscale.isChecked():
 							d.set('scale mode zscale')
 							return 0					
+					elif query.INSTRUME == 'OSIRIS':
+						data = pyfits.getdata(frame)
+						#logging.debug('array [xdim = {XDIM} ydim = {YDIM} bitpix=-32]'.format(XDIM=len(data[0]),YDIM=len(data)))
+						d.set_np2arr(np.array(data,dtype=np.float))
+						d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
+						if self.ui.actionZoom_to_fit.isChecked():
+							d.set('zoom to fit')
+						if self.ui.actionZscale.isChecked():
+							d.set('scale mode zscale')
+						#display(frame,1)
+						return 0
+						
 					else:
 						d.set('file {0}'.format(frame))
 						d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
