@@ -270,7 +270,11 @@ class soarDB():
 			#ff = ''
 
 			logging.debug('Starting queue')
+			
 			fframe = ''
+			query = session.query(self.Obj_CID)[:]
+			if len(query) > 0:
+				fframe = os.path.join(query[-1].PATH,query[-1].FILENAME)
 			while not self.Queue.empty():
 				
 				cframe = self.Queue.get()
