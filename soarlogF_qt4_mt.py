@@ -97,7 +97,8 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		self.dbname = 'soarlog_{0}.db'
 		self.masterDBName = '.soarMaster.db' # master database.
 		self.CommentColumn = 16
-		self.ExtraEditableColumns = [0,12,16]
+		self.ImtypeColumn = 11
+		self.ExtraEditableColumns = [0,11,12,16]
 		self.AskFile2Watch()
 				
 		self.logfile = self.logfile.format(self.dir.split('/')[-1])
@@ -105,7 +106,8 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		soarDB.__init__(self,self.Queue)
 		
 		self.dqStatus = ['','OK','WARN','FAIL']
-									
+		self.imageTYPE = ['','OBJECT','FLAT','DFLAT','BIAS','ZERO','DARK','COMP','FAILED','Object']
+											
 		self.header_CID = databaseF.frame_infos.tvDB.keys()
 		for i in range(len(self.header_CID)):
 			print i,self.header_CID[i]
@@ -301,6 +303,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		font = QtGui.QFont("Courier New", 8)
 		self.ui.tableDB.setFont(font)
 		self.ui.tableDB.setAlternatingRowColors(True)
+		self.ui.tableDB.setItemDelegateForColumn(11,ComboBoxDelegate(self.ui.tableDB.model(), self.imageTYPE))
 		#self.ui.tableDB.resizeColumnsToContents()
 		#print self.tm.rowCount(self)
 		
@@ -1036,7 +1039,7 @@ Time Spent:
 										 AIRMASS = frame.AIRMASS, EXPTIME = frame.EXPTIME, SEEING = frame.SEEING)
 				if frame.INSTRUME == 'Goodman Spectrograph':
 					#frame2 = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like(frame.FILENAME))[0]
-					logGS = '\tGRATING: {0} SLIT: {1} OBSTYPE: {2}\n'.format(frame.GRATING,frame.SLIT,frame.IMAGETYP)
+					logGS = '\tCONF: {0} SLIT: {1} OBSTYPE: {2}\n'.format(frame.SP_CONF,frame.SLIT,frame.IMAGETYP)
 					outlog+=logGS
 
 				if frame.INSTRUME == 'Spartan IR Camera' and writeFlag:
@@ -1116,9 +1119,10 @@ Time Spent:
 	def calcTime(self,id):
 	
 		session_CID = self.Session()
-		query = session_CID.query(self.Obj_CID.FILENAME,self.Obj_CID.DATEOBS,self.Obj_CID.TIMEOBS,self.Obj_CID.OBJECT,self.Obj_CID.EXPTIME).filter(self.Obj_CID.FILENAME.like('%SO%')).filter(self.Obj_CID.OBJECT != "NOTE")[:]		
+		query = session_CID.query(self.Obj_CID.id,self.Obj_CID.FILENAME,self.Obj_CID.DATEOBS,self.Obj_CID.TIMEOBS,self.Obj_CID.OBJECT,self.Obj_CID.EXPTIME,self.Obj_CID.IMAGETYP).filter(self.Obj_CID.FILENAME.like('%SO%')).filter(self.Obj_CID.OBJECT != "NOTE").filter(self.Obj_CID.IMAGETYP != "FAILED")[:]		
 		time_end = []
 						
+		fid = np.array( [ int(ff.id) for ff in query] )
 		fnames = np.array( [ str(ff.FILENAME) for ff in query] )
 		hour = np.array( [ str(ff.TIMEOBS) for ff in query] )
 		day = np.array( [ str(ff.DATEOBS) for ff in query] )
@@ -1141,8 +1145,8 @@ Time Spent:
 		
 		find_proj = np.array( [ i for i in range(len(fnames)) if fnames[i].find('-'+id) > 0] )
 
-		time_start = np.append([int(find_proj[0])], np.array( [ find_proj[i+1] for i in range(len(find_proj)-2) if find_proj[i] != find_proj[i+1]-1 ] ) )
-		time_end = np.append( np.array( [ find_proj[i] for i in range(len(find_proj)-2) if find_proj[i] != find_proj[i+1]-1 ] ), [int(find_proj[-1])] )
+		time_start = np.append([int(find_proj[0])], np.array( [ find_proj[i+1] for i in range(len(find_proj)-2) if fid[i] != fid[i+1]-1 ] ) )
+		time_end = np.append( np.array( [ find_proj[i] for i in range(len(find_proj)-2) if fid[i] != fid[i+1]-1 ] ), [int(find_proj[-1])] )
 		#print find_proj
 		
 		time_tmp = np.append(time_start , time_end  )
@@ -1250,7 +1254,7 @@ Time Spent:
 				text = self.ui.tableDB.model().getData(index.row(),self.CommentColumn)
 				if type(text) == type(QtCore.QVariant()):
 					text = text.toString()
-				self.ui.lineFrameComment.setText(text)		
+				self.ui.lineFrameComment.setText(text)	
 				return 0		
 			elif self.currentSelectedItem.row() == index.row():
 				return -1
@@ -1259,14 +1263,23 @@ Time Spent:
 				text = self.ui.tableDB.model().getData(index.row(),self.CommentColumn)
 				if type(text) == type(QtCore.QVariant()):
 					text = text.toString()
-				self.ui.lineFrameComment.setText(text)		
+				self.ui.lineFrameComment.setText(text)
 				return 0
 		except:
 			self.currentSelectedItem = index
 			text = self.ui.tableDB.model().getData(index.row(),self.CommentColumn)
 			if type(text) == type(QtCore.QVariant()):
 				text = text.toString()
-			self.ui.lineFrameComment.setText(text)		
+			self.ui.lineFrameComment.setText(text)	
+#			imtype = self.ui.tableDB.model().getData(index.row(),self.ImtypeColumn)
+#			try:
+#				imtypeIndex = self.imageTYPE.index(imtype)
+#			except:
+#				imtypeIndex = 0
+#				logging.debug(sys.exc_info()[1])
+#				pass
+#			self.ui.comboBoxIMGTYPE.setCurrentIndex( imtypeIndex )						
+
 			return 0
 
 #
@@ -1668,6 +1681,7 @@ Time Spent:
 
 		finfos['FILENAME'] = filename
 		finfos['TIMEOBS'] = time.strftime('%H:%M:%S',time.gmtime())
+		finfos['DATEOBS'] = time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())
 		finfos['INSTRUME'] = 'NOTE'
 		finfos['OBJECT'] = 'NOTE'
 		finfos['EXPTIME'] = 0.0

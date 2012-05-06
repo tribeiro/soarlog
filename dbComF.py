@@ -373,7 +373,16 @@ class soarDB():
 			hdu[0].header.update('OBJECT', '{0}'.format(OBSNOTES))
 			#pyfits.writeto(os.path.join(str(rr.PATH),str(rr.FILENAME)),hdu[0].data,hdu[0].header)
 			hdu.close(output_verify='silentfix')
-			
+		if index.column() == 11:
+			editFrame.IMAGETYP = '{0}'.format(OBSNOTES)
+			try:
+				hdu = pyfits.open(os.path.join(str(editFrame.PATH),str(editFrame.FILENAME)),mode='update')
+				#hdu.verify('fix')
+				hdu[0].header.update(databaseF.frame_infos.INSTRUMENT_TRANSLATE[editFrame.INSTRUME]['IMAGETYP'], '{0}'.format(OBSNOTES))
+				#pyfits.writeto(os.path.join(str(rr.PATH),str(rr.FILENAME)),hdu[0].data,hdu[0].header)
+				hdu.close(output_verify='silentfix')
+			except:
+				pass
 		if index.column() == 13:
 			editFrame.FILENAME = '{0}'.format(OBSNOTES)
 		session.commit()

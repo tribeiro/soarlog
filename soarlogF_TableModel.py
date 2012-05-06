@@ -25,6 +25,33 @@ class myQSqlTableModel(QtSql.QSqlTableModel):
 		if type(edlist) == type(self.EditableColumns):
 			self.EditableColumns = edlist
 
+class ComboBoxDelegate(QtGui.QItemDelegate):
+
+	def __init__(self, owner, itemslist):
+		QtGui.QItemDelegate.__init__(self, owner)
+		self.itemslist = itemslist
+		
+	def createEditor(self, parent, option, index):
+		editor = QtGui.QComboBox( parent )
+		for i in range(len(self.itemslist)):
+			editor.insertItem(i,self.itemslist[i])
+		return editor
+
+	def setEditorData( self, comboBox, index ):
+		value = index.model().data(index, QtCore.Qt.DisplayRole).toString()
+		ii = self.itemslist.index(value)
+		comboBox.setCurrentIndex(ii)
+
+	def setModelData(self, editor, model, index):
+		value = editor.currentIndex()
+		model.setData( index, self.itemslist[value],QtCore.Qt.EditRole)
+
+	def updateEditorGeometry( self, editor, option, index ):
+
+		editor.setGeometry(option.rect)
+
+
+
 class SOLogTableModel(QtCore.QAbstractTableModel): 
 
     def __init__(self, datain, headerdata, parent=None, *args,**argv): 
@@ -36,7 +63,9 @@ class SOLogTableModel(QtCore.QAbstractTableModel):
         self.arraydata = datain
         self.headerdata = headerdata
         self.commitDB = argv['commitDB']
-	self.EditableColumns = [16]
+        self.EditableColumns = [11,16]
+#        self.imageTYPE = ['','OBJECT','FLAT','DFLAT','BIAS','ZERO','DARK','COMP','FAILED','Object']
+#        self.setItemDelegateForColumn(11,ComboBoxDelegate(self, self.imageTYPE))
 #		self._parent = parent
 #		self._children = []
 
