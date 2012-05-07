@@ -797,10 +797,14 @@ def GetFrameInfos(filename):
 		if key != 'FILENAME':
 		
 			try:
-				hdr_inst[key] = hdr[TRANSLATE_CID[key]]
+				if str(hdr[TRANSLATE_CID[key]]).find('.core.Undef') > 0:
+					hdr_inst[key] = 0
+				else:
+					hdr_inst[key] = hdr[TRANSLATE_CID[key]]
 			except KeyError,ValueError:
 				print '--> Exception on CID:',sys.exc_info()[1],key
 				hdr_inst[key] = ''
+
 
 	for key in PARTICULAR_DB.keys():
 		if key != 'FILENAME' or key != 'PATH':
