@@ -33,18 +33,22 @@ class ComboBoxDelegate(QtGui.QItemDelegate):
 		
 	def createEditor(self, parent, option, index):
 		editor = QtGui.QComboBox( parent )
-		for i in range(len(self.itemslist)):
-			editor.insertItem(i,self.itemslist[i])
+		_inst = index.model().getData(index.row(),13) # QtCore.Qt.DisplayRole).toString()
+		for i in range(len(self.itemslist[_inst])):
+			editor.insertItem(i,self.itemslist[_inst][i])
 		return editor
 
 	def setEditorData( self, comboBox, index ):
 		value = index.model().data(index, QtCore.Qt.DisplayRole).toString()
-		ii = self.itemslist.index(value)
+		_inst = index.model().getData(index.row(),13)
+		ii = self.itemslist[_inst].index(value)
 		comboBox.setCurrentIndex(ii)
 
 	def setModelData(self, editor, model, index):
 		value = editor.currentIndex()
-		model.setData( index, self.itemslist[value],QtCore.Qt.EditRole)
+		_inst = index.model().getData(index.row(),13)
+		print value,len(self.itemslist[_inst])
+		model.setData( index, self.itemslist[_inst][value],QtCore.Qt.EditRole)
 
 	def updateEditorGeometry( self, editor, option, index ):
 

@@ -106,8 +106,9 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		soarDB.__init__(self,self.Queue)
 		
 		self.dqStatus = ['','OK','WARN','FAIL']
-		self.imageTYPE = ['','OBJECT','FLAT','DFLAT','BIAS','ZERO','DARK','COMP','FAILED','Object']
-											
+#		self.imageTYPE = ['','OBJECT','FLAT','DFLAT','BIAS','ZERO','DARK','COMP','FAILED','Object']
+		self.imageTYPE = databaseF.frame_infos.imageTYPE
+		
 		self.header_CID = databaseF.frame_infos.tvDB.keys()
 		for i in range(len(self.header_CID)):
 			print i,self.header_CID[i]

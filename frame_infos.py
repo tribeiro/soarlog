@@ -616,6 +616,13 @@ INSTRUMENT_TV = { 'OSIRIS' : OSIRIS_TV	,\
 'Spartan IR Camera' : SPARTAN_TV,\
 'SBIG ST-L' : SBIG_TV}
 
+#imageTYPE = ['','OBJECT','FLAT','DFLAT','BIAS','ZERO','DARK','COMP','FAILED','Object'] 
+
+imageTYPE = {'OSIRIS' : ['OBJECT','FLAT','ZERO','COMP','DARK','FAILED'],
+'Goodman Spectrograph' : ['OBJECT','COMP','FLAT','BIAS','FAILED'],
+'Spartan IR Camera' : ['Object','Flat-Field','Dark','FAILED'],
+'SOI' : ['ZERO','DFLAT','OBJECT','FAILED']}
+
 #
 #
 ##################################################################################################################################
