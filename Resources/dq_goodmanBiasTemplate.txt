@@ -1,0 +1,1 @@
+Bias {BIN},{RONMODE},({NTAKEN}/{NREQUEST}) [{BIAS_STAT}]
