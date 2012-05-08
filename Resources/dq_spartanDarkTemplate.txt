@@ -1,1 +1,5 @@
-Dark {}
+Dark: {FILTER2} {EXPTIME} ({NTAKEN}/{NREQUEST}) [{DARK_STAT}]
+      d0 {CONSTS_AVG}
+      d1 {CONSTS_AVG}
+      d2 {CONSTS_AVG}
+      d3 {CONSTS_AVG}

@@ -545,8 +545,8 @@ SPARTAN_TRANSLATE_CID = {'FILENAME' : 'FILENAME'  ,\
 
 
 SPARTAN_TV = {	'FILTER'	:	'FILTER'		,
-				'FILTER2'	:	'MASK'			,
-				'SLIT'		:	None			,
+				'FILTER2'	:	'PUPIL'			,
+				'SLIT'		:	'MASK'			,
 				'GRATING'		:	None			,
 				'FOC'		:	'TELFOCUS'		,
 				'CAM_ANGLE'	:	None			,
