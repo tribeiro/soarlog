@@ -553,7 +553,7 @@ SPARTAN_TV = {	'FILTER'	:	'FILTER'		,
 				'GRT_ANGLE'	:	None			,
 				'RON_MODE'	:	None			,
 				'BINNING'	:	None			,
-				'PA'		:	'ROTATOR'		,
+				'PA'		:	'DECPANGL'		,
 				'SP_CONF'	:	None			 }
 
 
