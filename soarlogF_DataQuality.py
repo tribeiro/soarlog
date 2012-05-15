@@ -47,6 +47,7 @@ class DataQuality():
 		
 		self.connect(self.dataQuality_ui.buttonBox, QtCore.SIGNAL('clicked(QAbstractButton*)'), self.commitDataQuality)
 		self.connect(self.dataQuality_ui.comboBox, QtCore.SIGNAL('currentIndexChanged(int)'), self.readDQProject)
+		self.connect(self.dataQuality_ui.comboBox_Object, QtCore.SIGNAL('currentIndexChanged(int)'), self.readDQObject)
 		self.connect(self.dataQuality_ui.tabWidget, QtCore.SIGNAL('currentChanged(int)'),self.setDqMessage)
 		self.dataQuality_ui.lineEditSemesterID.setText(self.semester_ID[:-4])
 		self.dataQuality_ui.lineEditPathToData.setText(self.dataStorage.format(SID=self.semester_ID[:-4],PID=self.semester_ID.format('123')))
@@ -78,6 +79,8 @@ class DataQuality():
      
 		if tab == 1:
         		self.dataQuality_ui.label.setText('1) Select the calibration files for this\nproject and select type.\n')
+		elif tab == 0:
+				self.dataQuality_ui.label.setText('Configure semester and place for files.\n\n')
 		elif tab == 2:
         		self.dataQuality_ui.label.setText('2) Select objects and fill Data Quality\n form.\n')
 #
@@ -105,7 +108,9 @@ class DataQuality():
 					'BIASNOTE'	: str( self.dataQuality_ui.lineEditBias.text() )	,\
 					'DARKNOTE'	: str( self.dataQuality_ui.lineEditDark.text() )			,\
 					'FLATFIELDNOTE'	: str( self.dataQuality_ui.lineEditFlatField.text() )	,\
-					'FROMDB'	: ''
+					'FROMDB'	: '',\
+					'OBSTIME'	: 0.,\
+					'VALIDTIME'	: 0.
 					}
 			info = self.Obj_DQ(**dqinf)
 			session.add(info)
@@ -114,9 +119,34 @@ class DataQuality():
 			query[0].BIAS = str( self.dataQuality_ui.comboBias.currentIndex() )
 			query[0].DARK = str( self.dataQuality_ui.comboDark.currentIndex() )
 			query[0].FLATFIELD = str( self.dataQuality_ui.comboFlatField.currentIndex() )
-			query[0].BIASNOTE = self.dataQuality_ui.lineEditBias.text() 
-			query[0].DARKNOTE = self.dataQuality_ui.lineEditDark.text() 
-			query[0].FLATFIELDNOTE = self.dataQuality_ui.lineEditFlatField.text() 
+			query[0].BIASNOTE = str(self.dataQuality_ui.lineEditBias.text() )
+			query[0].DARKNOTE = str(self.dataQuality_ui.lineEditDark.text() )
+			query[0].FLATFIELDNOTE = str(self.dataQuality_ui.lineEditFlatField.text() )
+
+		session.commit()
+		
+		query = session.query(self.Obj_FDQ).filter(self.Obj_FDQ.PID == str(self.dataQuality_ui.comboBox.currentText())).filter(self.Obj_FDQ.OBJECT == str(self.dataQuality_ui.comboBox_Object.currentText()))[:]
+
+		if len(query) == 0 and len(str(self.dataQuality_ui.comboBox.currentText())) > 0:
+			dqinf = {	'SEMESTER'	: 	self.semester_ID[:-4]	,\
+					'PID'		: 	str(self.dataQuality_ui.comboBox.currentText())		,\
+					'DATASET'	: 	'{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))),\
+					'OBJECT'	: str(self.dataQuality_ui.comboBox_Object.currentText()),\
+					'FIELD'	: 		str( self.dataQuality_ui.comboBox_5.currentIndex() ),\
+					'FIELDNOTE'	: str( self.dataQuality_ui.lineEdit_5.text() )		,\
+					'CONFIG'	: str( self.dataQuality_ui.comboBox_6.currentIndex() )		,\
+					'CONFIGNOTE': str( self.dataQuality_ui.lineEdit_6.text() )		,\
+					'FWHM'	: float( self.dataQuality_ui.lineEdit_7.text() )			,\
+					'E'	      : float( self.dataQuality_ui.lineEdit_8.text() )}
+			info = self.Obj_FDQ(**dqinf)
+			session.add(info)
+		else:
+			query[0].FIELD = str( self.dataQuality_ui.comboBox_5.currentIndex() )
+			query[0].FIELDNOTE = str( self.dataQuality_ui.lineEdit_5.text() )
+			query[0].CONFIG = str( self.dataQuality_ui.comboBox_6.currentIndex() )		
+			query[0].CONFIGNOTE = str( self.dataQuality_ui.lineEdit_6.text() )		
+			query[0].FHWM = float( self.dataQuality_ui.lineEdit_7.text() )			
+			query[0].E = float( self.dataQuality_ui.lineEdit_8.text() )
 			
 		session.commit()
 
@@ -152,8 +182,49 @@ class DataQuality():
 			self.dataQuality_ui.lineEditBias.setText( '' )
 			self.dataQuality_ui.lineEditDark.setText( '' )
 			self.dataQuality_ui.lineEditFlatField.setText( '' )
+
+		self.dataQuality_ui.comboBox_Object.clear()
+		self.dataQuality_ui.comboBox_Object.addItem('')		
+		
+		query2 = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+str(self.dataQuality_ui.comboBox.currentText())+'%'))[:]
+		obj_list = self.getObjects(query2)
+		for i in range(len(obj_list)):
+			self.dataQuality_ui.comboBox_Object.addItem(obj_list[i])
+		
+		self.dataQuality_ui.timeEdit.setTime(QtCore.QTime(*self.calcTime(str(self.dataQuality_ui.comboBox.currentText()))))
 				
 		print len(query),str(self.dataQuality_ui.comboBox.currentText())
+
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+
+	def readDQObject(self,action):
+
+		session_CID = self.Session()
+
+		query = session_CID.query(self.Obj_FDQ).filter(self.Obj_FDQ.PID == str(self.dataQuality_ui.comboBox.currentText())).filter(self.Obj_FDQ.OBJECT == str(self.dataQuality_ui.comboBox_Object.currentText())) [:]
+		
+		if len(query) > 0 and len(str(self.dataQuality_ui.comboBox_Object.currentText())) > 0:
+			print 'OK' 
+			self.dataQuality_ui.comboBox_5.setCurrentIndex( int( query[0].FIELD) )
+			self.dataQuality_ui.comboBox_6.setCurrentIndex( int( query[0].CONFIG) )
+			self.dataQuality_ui.lineEdit_5.setText( str( query[0].FIELDNOTE) )
+			self.dataQuality_ui.lineEdit_6.setText( str( query[0].CONFIGNOTE) )
+			self.dataQuality_ui.lineEdit_7.setText( str( query[0].FWHM) )
+			self.dataQuality_ui.lineEdit_8.setText( str( query[0].E) )
+		else:
+			print 'NOK'
+			self.dataQuality_ui.comboBox_5.setCurrentIndex( 0 )
+			self.dataQuality_ui.comboBox_6.setCurrentIndex( 0 )
+			self.dataQuality_ui.lineEdit_5.setText( '' )
+			self.dataQuality_ui.lineEdit_6.setText( '' )
+			self.dataQuality_ui.lineEdit_7.setText( '0.' )
+			self.dataQuality_ui.lineEdit_8.setText( '0.' )
 
 #
 #
