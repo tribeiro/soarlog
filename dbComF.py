@@ -167,11 +167,41 @@ class soarDB():
 			def __init__(self,**template):
 				for info in template.keys():
 					self.__dict__[info] = template[info]
-	
+
 		self.Obj_DQ = type(dataQualityUI(**databaseF.frame_infos.dataQualityDB))
+  
+		self.file_table_frameDQ = Table('SoarFrameDataQuality',self.metadata,Column('id', Integer, primary_key=True))
+		
+		for keys in databaseF.frame_infos.frameDataQualityDB.keys():
+			print keys
+			self.file_table_frameDQ.append_column(databaseF.frame_infos.frameDataQualityDB[keys])
+
+		class frameDataQualityUI(object):
+			def __init__(self,**template):
+				for info in template.keys():
+					self.__dict__[info] = template[info]
+
+	
+		self.Obj_FDQ = type(frameDataQualityUI(**databaseF.frame_infos.frameDataQualityDB))
+
+		self.file_table_frameListDQ = Table('SoarFrameListDataQuality',self.metadata,Column('id', Integer, primary_key=True))
+		
+		for keys in databaseF.frame_infos.frameListDataQualityDB.keys():
+			print keys
+			self.file_table_frameListDQ.append_column(databaseF.frame_infos.frameListDataQualityDB[keys])
+
+		class frameListDataQualityUI(object):
+			def __init__(self,**template):
+				for info in template.keys():
+					self.__dict__[info] = template[info]
+
+	
+		self.Obj_FLDQ = type(frameListDataQualityUI(**databaseF.frame_infos.frameListDataQualityDB))
+  
 
 		mapper(self.Obj_DQ,self.file_table_DQ)#, properties=relation)	
-
+		mapper(self.Obj_FDQ,self.file_table_frameDQ)#, properties=relation)	
+		mapper(self.Obj_FLDQ,self.file_table_frameListDQ)#, properties=relation)	
 		
 		self.metadata.create_all(self.engine)	
 		self.Session = sessionmaker(bind=self.engine)

@@ -170,10 +170,33 @@ dataQualityDB = {	'TYPE'		: Column('TYPE',String)			,\
 					'BIASNOTE'	: Column('BIASNOTE',TEXT)			,\
 					'DARKNOTE'	: Column('DARKNOTE',TEXT)			,\
 					'FLATFIELDNOTE'	: Column('FLATFIELDNOTE',TEXT)	,\
-					'FROMDB'	: Column('FROMDB',String)
-					}
+					'FROMDB'	: Column('FROMDB',String),
+					'OBSTIME'  : Column('OBSTIME',REAL),
+					'VALIDTIME'  : Column('VALIDTIME',REAL)}
 
 
+#
+#
+##################################################################################################################################		
+
+##################################################################################################################################
+#
+# object specific data quality database. it is related to dataQualityDB
+
+frameDataQualityDB = {	'SEMESTER'	: Column('SEMESTER',String)		,\
+					'PID'		: Column('PID',String)			,\
+					'DATASET'	: Column('DATASET',String)		,\
+					'OBJECT'	: Column('OBJECT',String)		,\
+					'FIELD'	: Column('FIELD',String)		,\
+					'FIELDNOTE'	: Column('FIELDNOTE',String)		,\
+					'CONFIG'	: Column('CONFIG',String)		,\
+					'CONFIGNOTE': Column('CONFIGNOTE',String)	,\
+					'FWHM'	: Column('FWHM',REAL)		,\
+					'E'	      : Column('E',REAL)}
+
+frameListDataQualityDB = {'id_tvDB' : Column('id_tvDB',Integer),
+                          'id_INSTRUME' : Column('id_INSTRUME',Integer),
+                          'DATASET'	: Column('DATASET',String)}
 #
 #
 ##################################################################################################################################		

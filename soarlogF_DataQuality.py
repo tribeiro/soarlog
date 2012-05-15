@@ -221,7 +221,15 @@ class DataQuality():
         		query = session_CID.query(self.Obj_CID.id,self.Obj_CID.INSTRUME).filter(self.Obj_CID.FILENAME == fname)[:]
         		qInst = session_CID.query(self.Obj_INSTRUMENTS[query[0].INSTRUME].id).filter(self.Obj_INSTRUMENTS[query[0].INSTRUME].FILENAME.like('%'+fname))[:]
         		print fname,query[0].id,qInst[0].id,query[0].INSTRUME
-        				
+        		vals = {'id_tvDB':query[0].id,
+                         'id_INSTRUME' : qInst[0].id,
+                         'DATASET'	: '{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText())))}
+        		entry = self.Obj_FLDQ(**vals)		
+        		query2 = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.id_tvDB == entry.id_tvDB and self.Obj_FLDQ.DATASET == entry.DATASET)[:]
+        		if len(query2) == 0:
+        			session_CID.add(entry)
+
+		session_CID.commit()                 
 #
 #
 ################################################################################################

@@ -28,6 +28,7 @@ from soarlogF_watch import *
 from soarlogF_watch import __FALSEWATCHER__
 
 from dbComF import *
+from soarlogF_DataQuality import *
 
 import time
 
@@ -59,7 +60,7 @@ def LongestCommonSubstring(S1, S2):
     return S1[x_longest-longest: x_longest]
 
 		
-class SoarLog(QtGui.QMainWindow,soarDB):
+class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 
 
 	def __init__(self,*args):
@@ -97,6 +98,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		self.dbname = 'soarlog_{0}.db'
 		self.masterDBName = '.soarMaster.db' # master database.
 		self.CommentColumn = 16
+		self.FilenameColumn = 12
 		self.ImtypeColumn = 11
 		self.ExtraEditableColumns = [0,11,12,16]
 		self.AskFile2Watch()
@@ -104,8 +106,7 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		self.logfile = self.logfile.format(self.dir.split('/')[-1])
 		self.dbname  = self.dbname.format(self.dir.split('/')[-1])
 		soarDB.__init__(self,self.Queue)
-		
-		self.dqStatus = ['','OK','WARN','FAIL']
+		#DataQuality.__init__()
 #		self.imageTYPE = ['','OBJECT','FLAT','DFLAT','BIAS','ZERO','DARK','COMP','FAILED','Object']
 		self.imageTYPE = databaseF.frame_infos.imageTYPE
 		
@@ -116,10 +117,10 @@ class SoarLog(QtGui.QMainWindow,soarDB):
 		self.header_dict = { 'OSIRIS' : databaseF.frame_infos.OSIRIS_ID.keys(),\
 							 'Goodman Spectrograph' : databaseF.frame_infos.GOODMAN_ID.keys() ,\
 							  'SOI' : databaseF.frame_infos.SOI_ID.keys()}
-		self.__FileWeatherComments__ = '.weatherComments.txt'
-		if not os.path.isfile(self.__FileWeatherComments__):
-			_file = open(self.__FileWeatherComments__,'w')
-			_file.write("No info available\n")
+		#self.__FileWeatherComments__ = '.weatherComments.txt'
+		#if not os.path.isfile(self.__FileWeatherComments__):
+		#	_file = open(self.__FileWeatherComments__,'w')
+		#	_file.write("No info available\n")
 		#self.__WeatherComments__ = "No info available\n"
 
 		self.currentSelectedItem = 0 #QtCore.QModelIndex()
@@ -1380,182 +1381,6 @@ Time Spent:
 #
 ################################################################################################
 
-################################################################################################
-#
-#
-	def startDataQuality(self):
-
-		session_CID = self.Session()
-		self.dataQuality_ui = DataQualityUI()
-		
-		projInfo = self.getProjects()
-		model = QtGui.QStandardItemModel()
-		# generate test data for the example here...
-
-		prj = np.append([''],projInfo[0])#np.append(projInfo[0],['all','Calibration'])
-		
-		for i in range(len(prj)):
-			self.dataQuality_ui.comboBox.addItem(prj[i])
-			
-			parentItem = model.invisibleRootItem()
-			item = QtGui.QStandardItem(QtGui.QIcon(":/trolltech/styles/commonstyle/images/parentdir-32.png"), QtCore.QString(prj[i]+'/'))
-			parentItem.appendRow(item)
-			parentItem = item
-			query = None
-			if i < len(prj)-2:
-				query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+prj[i]+'%'))[:]
-				item = QtGui.QStandardItem(QtGui.QIcon(":/trolltech/styles/commonstyle/images/parentdir-32.png"), 
-										   QtCore.QString('Calibration/'))				
-				parentItem.appendRow(item)
-			
-			elif i == len(prj)-2:
-				query = session_CID.query(self.Obj_CID)[:]
-			else:
-				query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.IMAGETYP != 'OBJECT')[:]
-		
-			for j in range(len(query)):
-				item = QtGui.QStandardItem(QtGui.QIcon(":/trolltech/styles/commonstyle/images/file-32.png"), 
-										   QtCore.QString(os.path.basename(query[j].FILENAME)))
-				parentItem.appendRow(item)
-
-		
-		#self.dataQuality_ui.buttonBox.addButton()
-		
-		self.connect(self.dataQuality_ui.buttonBox, QtCore.SIGNAL('clicked(QAbstractButton*)'), self.commitDataQuality)
-		self.connect(self.dataQuality_ui.comboBox, QtCore.SIGNAL('currentIndexChanged(int)'), self.readDQProject)
-		
-		self.dataQuality_ui.lineEditSemesterID.setText(self.semester_ID[:-4])
-		self.dataQuality_ui.lineEditPathToData.setText(self.dataStorage.format(SID=self.semester_ID[:-4],PID=self.semester_ID.format('123')))
-		#self.setAnimated(True)
-
-		#model.setRootPath('/')
-		#dataQuality_ui.dq_ui.columnDQ.setModel(model)
-		#dataQuality_ui.dq_ui.columnDQ.setDragDropMode(QtGui.QAbstractItemView.DragDrop)
-
-		#label = QtGui.QLabel('HELLO')
-		#dataQuality_ui.dq_ui.columnDQ.setPreviewWidget(label)
-		
-		self.ui.tableDB.setSelectionMode(self.ui.tableDB.ExtendedSelection)
-
-		self.dataQuality_ui.show()
-		
-		self.dataQuality_ui.exec_()
-		
-		self.ui.tableDB.setSelectionMode(self.ui.tableDB.SingleSelection)
-
-#
-#
-################################################################################################
-
-################################################################################################
-#
-#
-	def commitDataQuality(self):
-	
-		session = self.Session()
-		query = session.query(self.Obj_DQ).filter(self.Obj_DQ.PID == str(self.dataQuality_ui.comboBox.currentText()))[:]
-
-		if len(query) == 0:
-			
-			dqinf = {'TYPE'		: '',\
-					'SEMESTER'	: '',\
-					'PID'		: str(self.dataQuality_ui.comboBox.currentText()),\
-					'DATASET'	: '',\
-					'DQNOTE'	: '',\
-					'BIAS'		: str( self.dataQuality_ui.comboBias.currentIndex() ),\
-					'DARK'		: str( self.dataQuality_ui.comboDark.currentIndex() ),\
-					'FLATFIELD'	: str( self.dataQuality_ui.comboFlatField.currentIndex() ),\
-					'BIASNOTE'	: str( self.dataQuality_ui.lineEditBias.text() )	,\
-					'DARKNOTE'	: str( self.dataQuality_ui.lineEditDark.text() )			,\
-					'FLATFIELDNOTE'	: str( self.dataQuality_ui.lineEditFlatField.text() )	,\
-					'FROMDB'	: ''
-					}
-			info = self.Obj_DQ(**dqinf)
-			session.add(info)
-		else:
-			
-			query[0].BIAS = str( self.dataQuality_ui.comboBias.currentIndex() )
-			query[0].DARK = str( self.dataQuality_ui.comboDark.currentIndex() )
-			query[0].FLATFIELD = str( self.dataQuality_ui.comboFlatField.currentIndex() )
-			query[0].BIASNOTE = self.dataQuality_ui.lineEditBias.text() 
-			query[0].DARKNOTE = self.dataQuality_ui.lineEditDark.text() 
-			query[0].FLATFIELDNOTE = self.dataQuality_ui.lineEditFlatField.text() 
-			
-		session.commit()
-
-#
-#
-################################################################################################
-
-################################################################################################
-#
-#
-
-	def readDQProject(self,action):
-	
-		if not self.dataQuality_ui.tabWidget.isEnabled():
-			self.dataQuality_ui.tabWidget.setEnabled(True)
-			self.setUpCalibrationDQ()
-		
-		session_CID = self.Session()
-		query = session_CID.query(self.Obj_DQ).filter(self.Obj_DQ.PID == str(self.dataQuality_ui.comboBox.currentText()))[:]
-
-		if len(query) > 0:
-			self.dataQuality_ui.comboBias.setCurrentIndex( int( query[0].BIAS) )
-			self.dataQuality_ui.comboDark.setCurrentIndex( int( query[0].DARK) )
-			self.dataQuality_ui.comboFlatField.setCurrentIndex( int( query[0].FLATFIELD) )
-			self.dataQuality_ui.lineEditBias.setText( str( query[0].BIASNOTE) )
-			self.dataQuality_ui.lineEditDark.setText( str( query[0].DARKNOTE) )
-			self.dataQuality_ui.lineEditFlatField.setText( str( query[0].FLATFIELDNOTE) )
-		else:
-			self.dataQuality_ui.comboBias.setCurrentIndex( 0 )
-			self.dataQuality_ui.comboDark.setCurrentIndex( 0 )
-			self.dataQuality_ui.comboFlatField.setCurrentIndex( 0 )
-			self.dataQuality_ui.lineEditBias.setText( '' )
-			self.dataQuality_ui.lineEditDark.setText( '' )
-			self.dataQuality_ui.lineEditFlatField.setText( '' )
-				
-		print len(query),str(self.dataQuality_ui.comboBox.currentText())
-
-#
-#
-################################################################################################
-
-################################################################################################
-#
-#
-	def setUpCalibrationDQ(self):
-		
-		self.dataQuality_ui.label.setText('1) Select the calibration files for this\nproject and select type.\n')
-		
-		for status in self.dqStatus:
-			self.dataQuality_ui.comboBias.addItem(status)
-			self.dataQuality_ui.comboDark.addItem(status)
-			self.dataQuality_ui.comboFlatField.addItem(status)
-
-		self.dataQuality_ui.comboBias.setCurrentIndex(0)
-		self.dataQuality_ui.comboDark.setCurrentIndex(0)
-		self.dataQuality_ui.comboFlatField.setCurrentIndex(0)
-
-		
-		self.dataQuality_ui.fromDB.setEnabled(False)
-		self.dataQuality_ui.comboFromDB.setEnabled(False)
-		self.dataQuality_ui.lineEditFromDB.setEnabled(False)
-		
-		self.connect(self.dataQuality_ui.Bias, QtCore.SIGNAL('clicked()'), self.test)
-		self.connect(self.dataQuality_ui.Dark, QtCore.SIGNAL('clicked()'), self.test)
-		self.connect(self.dataQuality_ui.FlatField, QtCore.SIGNAL('clicked()'), self.test)
-#
-#
-################################################################################################
-
-	def test(self):
-	
-		indexes = self.ui.tableDB.selectedIndexes()
-		
-		for i in range(len(indexes)):
-			print indexes[i].row()
-		
 ################################################################################################
 #
 #
