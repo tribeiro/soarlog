@@ -219,6 +219,8 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 				try:
 					if query.INSTRUME == 'SOI':
 					#mscred.mscdisplay(frame,1)
+                                                for iext in range(4):
+                                                    data = pyfits.getdata(frame,ext=iext+1)
 						d.set('file mosaicimage iraf {0}'.format(frame))
 						d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
 						if self.ui.actionZoom_to_fit.isChecked():

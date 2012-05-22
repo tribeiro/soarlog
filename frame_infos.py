@@ -826,7 +826,7 @@ def GetFrameInfos(filename):
 					hdr_inst[key] = hdr[TRANSLATE_CID[key]]
 			except KeyError,ValueError:
 				print '--> Exception on CID:',sys.exc_info()[1],key
-				hdr_inst[key] = ''
+				hdr_inst[key] = '0'
 
 
 	for key in PARTICULAR_DB.keys():
