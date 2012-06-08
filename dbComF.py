@@ -160,7 +160,7 @@ class soarDB():
 		self.file_table_DQ = Table('SoarDataQuality',self.metadata,Column('id', Integer, primary_key=True))
 		
 		for keys in databaseF.frame_infos.dataQualityDB.keys():
-			print keys
+			#print keys
 			self.file_table_DQ.append_column(databaseF.frame_infos.dataQualityDB[keys])
 
 		class dataQualityUI(object):
@@ -173,7 +173,7 @@ class soarDB():
 		self.file_table_frameDQ = Table('SoarFrameDataQuality',self.metadata,Column('id', Integer, primary_key=True))
 		
 		for keys in databaseF.frame_infos.frameDataQualityDB.keys():
-			print keys
+			#print keys
 			self.file_table_frameDQ.append_column(databaseF.frame_infos.frameDataQualityDB[keys])
 
 		class frameDataQualityUI(object):
@@ -187,7 +187,7 @@ class soarDB():
 		self.file_table_frameListDQ = Table('SoarFrameListDataQuality',self.metadata,Column('id', Integer, primary_key=True))
 		
 		for keys in databaseF.frame_infos.frameListDataQualityDB.keys():
-			print keys
+			#print keys
 			self.file_table_frameListDQ.append_column(databaseF.frame_infos.frameListDataQualityDB[keys])
 
 		class frameListDataQualityUI(object):
@@ -209,6 +209,14 @@ class soarDB():
 		# Setup Done
 		#####################################################	
 
+		session = self.Session()
+		query = session.query(self.Obj_WC.Comment)[:]
+		if len(query) == 0:
+			info = self.Obj_WC(**{'Comment':"No weather comment."})
+			session.add(info)
+			session.commit()
+			#winfo.wi_ui.weatherInfo.setPlainText("No weather comment.")
+
 		self.file_table_CID = file_table_TVDB
 		
 		self.rthread = None
@@ -228,7 +236,7 @@ class soarDB():
 	
 		if not filename:
 
-			print '# - Filename is empty ...', filename
+			logging.debug('# - Filename is empty ...')
 			return -1
 		
 		# Checa se esta no banco de dados
@@ -243,7 +251,7 @@ class soarDB():
 		infos = databaseF.frame_infos.GetFrameInfos(str(filename))
 
 		if infos == -1:
-			print '# Could not read file %s... ' %(filename)
+			logging.debug('# Could not read file {0}... ' .format(filename))
 			return -1
 		else:
 			entry_CID = self.Obj_CID(**infos[1])

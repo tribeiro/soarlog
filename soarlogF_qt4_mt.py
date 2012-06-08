@@ -101,6 +101,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 		self.FilenameColumn = 12
 		self.ImtypeColumn = 11
 		self.ExtraEditableColumns = [0,11,12,16]
+                self.LocalTime = -4
 		self.AskFile2Watch()
 				
 		self.logfile = self.logfile.format(self.dir.split('/')[-1])
@@ -111,8 +112,6 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 		self.imageTYPE = databaseF.frame_infos.imageTYPE
 		
 		self.header_CID = databaseF.frame_infos.tvDB.keys()
-		for i in range(len(self.header_CID)):
-			print i,self.header_CID[i]
 		
 		self.header_dict = { 'OSIRIS' : databaseF.frame_infos.OSIRIS_ID.keys(),\
 							 'Goodman Spectrograph' : databaseF.frame_infos.GOODMAN_ID.keys() ,\
@@ -221,7 +220,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 					#mscred.mscdisplay(frame,1)
                                                 for iext in range(4):
                                                     data = pyfits.getdata(frame,ext=iext+1)
-						d.set('file mosaicimage iraf {0}'.format(frame))
+						d.set('file mosaicimage wcs {0}'.format(frame))
 						d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
 						if self.ui.actionZoom_to_fit.isChecked():
 							d.set('zoom to fit')
@@ -396,14 +395,14 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 			SavedInfoOrder[1] = SavedInfoOrder[1][ssort]
 			for i in range(len(SavedInfoOrder[0])):
 				self.MoveColumn( (SavedInfoOrder[0][i],SavedInfoOrder[1][i]))
-				print SavedInfoOrder[0][i],' --> ',SavedInfoOrder[1][i]
+				#print SavedInfoOrder[0][i],' --> ',SavedInfoOrder[1][i]
 		
 				
 		except:
 			pass
 			
 
-		print self.OrderInfoDict
+		#print self.OrderInfoDict
 
 		#
 		# Load Column Width
@@ -575,9 +574,9 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 			
 
 		else:
-			print 'No changes made to Layout'
+			logging.debug('No changes made to Layout')
 
-		print '[DONE]'
+		logging.debug('[DONE]')
 		return 0
 
 		
@@ -590,8 +589,8 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 
 		#QtGui.QFileDialog.getExistingDirectory(self, 'Selecione diretorio da noite','~/')
 		#pref_ui.prefUI()
-		print pref_ui.exec_()
-		print 'Done'
+		loggin.debug(pref_ui.exec_())
+		loggin.debug('Done')
 		return 0
 	
 ################################################################################################
@@ -616,14 +615,14 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 		#print self.ShowInfoOrder
 		index = [i for i,x in enumerate(self.ShowInfoOrder) if x == move[0]][0]
 		
-		print move
+		#print move
 		#print index
 		#print move
 
 		table_header = self.ui.tableDB.horizontalHeader()
 		table_header.moveSection(index,move[1])
 
-		print self.ShowInfoOrder
+		#print self.ShowInfoOrder
 		
 		self.ShowInfoOrder.insert(move[1], self.ShowInfoOrder.pop(index))		
 		
@@ -639,7 +638,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 		#print move[0], 'is in ',self.ShowInfoOrder[move[0]]
 		#print move
 		#print move[0],self.ShowInfoOrder[move[0]]
-		print self.ShowInfoOrder
+		#print self.ShowInfoOrder
 #
 #
 ################################################################################################
@@ -825,14 +824,14 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 			winfo.wi_ui.weatherInfo.setPlainText("No weather comment.")
 		else:
 			winfo.wi_ui.weatherInfo.setPlainText(query[0].Comment)
-			
+		winfo.show()	
 		if winfo.exec_():
 #			print winfo.wi_ui.weatherInfo.toPlainText()
 
 			query = session.query(self.Obj_WC)[0]
-			print query.Comment
+			logging.debug(query.Comment)
 			query.Comment = str(winfo.wi_ui.weatherInfo.toPlainText())
-			print query.Comment
+			logging.debug(query.Comment)
 
 			session.flush()			
 			session.commit()
@@ -864,26 +863,24 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 	def getProjects(self):
 	
 		session_CID = self.Session()
-		query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%SO%'))[:]
+		query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%SO%')).filter(self.Obj_CID.IMAGETYP.like('OBJECT'))[:]
 		fnames = np.array([ os.path.basename(str(ff.FILENAME)) for ff in query])
 		
 		for ff in range(len(fnames)):
 			id01 = fnames[ff].find('SO')
 			id02 = fnames[ff][id01:].find('_')
-			fnames[ff] = fnames[ff][id01:id01+id02]
+                        #if id01 > -1 and id02 > id01:
+                        fnames[ff] = fnames[ff][id01:id01+id02]
 		
 		proj_id = np.unique(fnames)
 		
 		mask = np.array([len(proj_id[i]) > 0 for i in range(len(proj_id))])
-		
-		if len(mask) == 0:
-			return [],[],0
-		
+
 		proj_id = proj_id[mask]
 		proj_id2 = proj_id
-		
+				
 		for i in range(len(proj_id)):
-			id01 = proj_id[i].find('-')
+			id01 = proj_id[i].rfind('-')
 			proj_id[i] = proj_id[i][id01+1:]
 
 		nframes = []
@@ -917,25 +914,9 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 		# Resolve projects
 		#
 		
-		fnames = np.array([ os.path.basename(str(ff.FILENAME)) for ff in query])
-		
-		for ff in range(len(fnames)):
-			id01 = fnames[ff].find('SO')
-			id02 = fnames[ff][id01:].find('_')
-			fnames[ff] = fnames[ff][id01:id01+id02]
-		
-		proj_id = np.unique(fnames)
-		
-		mask = np.array([len(proj_id[i]) > 0 for i in range(len(proj_id))])
-
-		proj_id = proj_id[mask]
-		proj_id2 = proj_id
-				
-		for i in range(len(proj_id)):
-			id01 = proj_id[i].find('-')
-			proj_id[i] = proj_id[i][id01+1:]
-		
-		print proj_id
+		proj_id,proj_id2,nframes = self.getProjects()
+                
+		logging.debug(proj_id)
 		
 		#
 		# Write log for each project
@@ -953,7 +934,7 @@ Time Spent:
 			#
 			
 			timeSpent = self.calcTime(proj)
-			timeSpentLog += proj + ': %02.0f:%02.0f\n' % timeSpent
+			timeSpentLog += self.semester_ID.format(proj) + ': %02.0f:%02.0f\n' % timeSpent
 
 			#
 			# Get proj Header
@@ -974,7 +955,7 @@ Time Spent:
 			query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+proj_id2[i]+'%'))[:]
 			obj_list = self.getObjects(query)
 
-			print obj_list
+			logging.debug(obj_list)
 
 			nlines = 3
 			end_hdr = 0
@@ -999,7 +980,7 @@ Time Spent:
 		
 			time = np.array( [ day[i]+'T'+hour[i] for i in range(len(hour)) ] )
 		
-			sumLT = -3
+			sumLT = self.LocalTime
 			for i in range(len(time)):
 				if day[i].find('T') > 0:
 
@@ -1028,9 +1009,9 @@ Time Spent:
 					time = [0,0,0]
 				hrs = int(time[0].split('T')[-1])+sumLT
 				if hrs > 23:
-					hrs -= 23
+					hrs -= 24
 				if hrs < 0:
-					hrs += 23
+					hrs += 24
 				try:
 					time = '%02i:%02i' % (hrs,int(time[1]))
 				except:
@@ -1063,7 +1044,10 @@ Time Spent:
 #
 
 	def SaveLogThreaded(self):
-		threading.Thread(target=self.SaveLog).start()
+            rthread = threading.Thread(target=self.SaveLog)
+            rthread.start()
+            
+            #threading.Thread(target=self.SaveLog).start()
 
 #
 #
@@ -1133,13 +1117,13 @@ Time Spent:
 		obj = np.array( [ str(ff.OBJECT) for ff in query] )
 		exptime  = np.array( [ float(ff.EXPTIME) for ff in query] )
 		
-		print obj 
+		#print obj 
 		
 		time = np.array( [ day[i]+'T'+hour[i] for i in range(len(hour)) ] )
 		
 		for i in range(len(time)):
-				if day[i].find('T') > 0:
-						time[i] = day[i]
+                    if day[i].find('T') > 0:
+                        time[i] = day[i]
 						
 		sort = time.argsort()
 
@@ -1147,10 +1131,16 @@ Time Spent:
 		
 		fnames = fnames[sort]
 		
-		find_proj = np.array( [ i for i in range(len(fnames)) if fnames[i].find('-'+id) > 0] )
+		find_proj = np.array( [ i for i in range(len(fnames)) if fnames[i].find('-'+id+'_') > 0] )
 
-		time_start = np.append([int(find_proj[0])], np.array( [ find_proj[i+1] for i in range(len(find_proj)-2) if fid[i] != fid[i+1]-1 ] ) )
-		time_end = np.append( np.array( [ find_proj[i] for i in range(len(find_proj)-2) if fid[i] != fid[i+1]-1 ] ), [int(find_proj[-1])] )
+                iddiff = fid[find_proj[1:]] - fid[find_proj[:-1]]
+                #for i in range(len(find_proj)-1):
+                #    print fid[find_proj[i]],fnames[find_proj[i]],iddiff[i]
+                    
+		#time_start = np.append([int(find_proj[0])], np.array( [ find_proj[i+1] for i in range(1,len(find_proj)-1) if not fid[i] == fid[i+1]-1 ] ) )
+		#time_end = np.append( np.array( [ find_proj[i] for i in range(1,len(find_proj)-2) if fid[i] != fid[i+1]-1 ] ), [int(find_proj[-1])] )
+                time_start = np.append([int(find_proj[0])],find_proj[1:][iddiff != 1])
+                time_end  = np.append(find_proj[:-1][iddiff != 1],[int(find_proj[-1])])
 		#print find_proj
 		
 		time_tmp = np.append(time_start , time_end  )
@@ -1165,29 +1155,34 @@ Time Spent:
 		
 		calcT = 0
 		try:
-#                       for i in range(0,len(time_tmp),2):
-				for i in range(len(time_start)):
-								
-						dia_start,hora_start = time[time_start[i]].split('T')
-						dia_end,hora_end = time[time_end[i]].split('T')
-				
-						ano1,mes1,dia1 = dia_start.split('-')
-						hr1,min1,sec1 = hora_start.split(':')
-				
-						ano2,mes2,dia2 = dia_end.split('-')
-						hr2,min2,sec2 = hora_end.split(':')
-				
-						start = float(ano1)*365.+float(mes1)*30.+float(dia1)+float(hr1)/24.+float(min1)/24./60.
-						end = float(ano2)*365.+float(mes2)*30.+float(dia2)+float(hr2)/24.+float(min2)/24./60.
-				
-						calcT += (end-start)*24.0 + exptime[time_end[i]]/60./60.
-						print start, end, (end-start)*24.0 
-						
-						
-				print id, [ time[i] for i in time_start ], [time[i] for i in time_end], '%02.0f:%02.0f' %( np.floor(calcT), (calcT-np.floor(calcT))*60)
 
+                    for i in range(len(time_start)):
+                        
+                        dia_start,hora_start = time[time_start[i]].split('T')
+                        dia_end,hora_end = time[time_end[i]].split('T')
+                        
+                        ano1,mes1,dia1 = dia_start.split('-')
+                        hr1,min1,sec1 = hora_start.split(':')
+                        
+                        ano2,mes2,dia2 = dia_end.split('-')
+                        hr2,min2,sec2 = hora_end.split(':')
+
+                        
+                        start = float(hr1)/24.+float(min1)/24./60.
+                        end = float(hr2)/24.+float(min2)/24./60.
+                        if ano1 != ano2 or mes1 != mes2 or dia1 != dia2:
+                            end += 1.
+                        
+                        calcT += (end-start)*24.0 + exptime[time_end[i]]/60./60.
+                        #print 'START = ', ano1,mes1,dia1,hr1,min1,sec1,' ->',start
+                        #print 'END = ', ano2,mes2,dia2,hr2,min2,sec2,' ->',end
+                        #print 'TIME = ',(end-start)*24.0 
+						
+						
+                    #print id, [ time[i] for i in time_start ], [time[i] for i in time_end], '%02.0f:%02.0f' %( np.floor(calcT), (calcT-np.floor(calcT))*60)
+                    logging.debug(self.semester_ID.format(id)+' {hora:02.0f}:{min:02.0f} (with {nsub} subblocks).'.format(nsub=len(time_start), hora=np.floor(calcT), min=(calcT-np.floor(calcT))*60))
 		except:
-				print 'Failed to obtain program time'
+                    logging.debug('Failed to obtain program time')
 				
 				
 				
@@ -1335,7 +1330,7 @@ Time Spent:
 			try:
 				if query.INSTRUME == 'SOI':
 					#mscred.mscdisplay(frame,1)
-					d.set('file mosaicimage iraf {0}'.format(frame))
+					d.set('file mosaicimage wcs {0}'.format(frame))
 					d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
 					if self.ui.actionZoom_to_fit.isChecked():
 						d.set('zoom to fit')
@@ -1371,12 +1366,12 @@ Time Spent:
 						d.set('scale mode zscale')
 					return 0
 			except:
-				print 'Could not display file {0}'.format(frame)
+				loggin.debug('Could not display file {0}'.format(frame))
 				return -1
 		
 			return 0
 		else:
-			print 'File {0} does not exists...'.format(frame)
+			loggin.debug('File {0} does not exists...'.format(frame))
 			return -1
 							
 #
@@ -1611,7 +1606,7 @@ class PrefMenu(QtGui.QDialog):
 #
 #
 	def dropEvent(self, event): 
-		print 'dropping'
+		#print 'dropping'
 		txt = event.mimeData().data('text/xml')
 		item = QtGui.QListWidgetItem(txt,self)     #os.path.basename(url)
 		event.accept()
@@ -1628,8 +1623,8 @@ class PrefMenu(QtGui.QDialog):
 #
 #
 			
-	def startDrag(self, supportedActions): 
-		print 'start Dragging...'
+#	def startDrag(self, supportedActions): 
+		#print 'start Dragging...'
 #		self.drag_item = self.pref_ui.listSort.currentItem() 
 #		self.drag_row = self.row(self.drag_item) 
 #		super(DragAndDropList, self).startDrag(supportedActions) 
@@ -1643,7 +1638,7 @@ class PrefMenu(QtGui.QDialog):
 #
 
 	def dragMoveEvent(self, event):
-		print 'start move'
+		#print 'start move'
 		#if event.mimeData().hasUrls:
 		#event.setDropAction(QtCore.Qt.CopyAction)
 		event.accept()
@@ -1659,11 +1654,6 @@ class PrefMenu(QtGui.QDialog):
 #
 
 	def dragEnterEvent(self, event):
-		print 'enter drag'
-		print event.mimeData().data('text/xml')
-		print event.proposedAction()
-		#if event.mimeData().hasFormat('text/plain'):
-		#	event.acceptProposedAction()
 		event.accept()
 #
 #
