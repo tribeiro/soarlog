@@ -63,7 +63,7 @@
      <x>0</x>
      <y>0</y>
      <width>700</width>
-     <height>23</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -84,8 +84,15 @@
      <property name="title">
       <string>ds9 commands</string>
      </property>
+     <widget class="QMenu" name="menuSPARTAN">
+      <property name="title">
+       <string>SPARTAN</string>
+      </property>
+      <addaction name="actionSpartan_showall"/>
+     </widget>
      <addaction name="actionZoom_to_fit"/>
      <addaction name="actionZscale"/>
+     <addaction name="menuSPARTAN"/>
     </widget>
     <addaction name="actionGot_to_last_frame"/>
     <addaction name="actionDisplay_last_frame"/>
@@ -188,6 +195,17 @@
    </property>
    <property name="text">
     <string>Zscale</string>
+   </property>
+  </action>
+  <action name="actionSpartan_showall">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>show all</string>
    </property>
   </action>
  </widget>
