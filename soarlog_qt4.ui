@@ -97,12 +97,19 @@
     <addaction name="actionGot_to_last_frame"/>
     <addaction name="actionDisplay_last_frame"/>
     <addaction name="actionAdd_Frame"/>
-    <addaction name="actionHideCB"/>
     <addaction name="actionEnable_Disable_Table_Edit"/>
     <addaction name="menuDs9_commands"/>
    </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <addaction name="actionHideCB"/>
+    <addaction name="actionCalibration_Helper"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
+   <addaction name="menuView"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionGot_to_last_frame">
@@ -206,6 +213,11 @@
    </property>
    <property name="text">
     <string>show all</string>
+   </property>
+  </action>
+  <action name="actionCalibration_Helper">
+   <property name="text">
+    <string>Calibration Helper</string>
    </property>
   </action>
  </widget>
