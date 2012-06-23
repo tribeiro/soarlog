@@ -204,12 +204,9 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 					return -1
 			else: 
 				d = ds9.ds9(_targets[1].split(' ')[1])
+			d.set('preserve regions yes')
 		
 			if os.path.isfile(frame):
-				regions = d.get('regions')
-				_file = open(os.path.join(self._CFGFilePath_,'ds9.reg'),'w')
-				_file.write(regions)
-				_file.close()
 				
 				try:
 					query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME == os.path.basename(frame))[0]
@@ -218,10 +215,9 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 				try:
 					if query.INSTRUME == 'SOI':
 					#mscred.mscdisplay(frame,1)
-                                                for iext in range(4):
-                                                    data = pyfits.getdata(frame,ext=iext+1)
+						for iext in range(4):
+							data = pyfits.getdata(frame,ext=iext+1)
 						d.set('file mosaicimage wcs {0}'.format(frame))
-						d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
 						if self.ui.actionZoom_to_fit.isChecked():
 							d.set('zoom to fit')
 						if self.ui.actionZscale.isChecked():
@@ -229,30 +225,27 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 						return 0
 					elif query.INSTRUME == 'Spartan IR Camera':
 						query2 = session_CID.query(self.Obj_INSTRUMENTS['Spartan IR Camera']).filter(self.Obj_INSTRUMENTS['Spartan IR Camera'].FILENAME.like(frame))[0]
-                                                if self.ui.actionSpartan_showall.isChecked():
-                                                    if query2.DETSERNO == '102':
-                                                        zoom = d.get('zoom')
-                                                        d.set('frame clear')
-                                                        d.set('zoom '+zoom)
-                                                        d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
-                                                    d.set('file mosaic iraf {0}'.format(frame))
+						if self.ui.actionSpartan_showall.isChecked():
+							if query2.DETSERNO == '102':
+								zoom = d.get('zoom')
+								d.set('frame clear')
+								d.set('zoom '+zoom)
+							d.set('file mosaic iraf {0}'.format(frame))
 						elif query2.DETSERNO == '66':
-                                                        zoom = d.get('zoom')
-                                                        d.set('frame clear')
-                                                        d.set('zoom '+zoom)
+							zoom = d.get('zoom')
+							d.set('frame clear')
+							d.set('zoom '+zoom)
 							d.set('file {0}'.format(frame))
-                                                        d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
 						if self.ui.actionZoom_to_fit.isChecked():
 							d.set('zoom to fit')
 						if self.ui.actionZscale.isChecked():
 							d.set('scale mode zscale')
-                                                return 0					
+						return 0					
 					elif query.INSTRUME == 'OSIRIS':
 						data = pyfits.getdata(frame)
 						#logging.debug('array [xdim = {XDIM} ydim = {YDIM} bitpix=-32]'.format(XDIM=len(data[0]),YDIM=len(data)))
 						if d.set_np2arr(np.array(data,dtype=np.float))==1:
 							d.set('file {0}'.format(frame))
-						d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
 						if self.ui.actionZoom_to_fit.isChecked():
 							d.set('zoom to fit')
 						if self.ui.actionZscale.isChecked():
@@ -262,7 +255,6 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 						
 					else:
 						d.set('file {0}'.format(frame))
-						d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
 						if self.ui.actionZoom_to_fit.isChecked():
 							d.set('zoom to fit')
 						if self.ui.actionZscale.isChecked():
@@ -1327,23 +1319,19 @@ Time Spent:
 		# Check if ds9 is opened
 
 		if not _targets == 0:
-                    d = ds9.ds9()
+			d = ds9.ds9()
                                            
 		else: 
-                    #print _targets[1].split(' ')[1]
-                    d = ds9.ds9(_targets[0])#.split(' ')[1])
-		
+			#print _targets[1].split(' ')[1]
+			d = ds9.ds9(_targets[0])#.split(' ')[1])
+		d.set('preserve regions yes')
+				
 		if os.path.isfile(frame):
-			regions = d.get('regions')
-			_file = open(os.path.join(self._CFGFilePath_,'ds9.reg'),'w')
-			_file.write(regions)
-			_file.close()
 
 			try:
 				if query.INSTRUME == 'SOI':
 					#mscred.mscdisplay(frame,1)
 					d.set('file mosaicimage wcs {0}'.format(frame))
-					d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
 					if self.ui.actionZoom_to_fit.isChecked():
 						d.set('zoom to fit')
 					if self.ui.actionZscale.isChecked():
@@ -1351,34 +1339,30 @@ Time Spent:
 					return 0
 				elif query.INSTRUME == 'Spartan IR Camera':
                                     
-                                    if self.ui.actionSpartan_showall.isChecked():
-                                        detIndex = frame.rfind('.fits')
-                                        #frame2 = frame#[detIndex-1]='%'
-                                        frame2 = frame[:detIndex-1]+'%.fits'
-                                        query2 = session_CID.query(self.Obj_INSTRUMENTS['Spartan IR Camera']).filter(self.Obj_INSTRUMENTS['Spartan IR Camera'].FILENAME.like(frame2))[::]
-                                        zoom = d.get('zoom')
-                                        d.set('frame clear')
-                                        d.set('zoom '+zoom)
-                                        for nfile in range(len(query2)):
-                                            d.set('file mosaic iraf {0}'.format(query2[nfile].FILENAME))
-                                        d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
-                                    else:
-                                        zoom = d.get('zoom')
-                                        d.set('frame clear')
-                                        d.set('zoom '+zoom)
-                                        d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
-                                        d.set('file {0}'.format(frame))
-                                        d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
-                                    if self.ui.actionZoom_to_fit.isChecked():
-                                        d.set('zoom to fit')
-                                    if self.ui.actionZscale.isChecked():
-                                        d.set('scale mode zscale')
-                                    return 0					
+					if self.ui.actionSpartan_showall.isChecked():
+						detIndex = frame.rfind('.fits')
+						#frame2 = frame#[detIndex-1]='%'
+						frame2 = frame[:detIndex-1]+'%.fits'
+						query2 = session_CID.query(self.Obj_INSTRUMENTS['Spartan IR Camera']).filter(self.Obj_INSTRUMENTS['Spartan IR Camera'].FILENAME.like(frame2))[::]
+						zoom = d.get('zoom')
+						d.set('frame clear')
+						d.set('zoom '+zoom)
+						for nfile in range(len(query2)):
+							d.set('file mosaic iraf {0}'.format(query2[nfile].FILENAME))
+					else:
+						zoom = d.get('zoom')
+						d.set('frame clear')
+						d.set('zoom '+zoom)
+						d.set('file {0}'.format(frame))
+					if self.ui.actionZoom_to_fit.isChecked():
+						d.set('zoom to fit')
+					if self.ui.actionZscale.isChecked():
+						d.set('scale mode zscale')
+					return 0					
 				elif query.INSTRUME == 'OSIRIS':
 					data = pyfits.getdata(frame)
 					if d.set_np2arr(np.array(data,dtype=np.float))==1:
 						d.set('file {0}'.format(frame))
-					d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
 					if self.ui.actionZoom_to_fit.isChecked():
 						d.set('zoom to fit')
 					if self.ui.actionZscale.isChecked():
@@ -1387,7 +1371,6 @@ Time Spent:
 					return 0
 				else:
 					d.set('file {0}'.format(frame))
-					d.set('regions %s'%(os.path.join(self._CFGFilePath_,'ds9.reg')))
 					#display(frame,1)
 					if self.ui.actionZoom_to_fit.isChecked():
 						d.set('zoom to fit')
