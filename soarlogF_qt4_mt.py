@@ -1315,7 +1315,7 @@ Time Spent:
 
 		d = None
 		_targets = ds9.ds9_targets()
-		print _targets
+		#print _targets
 		# Check if ds9 is opened
 
 		if not _targets == 0:
