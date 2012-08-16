@@ -4,81 +4,11 @@ from sqlalchemy import FLOAT as REAL
 import pyfits
 import time,os,sys
 import numpy as np
-
+from instConf import *
 
 '''
 	Basic definition of header parameters contained in each database.
 '''
-
-def GOODMAN_RDMODE(query):
-	
-	RD = {330 : '100kHz', 130 : '200kHz' , 30 : '400kHz'}
-	return RD[query['PARAM26']] + ' ATT' + '{0}'.format(query['PARAM27'])
-
-def GOODMAN_SPCONF(query):
-	'''
-		GOODMAN SP configuration.
-	'''
-	
-	# Grating
-	grt = '' #query.GRATNGID.split('_')[1]
-	if query['GRATING'] == '<NO GRATING>':
-		return 'ACQ'
-	else:
-		grt = query['GRATING'].split('_')[1]
-	
-	# Filter (yes or no)
-	filter = ''
-	
-	if query['FILTER'] != '<NO FILTER>' or query['FILTER'] != '<NO FILTER>':
-		filter = 'F'
-	
-	# Region 300() 600(custom,red,mid,blue) 1200(custom,m1,m2,m3,m4,m5,m6,m7)
-	
-	spcfg = ''
-	
-
-	grtAng = [  5. ,   7. ,  10. ,  12. ,  16.3,  18.7,  20.2,  22.2,  24.8, 27.4,  30.1]
-	camAng = [ 11. ,  17. ,  20. ,  27. ,  29.5,  34.4,  39.4,  44.4,  49.6, 54.8,  60.2]
-	
-	if grt == '600' and ( np.abs(float(query['CAM_ANG']) - camAng[1]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[1]) < 1.0):
-		
-		spcfg = 'b'
-
-	elif grt == '600' and ( np.abs(float(query['CAM_ANG']) - camAng[2]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[2]) < 1.0):
-		
-		spcfg = 'm'
-
-	elif grt == '600' and ( np.abs(float(query['CAM_ANG']) - camAng[3]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[3]) < 1.0):
-		
-		spcfg = 'r'
-
-	elif grt == '1200' and ( np.abs(float(query['CAM_ANG']) - camAng[4]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[4]) < 1.0):
-			spcfg = 'm1'
-
-	elif grt == '1200' and ( np.abs(float(query['CAM_ANG']) - camAng[5]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[5]) < 1.0):
-			spcfg = 'm2'
-
-	elif grt == '1200' and ( np.abs(float(query['CAM_ANG']) - camAng[6]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[6]) < 1.0):
-			spcfg = 'm3'
-
-	elif grt == '1200' and ( np.abs(float(query['CAM_ANG']) - camAng[7]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[7]) < 1.0):
-			spcfg = 'm4'
-
-	elif grt == '1200' and ( np.abs(float(query['CAM_ANG']) - camAng[8]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[8]) < 1.0):
-			spcfg = 'm5'
-
-	elif grt == '1200' and ( np.abs(float(query['CAM_ANG']) - camAng[9]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[9]) < 1.0):
-			spcfg = 'm6'
-
-	elif grt == '1200' and ( np.abs(float(query['CAM_ANG']) - camAng[10]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[10]) < 1.0):
-			spcfg = 'm7'
-	
-	else:
-		spcfg = 'C'
-	
-	return grt+filter+spcfg
-		
 
 
 # defines the image header parameter for instrument!
@@ -89,6 +19,11 @@ instTemplates = {'Goodman Spectrograph' : os.path.join(os.path.dirname(__file__)
 'OSIRIS' : os.path.join(os.path.dirname(__file__),'Resources/osirisTemplate.fits'),
 'SOI' : os.path.join(os.path.dirname(__file__),'Resources/soiTemplate.fits'),
 'Spartan IR Camera' : os.path.join(os.path.dirname(__file__),'Resources/spartanTemplate.fits')}
+
+instConfDict = {'Goodman Spectrograph' : instConfGoodman,
+'OSIRIS' : instConfOSIRIS,
+'SOI' : instConfSOI,
+'Spartan IR Camera' : instConfSPARTAN}
 
 SPARTAN = 'Spartan IR Camera'
 
@@ -189,29 +124,27 @@ frameDataQualityDB = {	'SEMESTER'	: Column('SEMESTER',String)		,\
 					'OBJECT'	: Column('OBJECT',String)		,\
 					'FIELD'	: Column('FIELD',String)		,\
 					'FIELDNOTE'	: Column('FIELDNOTE',String)		,\
-					'CONFIG'	: Column('CONFIG',String)		,\
+					'CONFIG'	: Column('CONFIG',Integer)		,\
 					'CONFIGNOTE': Column('CONFIGNOTE',String)	,\
 					'FWHM'	: Column('FWHM',REAL)		,\
 					'E'	      : Column('E',REAL)}
 
+configDataQualityDB = {         'PID'		: Column('PID',String)			,\
+				'DATASET'	: Column('DATASET',String)		,\
+				'NCONF'	        : Column('NCONF',Integer)		,\
+				'OBJECT'	: Column('OBJECT',String)		,\
+				'CONFIG'	: Column('CONFIG',String)		,\
+				'STATUS'	: Column('STATUS',String)		,\
+				'CONFIGNOTE'    : Column('CONFIGNOTE',String)		}
+
 frameListDataQualityDB = {'id_tvDB' : Column('id_tvDB',Integer),
                           'id_INSTRUME' : Column('id_INSTRUME',Integer),
-                          'DATASET'	: Column('DATASET',String)}
-#
-#
-##################################################################################################################################		
-
-##################################################################################################################################
-#
-# Project file database. This database stores the files related to each project. The db stores information on file location, file
-# name and type (calibration[BIAS, DARK, FLAT-FIELD, WAVELENGHT]/day-ligth-calibration[BIAS, DARK, FLAT-FIELD, WAVELENGHT]/
-# observatarions[TARGET,STANDARD].
-
-projectFilesDB = {	'PID'		:	Column('PID',String)		,
-					'TYPE'		:	Column('TYPE',Integer)		,
-					'SUBTYPE'	:	Column('SUBTYPE',Integer)	,
-					'FILENAME'	:	Column('FILENAME',String)	,
-					'PATH'		:	Column('PATH',String)		}
+			  'PID'		:	Column('PID',String)		,
+			  'TYPE'		:	Column('TYPE',Integer)		,
+			  'SUBTYPE'	:	Column('SUBTYPE',Integer)	,
+			  'FILENAME'	:	Column('FILENAME',String)	,
+			  'PATH'		:	Column('PATH',String)		,
+			  'DATASET'       :	Column('DATASET',String)	}
 
 #
 #
@@ -857,6 +790,14 @@ def GetFrameInfos(filename):
 #
 #
 
+#
+#
+##################################################################################################################################
+
+##################################################################################################################################
+#
+#
+
 def frameLog(dbEntry):
 	
 	temp = '''
@@ -882,3 +823,7 @@ def frameLog(dbEntry):
 		return '\n'
 
 	
+#
+#
+##################################################################################################################################
+

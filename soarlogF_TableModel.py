@@ -175,7 +175,16 @@ class SOLogTableModel(QtCore.QAbstractTableModel):
 #        print self.arraydata[0]
 #        print self.arraydata[index]
 						
+    def removeRows(self,index,count,parent=QtCore.QModelIndex()):
 
+	    self.beginRemoveRows(parent,index,index+count)
+
+	    for i in range(index,index+count):
+		    self.arraydata.pop(index)
+
+	    self.endRemoveRows()
+
+	    return True
 		
     def headerData(self, col, orientation, role):
         if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:

@@ -94,7 +94,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 		self.logfile = 'SOARLOG_{0}.txt'
 		self.semester_ID = 'SO2012A-{0}'
 		self.dataCalib = '/data/data_calib/2012A/SO2012A-%s.txt'
-		self.dataStorage = '/data/data_{SID}/{PID}'
+		self.dataStorage = '/home/tiago/data/data_{SID}/{PID}'
 		self.dbname = 'soarlog_{0}.db'
 		self.masterDBName = '.soarMaster.db' # master database.
 		self.CommentColumn = 16
@@ -896,7 +896,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 ################################################################################################
 #
 #
-	def GetFrameLog(self):
+	def GetFrameLog(self,sproj=None):
 		session_CID = self.Session()
 		query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.IMAGETYP.like('OBJECT'))[:]
 		
@@ -928,6 +928,9 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 Time Spent:
 ===========
 '''
+                if sproj:
+                    proj_id = [sproj]
+
 		for i in range(len(proj_id)):
 			proj = proj_id[i]
 
