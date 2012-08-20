@@ -25,7 +25,7 @@ import databaseF
 
 import numpy as np
 
-import os,sys
+import os,sys,shutil
 
 import Queue
 
@@ -147,6 +147,7 @@ class soarDB():
 				def __init__(self,**template):
 					for info in template.keys():
 						self.__dict__[info] = template[info]
+						logging.debug('{0} = {1}'.format(info,template[info]))
 					frame_id = Column('frame_id',Integer, ForeignKey('SoarLogTVDB.id'))
 
 			self.Obj_INSTRUMENTS[_inst] = type(FrameINST(**instTemplate))
@@ -159,7 +160,7 @@ class soarDB():
 		# Creating a mapper for Data Quality
 		#
 
-		self.file_table_DQ = Table('SoarDataQuality',self.metadata,Column('id', Integer, primary_key=True))
+		self.file_table_DQ = Table('SoarDataQuality_v1',self.metadata,Column('id', Integer, primary_key=True))
 		
 		for keys in databaseF.frame_infos.dataQualityDB.keys():
 			#print keys
@@ -214,12 +215,31 @@ class soarDB():
 
 	
 		self.Obj_CDQ = type(configDataQualityUI(**databaseF.frame_infos.configDataQualityDB))
-  
+
+		self.file_table_RDB = Table('SoarReportDB',self.metadata,Column('id', Integer, primary_key=True))
+		
+		for keys in databaseF.frame_infos.reportDB.keys():
+			#print keys
+			self.file_table_RDB.append_column(databaseF.frame_infos.reportDB[keys])
+
+
+		class reportUI(object):
+			def __init__(self,**template):
+				for info in template.keys():
+					self.__dict__[info] = template[info]
+
+	
+		self.Obj_RDB = type(reportUI(**databaseF.frame_infos.reportDB))
+
+		#
+		#####
+		#
 
 		mapper(self.Obj_DQ,self.file_table_DQ)#, properties=relation)	
 		mapper(self.Obj_FDQ,self.file_table_frameDQ)#, properties=relation)	
 		mapper(self.Obj_FLDQ,self.file_table_frameListDQ)#, properties=relation)	
 		mapper(self.Obj_CDQ,self.file_table_CDQ)#, properties=relation)	
+		mapper(self.Obj_RDB,self.file_table_RDB)#, properties=relation)	
 		
 		self.metadata.create_all(self.engine)	
 		self.Session = sessionmaker(bind=self.engine)
@@ -411,7 +431,12 @@ class soarDB():
 		session = self.Session()
 		
 		editFrame = session.query(self.Obj_CID).filter(self.Obj_CID.id == index.row()+1)[0]
-		
+		editFrameInst = session.query(self.Obj_INSTRUMENTS[editFrame.INSTRUME]).filter(self.Obj_INSTRUMENTS[editFrame.INSTRUME].FILENAME == os.path.join(editFrame.PATH,editFrame.FILENAME))[:]
+
+		if len(editFrameInst) == 0:
+			logging.debug('OPERATION ERROR: No Instrument frame found on database.')
+			raise IOError('OPERATION ERROR: No Instrument frame found on database.')
+
 		#OLD_NOTES = editFrame.OBSNOTES
 		#
 		#print '---------------'
@@ -423,8 +448,16 @@ class soarDB():
 			editFrame.OBSNOTES = '{0}'.format(OBSNOTES)
 		if index.column() == 0:
 			editFrame.OBJECT = '{0}'.format(OBSNOTES)
+			editFrameInst[0].OBJECT = '{0}'.format(OBSNOTES)
 			logging.debug(os.path.join(str(editFrame.PATH),str(editFrame.FILENAME)))
 			hdu = pyfits.open(os.path.join(str(editFrame.PATH),str(editFrame.FILENAME)),mode='update')
+			if editFrame.INSTRUME == 'Goodman Spectrograph':
+				hdu[0].header.update('PARAM0', hdu[0].header['PARAM0'],"CCD Temperature, C")
+				hdu[0].header.update('PARAM61',hdu[0].header['PARAM61'],"Low Temp Limit, C")
+				hdu[0].header.update('PARAM62',hdu[0].header['PARAM62'],"CCD Temperature Setpoint, C")
+				hdu[0].header.update('PARAM63',hdu[0].header['PARAM63'],"Operational Temp, C")        
+
+
 			#hdu.verify('fix')
 			hdu[0].header.update('OBJECT', '{0}'.format(OBSNOTES))
 			#pyfits.writeto(os.path.join(str(rr.PATH),str(rr.FILENAME)),hdu[0].data,hdu[0].header)
@@ -439,9 +472,22 @@ class soarDB():
 				hdu.close(output_verify='silentfix')
 			except:
 				pass
-		if index.column() == 13:
-			editFrame.FILENAME = '{0}'.format(OBSNOTES)
+		if index.column() == 12:
+			oldfile = editFrame.FILENAME
+			editFrameInst[0].FILENAME = os.path.join(editFrame.PATH,str(OBSNOTES))
+			try:
+				editFrame.FILENAME = '{0}'.format(OBSNOTES)
+				shutil.copy2(os.path.join(editFrame.PATH,oldfile),os.path.join(editFrame.PATH,str(OBSNOTES)))
+			except IOError:
+				editFrame.FILENAME = oldfile
+				session.commit()
+				raise
+			#	return -1
+
+			
+			
 		session.commit()
+		return 0
 		
 #
 #

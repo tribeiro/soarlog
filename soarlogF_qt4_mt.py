@@ -92,9 +92,9 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 	
 		self.dir = ''
 		self.logfile = 'SOARLOG_{0}.txt'
-		self.semester_ID = 'SO2012A-{0}'
-		self.dataCalib = '/data/data_calib/2012A/SO2012A-%s.txt'
-		self.dataStorage = '/home/tiago/data/data_{SID}/{PID}'
+		self.semester_ID = 'SO2012B-{0}'
+		self.dataCalib = '/data/data_calib/2012B/SO2012B-%s.txt'
+		self.dataStorage = '/data/data_{SID}/{PID}'
 		self.dbname = 'soarlog_{0}.db'
 		self.masterDBName = '.soarMaster.db' # master database.
 		self.CommentColumn = 16

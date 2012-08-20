@@ -11,14 +11,17 @@ import sqlalchemy
 import frame_infos
 import os,shutil
 import numpy as np
-import Queue,threading
+import Queue,threading,logging
+import time
 
 uipath = os.path.dirname(__file__)
 
 class DataQuality():
     
     #dqStatus = ['','OK','WARN','FAIL']
-    
+
+	_separator = '\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+\n'
+
 ################################################################################################
 #
 #
@@ -63,7 +66,7 @@ class DataQuality():
 					#
 					# Data Quality has not began yet! Including project files in database
 					#
-					query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+prj[i]+'%' ) )[:]
+					query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+prj[i]+'%' ) ).filter(sqlalchemy.not_(self.Obj_CID.INSTRUME == 'NOTE'))[:]
 					for ii in range(len(query)):
 						iquery = qInst = session_CID.query(self.Obj_INSTRUMENTS[query[ii].INSTRUME].id).filter(self.Obj_INSTRUMENTS[query[ii].INSTRUME].FILENAME.like('%'+query[ii].FILENAME))[:]
 						entry = self.Obj_FLDQ(id_tvDB=query[ii].id,
@@ -86,6 +89,10 @@ class DataQuality():
 
 
 		self.connect(self.dataQuality_ui.buttonBox, QtCore.SIGNAL('clicked(QAbstractButton*)'), self.commitDataQuality)
+		self.connect(self.dataQuality_ui.validTime, QtCore.SIGNAL('timeChanged(QTime)'), 
+			     self.dataQuality_ui.obsTime.setMinimumTime)
+		self.connect(self.dataQuality_ui.obsTime, QtCore.SIGNAL('timeChanged(QTime)'), 
+			     self.dataQuality_ui.validTime.setMaximumTime)
 		self.connect(self.dataQuality_ui.comboBox, QtCore.SIGNAL('currentIndexChanged(int)'), self.readDQProject)
 		self.connect(self.dataQuality_ui.comboBox_Object, QtCore.SIGNAL('currentIndexChanged(int)'), self.readDQObject)
 		self.connect(self.dataQuality_ui.comboBox_config, QtCore.SIGNAL('currentIndexChanged(int)'), self.readCDQ)
@@ -94,12 +101,29 @@ class DataQuality():
 		self.connect(self.dataQuality_ui.pushButton_copy,QtCore.SIGNAL('clicked()'), self.copyProgramFiles)
 		self.connect(self.dataQuality_ui.pushButton_exclude,QtCore.SIGNAL('clicked()'), self.excludeFilesFromProgram)
 		self.connect(self.dataQuality_ui.pushButton_filtertable,QtCore.SIGNAL('clicked()'), self.filterMainTable)
+		self.connect(self.dataQuality_ui.pushButton_RunReplace,QtCore.SIGNAL('clicked()'), self.runUpdateSelectedColumn)
+		self.connect(self.dataQuality_ui.pushButton_loadfromfile,QtCore.SIGNAL('clicked()'), self.loadUpdateSelectedColumnFromFile)
+		self.connect(self.dataQuality_ui.comboBiasConf, QtCore.SIGNAL('currentIndexChanged(int)'), self.readBiasConf)
+		self.connect(self.dataQuality_ui.comboDarkConf, QtCore.SIGNAL('currentIndexChanged(int)'), self.readDarkConf)
+		self.connect(self.dataQuality_ui.comboFlatConf, QtCore.SIGNAL('currentIndexChanged(int)'), self.readFlatConf)
+
+		#self.connect(self.dataQuality_ui.comboBox_FIELD, QtCore.SIGNAL('currentIndexChanged(int)'), self.commitDataQuality)
+		#self.connect(self.dataQuality_ui.comboBox_6, QtCore.SIGNAL('currentIndexChanged(int)'), self.commitDataQuality)
+		#
+		# Never link comboBox_config to commitDataQuality. It will fail since it changes the object before you can 
+		# commit to the database.
+		#
+		self.connect(self.dataQuality_ui.lineEdit_5,QtCore.SIGNAL('editingFinished()'), self.commitDataQuality)
+		self.connect(self.dataQuality_ui.lineEdit_6,QtCore.SIGNAL('editingFinished()'), self.commitDataQuality)
+		self.connect(self.dataQuality_ui.lineEdit_7,QtCore.SIGNAL('editingFinished()'), self.commitDataQuality)
+		self.connect(self.dataQuality_ui.lineEdit_8,QtCore.SIGNAL('editingFinished()'), self.commitDataQuality)
 		self.connect(self,QtCore.SIGNAL('copyProgress(int)'), self.updateCopyProgress)
 		self.connect(self,QtCore.SIGNAL('copyDone()'), self.enableCopyButton)
 
 		self.dataQuality_ui.lineEditSemesterID.setText(self.semester_ID[:-4])
 		self.dataQuality_ui.lineEditPathToData.setText(self.dataStorage.format(SID=self.semester_ID[:-4],PID=self.semester_ID.format('123')))
-		
+
+
 		#self.setAnimated(True)
 
 		self.tpfModel = SOLogTableModel([], ['FILENAME'],self ,commitDB=None)
@@ -121,19 +145,29 @@ class DataQuality():
 
 		#label = QtGui.QLabel('HELLO')
 		#dataQuality_ui.dq_ui.columnDQ.setPreviewWidget(label)
-		
-		self.ui.tableDB.setSelectionMode(self.ui.tableDB.ExtendedSelection)
+		selectionMode = self.ui.tableDB.ExtendedSelection
+		self.ui.tableDB.setSelectionMode(selectionMode)
+#		self.connect(selectionMode,QtCore.SIGNAL("currentChanged(const QModelIndex &, const QModelIndex &)"),
+#			     self.testclick)
+		self.connect(self.ui.tableDB,QtCore.SIGNAL('clicked(QModelIndex)'), 
+			     self.updateSelectedColumn)
+
 
 		self.dataQuality_ui.show()
 		
 		self.dataQuality_ui.exec_()
 		
 		self.ui.tableDB.setSelectionMode(self.ui.tableDB.SingleSelection)
+		self.disconnect(self.ui.tableDB,QtCore.SIGNAL('clicked(QModelIndex)'), 
+			     self.testclick)
+
 
 #
 #
 ################################################################################################
- 
+	def testclick(self,a):
+#		self.commitDataQuality()
+		logging.debug('ckicked')
 ################################################################################################
 #
 #
@@ -145,6 +179,11 @@ class DataQuality():
 				self.dataQuality_ui.label.setText('Configure semester and place for files.\n\n')
 		elif tab == 2:
         		self.dataQuality_ui.label.setText('2) Select objects and fill Data Quality\n form.\n')
+		elif tab == 4:
+			self.dataQuality_ui.label.setText('''Replace information on table database and file header (name).
+Do NOT remove '?' when doing 'matched' selection (specially for
+filenames) unless you REALLY know what you are doing. 
+''')	
 #
 #
 ################################################################################################
@@ -154,39 +193,51 @@ class DataQuality():
 #
 	def commitDataQuality(self):
 	
+		logging.debug(str(self.dataQuality_ui.comboBox.currentText()))
+
+		self.commitCalibrationDataQuality()
+		
 		session = self.Session()
 		query = session.query(self.Obj_DQ).filter(self.Obj_DQ.PID == str(self.dataQuality_ui.comboBox.currentText()))[:]
 
+		vtime = 0.
+		otime = 0.
 		if len(query) == 0:
 			
+			vtime = self.dataQuality_ui.validTime.time().hour() + self.dataQuality_ui.validTime.time().minute() / 60.
+			otime = self.dataQuality_ui.obsTime.time().hour() + self.dataQuality_ui.obsTime.time().minute() / 60.
 			dqinf = {   'TYPE'		: '',\
 					'SEMESTER'	: self.semester_ID[:-4],\
 					'PID'		: str(self.dataQuality_ui.comboBox.currentText()),\
 					'DATASET'	: '{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))),\
 					'DQNOTE'	: '',\
-					'BIAS'		: str( self.dataQuality_ui.comboBias.currentIndex() ),\
-					'DARK'		: str( self.dataQuality_ui.comboDark.currentIndex() ),\
-					'FLATFIELD'	: str( self.dataQuality_ui.comboFlatField.currentIndex() ),\
-					'BIASNOTE'	: str( self.dataQuality_ui.lineEditBias.text() )	,\
-					'DARKNOTE'	: str( self.dataQuality_ui.lineEditDark.text() )			,\
-					'FLATFIELDNOTE'	: str( self.dataQuality_ui.lineEditFlatField.text() )	,\
+					'BIAS'		: '',\
+					'DARK'		: '',\
+					'FLATFIELD'	: '',\
+					'BIASNOTE'	: ''	,\
+					'DARKNOTE'	: ''			,\
+					'FLATFIELDNOTE'	: ''	,\
 					'FROMDB'	: '',\
-					'OBSTIME'	: 0.,\
-					'VALIDTIME'	: 0.
+					'OBSTIME'	: otime,\
+					'VALIDTIME'	: vtime
 					}
 			info = self.Obj_DQ(**dqinf)
 			session.add(info)
 		else:
 			
-			query[0].BIAS = str( self.dataQuality_ui.comboBias.currentIndex() )
-			query[0].DARK = str( self.dataQuality_ui.comboDark.currentIndex() )
-			query[0].FLATFIELD = str( self.dataQuality_ui.comboFlatField.currentIndex() )
-			query[0].BIASNOTE = str(self.dataQuality_ui.lineEditBias.text() )
-			query[0].DARKNOTE = str(self.dataQuality_ui.lineEditDark.text() )
-			query[0].FLATFIELDNOTE = str(self.dataQuality_ui.lineEditFlatField.text() )
+			vtime = float( self.dataQuality_ui.validTime.time().hour() + self.dataQuality_ui.validTime.time().minute() / 60. )
+			otime = float( self.dataQuality_ui.obsTime.time().hour() + self.dataQuality_ui.obsTime.time().minute() / 60. )
+			query[0].BIAS = '0'
+			query[0].DARK = '0'
+			query[0].FLATFIELD = '0'
+			query[0].BIASNOTE = ''
+			query[0].DARKNOTE = ''
+			query[0].FLATFIELDNOTE = ''
+			query[0].VALIDTIME = vtime
+			query[0].OBSTIME = otime
 
 		session.commit()
-		
+
 		query = session.query(self.Obj_FDQ).filter(self.Obj_FDQ.PID == str(self.dataQuality_ui.comboBox.currentText())).filter(self.Obj_FDQ.OBJECT == str(self.dataQuality_ui.comboBox_Object.currentText()))[:]
 
 		if len(query) == 0 and len(str(self.dataQuality_ui.comboBox.currentText())) > 0:
@@ -244,8 +295,45 @@ class DataQuality():
 			querycfg[0].CONFIGNOTE = str( self.dataQuality_ui.lineEdit_6.text() )
 			querycfg[0].STATUS = str( self.dataQuality_ui.comboBox_6.currentIndex() )
 							     
-			
+
+		query = session.query(self.Obj_RDB).filter(self.Obj_RDB.DATASET == '{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))))[:]
+
+		if len(query) == 0:
+			#
+			# Nothing on the database. Creating default values
+			#
+			query2 = session.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-{0}%'.format(str(self.dataQuality_ui.comboBox.currentText()))))[:]
+			instru_list = np.unique([query2[i].INSTRUME for i in range(len(query2))])
+			instru =''
+			if len(instru_list) == 1:
+				instru = instru_list[0]
+			else:
+				for i in range(len(instru_list)):
+					instru = instru+instru_list[i]+'/'
+					
+			vals = {'PID':self.semester_ID.format(  str(self.dataQuality_ui.comboBox.currentText() ) )  ,\
+				'PI' : 'None' ,\
+				'INSTRUME' :  instru,\
+				'SETUP':'',\
+				'TIMESPENT':otime,\
+				'TIMEVALID':vtime,\
+				'DATASET':'{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))),\
+				'REPORT': ''}
+			entry = self.Obj_RDB(**vals)
+			session.add(entry)
+		else:
+			query[0].PI = str( self.dataQuality_ui.PI.text() )
+			query[0].INSTRUME = str( self.dataQuality_ui.INSTRUME.text() )
+			query[0].SETUP = str( self.dataQuality_ui.SETUP.text() )
+			query[0].TIMESPENT = otime
+			query[0].TIMEVALID = vtime
+			query[0].REPORT = str( self.dataQuality_ui.REPORT.toPlainText() )
+
+	
 		session.commit()
+
+		self.makeReport()
+				
 
 #
 #
@@ -261,35 +349,39 @@ class DataQuality():
 			self.dataQuality_ui.tabWidget.setEnabled(True)
 			self.setUpCalibrationDQ()
 			self.setUpCienceDQ()               
+
 		else:
-			self.commitDataQuality()	
+			self.setUpCalibrationDQProject()
 
 
-		
 		session_CID = self.Session()
 		query = session_CID.query(self.Obj_DQ).filter(self.Obj_DQ.PID == str(self.dataQuality_ui.comboBox.currentText()))[:]
 
 		if len(query) > 0:
-			self.dataQuality_ui.comboBias.setCurrentIndex( int( query[0].BIAS) )
-			self.dataQuality_ui.comboDark.setCurrentIndex( int( query[0].DARK) )
-			self.dataQuality_ui.comboFlatField.setCurrentIndex( int( query[0].FLATFIELD) )
-			self.dataQuality_ui.lineEditBias.setText( str( query[0].BIASNOTE) )
-			self.dataQuality_ui.lineEditDark.setText( str( query[0].DARKNOTE) )
-			self.dataQuality_ui.lineEditFlatField.setText( str( query[0].FLATFIELDNOTE) )
+			vtime = query[0].VALIDTIME
+			otime = query[0].OBSTIME
+			logging.debug('Obs Time: {0}\nValid Time: {1}'.format(otime,vtime))
+			if otime > 0.:
+				self.dataQuality_ui.obsTime.setTime(QtCore.QTime( int(otime) , int( np.ceil(60.*(otime-np.floor(otime)) ) ) ))
+				self.dataQuality_ui.validTime.setTime(QtCore.QTime( int(vtime) , int( np.ceil(60.*(vtime-np.floor(vtime)) ) ) ) )
+			else:
+				self.dataQuality_ui.obsTime.setTime(QtCore.QTime(*self.calcTime(str(self.dataQuality_ui.comboBox.currentText()))))
+				self.dataQuality_ui.validTime.setTime(QtCore.QTime(*self.calcTime(str(self.dataQuality_ui.comboBox.currentText()))))
+
 		else:
-			self.dataQuality_ui.comboBias.setCurrentIndex( 0 )
-			self.dataQuality_ui.comboDark.setCurrentIndex( 0 )
-			self.dataQuality_ui.comboFlatField.setCurrentIndex( 0 )
-			self.dataQuality_ui.lineEditBias.setText( '' )
-			self.dataQuality_ui.lineEditDark.setText( '' )
-			self.dataQuality_ui.lineEditFlatField.setText( '' )
+			self.dataQuality_ui.obsTime.setTime(QtCore.QTime(*self.calcTime(str(self.dataQuality_ui.comboBox.currentText()))))
+			self.dataQuality_ui.validTime.setTime(QtCore.QTime(*self.calcTime(str(self.dataQuality_ui.comboBox.currentText()))))
 
 		self.dataQuality_ui.comboBox_Object.clear()
 		self.dataQuality_ui.comboBox_Object.addItem('')		
 		self.dataQuality_ui.pushButton_filtertable.setEnabled(False)
 
+#		self.dataQuality_ui.validTime.setMaximumTime(self.dataQuality_ui.obsTime.time())
+#		self.dataQuality_ui.obsTime.setMinimumTime(self.dataQuality_ui.validTime.time())
+
+
 		#
-		# Setting up object list
+		# Seting up object list
 		#
 
 		query2 = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+str(self.dataQuality_ui.comboBox.currentText())+'%'))[:]
@@ -314,44 +406,105 @@ class DataQuality():
 				obsConf.append(query_CDQ[j].CONFIG)
 
 			query_CID = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+str(self.dataQuality_ui.comboBox.currentText())+'%')).filter(self.Obj_CID.OBJECT.like(obj_list[i]+'%'))[:]
-			frameobsConf = self.getConf(query_CID)
+			frameobsConf,frameobsCount = self.getConf(query_CID)
 
 			for j in range(len(frameobsConf)):
 				if frameobsConf[j] not in obsConf:
 					obsConf.append(frameobsConf[j])
 					vals = {'PID':self.semester_ID.format(  str(self.dataQuality_ui.comboBox.currentText() ) )  ,\
 				'DATASET':dataset.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(  str(self.dataQuality_ui.comboBox.currentText()) ))		,\
-				'NCONF'	        : 0		,\
+				'NCONF'	        : frameobsCount[j]		,\
 				'OBJECT'	: obj_list[i]		,\
 				'CONFIG'	: frameobsConf[j],\
 				'STATUS'        : 0 ,\
 				'CONFIGNOTE'    : ''		}
 					entry = self.Obj_CDQ(**vals)
 					session_CID.add(entry)
-		session_CID.commit()
-			
 		
-		self.dataQuality_ui.timeEdit.setTime(QtCore.QTime(*self.calcTime(str(self.dataQuality_ui.comboBox.currentText()))))
-
-
 		#
 		# Setting up object configuration
 		#
 
 
+		self.fillProjectFiles()
+
+		#
+		# Setting up data data quality report
+		#
+
+		query = session_CID.query(self.Obj_RDB).filter(self.Obj_RDB.DATASET == '{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))))[:]
+
+		if len(query) == 0:
+			#
+			# Nothing done yet. Creating basic table
+			# 
+			instru_list = np.unique([query2[i].INSTRUME for i in range(len(query2))])
+			instru =''
+			if len(instru_list) == 1:
+				instru = instru_list[0]
+			else:
+				for i in range(len(instru_list)):
+					instru = instru+instru_list[i]+'/'
+					
+
+			vals = {'PID':self.semester_ID.format(  str(self.dataQuality_ui.comboBox.currentText() ) )  ,\
+				'PI' : 'None' ,\
+				'INSTRUME' :  instru,\
+				'SETUP':'',\
+				'TIMESPENT':0.,\
+				'TIMEVALID':0.,\
+				'DATASET':'{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))),\
+				'REPORT': ''}
+			entry = self.Obj_RDB(**vals)
+			session_CID.add(entry)
+			
+			self.dataQuality_ui.PI.setText(vals['PI'])
+			self.dataQuality_ui.INSTRUME.setText(vals['INSTRUME'])
+			self.dataQuality_ui.SETUP.setText(vals['SETUP'])
+			self.dataQuality_ui.REPORT.setText(vals['REPORT'])
+			
+		else:
+			#
+			# Already started reading from DB.
+			#
+			self.dataQuality_ui.PI.setText(        query[0].PI      )
+			self.dataQuality_ui.INSTRUME.setText(query[0].INSTRUME)
+			self.dataQuality_ui.SETUP.setText(     query[0].SETUP   )
+			self.dataQuality_ui.REPORT.setText(    query[0].REPORT  )
+
+		session_CID.commit()
+			
+
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+
+	def fillProjectFiles(self):
+		session_CID = self.Session()
 		#
 		# Setting up data quality files
 		#
 		query = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.DATASET == '{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))))[:]
 
 
+		nrow = self.tpfModel.rowCount(None)
+
+		if nrow > len(query):
+			self.tpfModel.removeRows(len(query)-1,nrow-len(query))
+			logging.debug('More row than needed will delete some.')
+
 		for i in range(len(query)):
-			self.tpfModel.insertRow(i)
+			if i >= nrow:
+				logging.debug('Increasing row in table.')
+				self.tpfModel.insertRow(i)
 			name_query = session_CID.query(self.Obj_CID.FILENAME).filter(self.Obj_CID.id == query[i].id_tvDB)[:]
 			self.tpfModel.setData(self.tpfModel.createIndex(i,0),name_query[0].FILENAME,QtCore.Qt.DisplayRole)
-			print name_query[0].FILENAME
+			#logging.debug( name_query[0].FILENAME )
 
-		print len(query),str(self.dataQuality_ui.comboBox.currentText())
 
 #
 #
@@ -362,7 +515,6 @@ class DataQuality():
 #
 
 	def readDQObject(self,action):
-
 
 		session_CID = self.Session()
 
@@ -391,7 +543,7 @@ class DataQuality():
 		self.dataQuality_ui.comboBox_config.setCurrentIndex(0)
 		self.dataQuality_ui.lineEdit_6.setText( '' )
 
-		print len(querycfg),self.semester_ID.format(self.dataQuality_ui.comboBox.currentText()),str(self.dataQuality_ui.comboBox_Object.currentText())
+		logging.debug('{0} {1} {2}'.format( len(querycfg),self.semester_ID.format(self.dataQuality_ui.comboBox.currentText()),str(self.dataQuality_ui.comboBox_Object.currentText()) ))
 
 		for i in range(len(querycfg)):
 			self.dataQuality_ui.comboBox_config.addItem(querycfg[i].CONFIG)
@@ -418,7 +570,7 @@ class DataQuality():
 		elif len(querycfg) > 1:
 			self.dataQuality_ui.comboBox_6.setCurrentIndex( 0 )#int(querycfg[0].STATUS ) )
 			self.dataQuality_ui.lineEdit_6.setText( querycfg[0].CONFIGNOTE )
-			print 'WARNING:', len(querycfg)
+			logging.debug( 'WARNING: {0}'.format( len(querycfg)))
 		else:
 			self.dataQuality_ui.comboBox_6.setCurrentIndex( 0 )
 			self.dataQuality_ui.lineEdit_6.setText( '' )
@@ -454,6 +606,154 @@ class DataQuality():
 		self.connect(self.dataQuality_ui.Bias, QtCore.SIGNAL('clicked()'), self.addBias)
 		self.connect(self.dataQuality_ui.Dark, QtCore.SIGNAL('clicked()'), self.addDark)
 		self.connect(self.dataQuality_ui.FlatField, QtCore.SIGNAL('clicked()'), self.addFlatField)
+
+
+		self.setUpCalibrationDQProject()
+
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+
+	def setUpCalibrationDQProject(self):
+
+		self.dataQuality_ui.comboBias.setCurrentIndex( 0 )
+		self.dataQuality_ui.comboDark.setCurrentIndex( 0 )
+		self.dataQuality_ui.comboFlatField.setCurrentIndex( 0 )
+		self.dataQuality_ui.lineEditBias.setText( '' )
+		self.dataQuality_ui.lineEditDark.setText( '' )
+		self.dataQuality_ui.lineEditFlatField.setText( '' )
+
+		session = self.Session()
+		cb_cal = [self.dataQuality_ui.comboBiasConf,
+			  self.dataQuality_ui.comboDarkConf,
+			  self.dataQuality_ui.comboFlatConf ]
+		ctype = ['bias','dark','flatfield']
+
+		for i in range(len(ctype)):
+			qq = session.query(self.Obj_CDQ).filter(self.Obj_CDQ.PID == self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))).filter(self.Obj_CDQ.DATASET == '{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText())))).filter(self.Obj_CDQ.OBJECT == ctype[i])[:]
+			cb_cal[i].clear()
+			cb_cal[i].addItem('')
+			for j in range(len(qq)):
+				cb_cal[i].addItem(str(qq[j].CONFIG))
+			cb_cal[i].setCurrentIndex(0)
+
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+
+	def commitCalibrationDataQuality(self):
+
+		cb_calconf = [self.dataQuality_ui.comboBiasConf,
+			      self.dataQuality_ui.comboDarkConf,
+			      self.dataQuality_ui.comboFlatConf ]
+		cb_calstat = [self.dataQuality_ui.comboBias,
+			      self.dataQuality_ui.comboDark,
+			      self.dataQuality_ui.comboFlatField ]
+		cb_caltext = [self.dataQuality_ui.lineEditBias,
+			      self.dataQuality_ui.lineEditDark,
+			      self.dataQuality_ui.lineEditFlatField ]
+		ctype = ['bias','dark','flatfield']
+
+		session = self.Session()
+
+		for i in range(len(ctype)):
+			qq = session.query(self.Obj_CDQ).filter(self.Obj_CDQ.PID == self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))).filter(self.Obj_CDQ.DATASET == '{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText())))).filter(self.Obj_CDQ.OBJECT == ctype[i]).filter(self.Obj_CDQ.CONFIG == str(cb_calconf[i].currentText()))[:]
+			logging.debug('{0} {1}'.format(ctype[i],len(qq)))
+			if len(qq) > 0:
+				qq[0].CONFIGNOTE = str(cb_caltext[i].text())
+				qq[0].STATUS = str(cb_calstat[i].currentIndex())
+				session.commit()
+
+			if len(qq) > 1 :
+				logging.debug('WARNING: Found duplicate configuration for {0}'.format(ctype[i]))
+			
+		
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+
+	def readBiasConf(self):
+
+		self.readCalConf('bias')
+
+		return 0
+
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+	def readDarkConf(self):
+
+		self.readCalConf('dark')
+		return 0
+
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+
+	def readFlatConf(self):
+
+		self.readCalConf('flatfield')
+		return 0
+
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+
+	def readCalConf(self,ctype):
+
+
+		cb_calconf = {'bias'     :self.dataQuality_ui.comboBiasConf,
+			      'dark'     :self.dataQuality_ui.comboDarkConf,
+			      'flatfield':self.dataQuality_ui.comboFlatConf }
+		cb_calstat = {'bias'     :self.dataQuality_ui.comboBias,
+			      'dark'     :self.dataQuality_ui.comboDark,
+			      'flatfield':self.dataQuality_ui.comboFlatField }
+		cb_caltext = {'bias'     :self.dataQuality_ui.lineEditBias,
+			      'dark'     :self.dataQuality_ui.lineEditDark,
+			      'flatfield':self.dataQuality_ui.lineEditFlatField }
+
+		cb_calstat[ctype].setCurrentIndex(0)
+		cb_caltext[ctype].setText('')
+
+		session = self.Session()
+
+		qq = session.query(self.Obj_CDQ).filter(self.Obj_CDQ.PID == self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))).filter(self.Obj_CDQ.DATASET == '{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText())))).filter(self.Obj_CDQ.OBJECT == ctype).filter(self.Obj_CDQ.CONFIG == str(cb_calconf[ctype].currentText()))[:]
+
+		logging.debug('-> {0} {1}'.format(ctype,str(cb_calconf[ctype].currentText())))
+		for i in range(len(qq)):
+			logging.debug('--> {0} {1}'.format(qq[0].OBJECT,qq[0].CONFIG))
+
+		if len(qq) > 0:
+			logging.debug('--> {0} {1}'.format(int(qq[0].STATUS),str(qq[0].CONFIGNOTE)))
+			cb_calstat[ctype].setCurrentIndex(int(qq[0].STATUS))
+			cb_caltext[ctype].setText(str(qq[0].CONFIGNOTE))
+
+		return 0
+
 #
 #
 ################################################################################################
@@ -480,7 +780,11 @@ class DataQuality():
 #
 	def addBias(self):
 
-		self.add2FLDQ('bias')
+		new = self.add2FLDQ('bias')
+
+		self.add2CDQ('bias',new)
+
+		self.setUpCalibrationDQProject()
 
 		return 0
 #
@@ -492,7 +796,11 @@ class DataQuality():
 #
 	def addDark(self):
 
-		self.add2FLDQ('dark')
+		new = self.add2FLDQ('dark')
+
+		self.add2CDQ('dark', new)
+
+		self.setUpCalibrationDQProject()
 
 		return 0
 #
@@ -505,11 +813,71 @@ class DataQuality():
 
 	def addFlatField(self):
 
-		self.add2FLDQ('flatfield')
+		new = self.add2FLDQ('flatfield')
+
+		self.add2CDQ('flatfield',new)
+
+		self.setUpCalibrationDQProject()
 
 		return 0
 	
-				
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+	def add2CDQ(self,obj=None,new=0):
+
+		indexes = self.ui.tableDB.selectedIndexes()
+
+		session = self.Session()
+
+		query = []
+		for i in range(len(indexes)):
+
+			idx = indexes[i].row() # table row should be equal to id
+			qq = session.query(self.Obj_CID).filter(self.Obj_CID.id == idx+1)[:]
+			query.append(qq[0])
+
+		fconf,nconf = self.getConf(query)
+
+		for i in range(len(fconf)):
+
+			_obj = obj
+			if not obj:
+				_obj = str(self.dataQuality_ui.comboBox_Object.currentText())
+			else:
+				logging.debug('OBJECT will be changed to user specified {0}'.format(_obj))
+
+
+			vals = {'PID': self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText())),
+				'DATASET':'{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))),
+				'NCONF' : nconf[i],
+				'OBJECT': _obj,
+				'CONFIG': fconf[i],
+				'STATUS': '0',
+				'CONFIGNOTE' : ''}
+
+			entry = self.Obj_CDQ(**vals)
+			qq = session.query(self.Obj_CDQ).filter(self.Obj_CDQ.PID == entry.PID).filter(self.Obj_CDQ.DATASET == entry.DATASET).filter(self.Obj_CDQ.OBJECT == entry.OBJECT).filter(self.Obj_CDQ.CONFIG == entry.CONFIG)[:]
+
+			if len(qq) == 0:
+				logging.debug('Entry not in database')
+				session.add(entry)
+				session.commit()
+			elif new > 0:
+				logging.debug('Entry already in database, but {0} new files added.'.format(new))
+				for i in range(len(qq)):
+					qq[0].NCONF += new
+				session.commit()
+			else:
+				logging.debug('Entry already in database')
+
+			
+
+		
 #
 #
 ################################################################################################
@@ -523,6 +891,8 @@ class DataQuality():
   		
 		session_CID = self.Session()
 		
+		new = 0
+
 		for i in range(len(indexes)):
 			fname = self.ui.tableDB.model().getData(indexes[i].row(),self.FilenameColumn)
         		query = session_CID.query(self.Obj_CID.id,self.Obj_CID.INSTRUME,self.Obj_CID.PATH).filter(self.Obj_CID.FILENAME == fname)[:]
@@ -539,13 +909,15 @@ class DataQuality():
         		query2 = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.id_tvDB == entry.id_tvDB).filter(self.Obj_FLDQ.DATASET == entry.DATASET)[:]
 
         		if len(query2) == 0:
+				new += 1
         			session_CID.add(entry)
 				iidx = self.tpfModel.rowCount(None)
 				self.tpfModel.insertRow(iidx)
 				self.tpfModel.setData(self.tpfModel.createIndex(iidx,0),fname,QtCore.Qt.DisplayRole)
 
 
-		session_CID.commit()                 
+		session_CID.commit()    
+		return new
 #
 #
 ################################################################################################
@@ -560,15 +932,46 @@ class DataQuality():
 
 		session_CID = self.Session()
 
+		ctype = ['bias','dark','flatfield']
+
 		for i in range(len(sIndex)-1,-1,-1):
 			
 			query = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.FILENAME == str(sIndex[i].data().toString() ) )[:]
+
+			query2 = session_CID.query(self.Obj_CID).filter(self.Obj_CID.id == query[0].id_tvDB)[:]
+
+			conf,nfiles = self.getConf(query2)
+
+			query2 = session_CID.query(self.Obj_CDQ).filter(self.Obj_CDQ.CONFIG == conf[0]).filter(self.Obj_CDQ.OBJECT == query[0].TYPE)[:]
+
+			logging.debug('{0} {1} {2} {3}'.format(query2[0].OBJECT,query2[0].CONFIG,query2[0].NCONF, query[0].TYPE))
+			
+			if len(query2) > 0 :
+
+				logging.debug('NCONF = {0}...'.format(query2[0].NCONF))
+
+				if int(query2[0].NCONF) > 1 :
+					#
+					# If there is still frames left with this configuration on CDQ just decrement NCONF (the files couter).
+					#
+					query2[0].NCONF = query2[0].NCONF-1
+					logging.debug('Decrementing NCONF {0}...'.format(query2[0].NCONF))
+				else:
+					#
+					# Otherwise, delete entire entry from CDQ
+					#
+					session_CID.delete(query2[0])
+					logging.debug('Deleting entry from CDQ')
+					
+				session_CID.commit()
 			
 			session_CID.delete(query[0])
 
-			self.dataQuality_ui.tableProjectFiles.model().removeRow(sIndex[i].row(),sIndex[i])
+			self.tpfModel.removeRow(sIndex[i].row())
 
 		session_CID.commit()
+
+		self.setUpCalibrationDQProject()
 		
 		return 0
 
@@ -591,11 +994,12 @@ class DataQuality():
 		query = session_CID.query(self.Obj_CID).filter(sqlalchemy.not_(self.Obj_CID.OBJECT.like('{0}%'.format(obj))))[:] 
 		
 #.filter(self.Obj_CID.FILENAME.like('%-{0}%'.format(pid)))
-		#print len(query)
+
 		for i in range(len(query)):
 			self.ui.tableDB.setRowHidden(query[i].id-1,True)
 
 		self.dataQuality_ui.pushButton_filtertable.setText('unFilter Table')
+		self.disconnect(self.dataQuality_ui.pushButton_filtertable,QtCore.SIGNAL('clicked()'), self.filterMainTable)
 		self.connect(self.dataQuality_ui.pushButton_filtertable,QtCore.SIGNAL('clicked()'), self.unfilterMainTable)	
 		self.dataQuality_ui.pushButton_filtertable.setEnabled(True)
 #
@@ -614,6 +1018,7 @@ class DataQuality():
 				self.ui.tableDB.setRowHidden(i,False)
 
 		self.dataQuality_ui.pushButton_filtertable.setText('Filter Table')
+		self.disconnect(self.dataQuality_ui.pushButton_filtertable,QtCore.SIGNAL('clicked()'), self.unfilterMainTable)
 		self.connect(self.dataQuality_ui.pushButton_filtertable,QtCore.SIGNAL('clicked()'), self.filterMainTable)	
 		self.dataQuality_ui.pushButton_filtertable.setEnabled(True)	
 #
@@ -637,7 +1042,15 @@ which handles the query and return a string with the instrument configuration.
 
 			obsConf.append( frame_infos.instConfDict[query[i].INSTRUME](query[i]) )
 		
-		return np.unique(obsConf)
+		uConf = np.unique(obsConf)
+		nConf = np.zeros(len(uConf))
+		for i in range(len(uConf)):
+			mask = np.array(obsConf) == uConf[i]
+			nConf[i] = len(mask[mask])
+			#if query[i].INSTRUME == 'Spartan IR Camera':
+			#	nConf[i] /= 4
+		
+		return uConf,nConf
 #
 #
 ################################################################################################
@@ -669,7 +1082,7 @@ FROM FILE: {fimg}
 			logCalib += tmp_logCalib.format(type='BIAS',
 							fimg=query[0].FILENAME,
 							limg=query[-1].FILENAME,
-							conf=self.getConf(query2)[0])
+							conf=self.getConf(query2)[0][0])
 
 		query = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.PID==pid).filter(self.Obj_FLDQ.TYPE=='flatfield')[:]
 
@@ -679,7 +1092,7 @@ FROM FILE: {fimg}
 			logCalib += tmp_logCalib.format(type='FLAT',
 							fimg=query[0].FILENAME,
 							limg=query[-1].FILENAME,
-							conf=self.getConf(query2)[0])
+							conf=self.getConf(query2)[0][0])
 		
 		query = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.PID==pid).filter(self.Obj_FLDQ.TYPE=='dark')[:]
 		
@@ -689,9 +1102,9 @@ FROM FILE: {fimg}
 			logCalib += tmp_logCalib.format(type='DARK',
 							fimg=query[0].FILENAME,
 							limg=query[-1].FILENAME,
-							conf=self.getConf(query2)[0])
+							conf=self.getConf(query2)[0][0])
 
-		print '--> ',pid,logCalib
+		logging.debug( '--> {0} {1}'.format(pid,logCalib ))
 
 		return logCalib
 
@@ -715,7 +1128,7 @@ FROM FILE: {fimg}
 				os.makedirs(solog_dir)
 
 			solog_file = os.path.join(solog_dir,self.logfile)
-			print solog_file
+			logging.debug(solog_file)
 
 			fp = open(solog_file , 'w')
 
@@ -731,7 +1144,6 @@ FROM FILE: {fimg}
 			
 			fp.write(self.GetWeatherComment())
 
-			#print str(pid)
 			fp.write(self.GetFrameLog(str(pid)))
 			
 			fp.close()
@@ -751,8 +1163,6 @@ FROM FILE: {fimg}
 
 		projInfo = self.getProjects()
 
-		p3 = 100./len(projInfo[0]) # Percent per project
-
 		progress = 0.
 		self.copy_queue = Queue.Queue()
 
@@ -768,13 +1178,24 @@ FROM FILE: {fimg}
 
 
 			for i in range(len(pfiles_query)):
-				self.copy_queue.put([os.path.join(str(pfiles_query[i].PATH),str(pfiles_query[i].FILENAME)),solog_dir])
+				pfiles_cid = session_CID.query(self.Obj_CID).filter(self.Obj_CID.id == pfiles_query[i].id_tvDB)[0]
+				self.copy_queue.put([os.path.join(str(pfiles_cid.PATH),str(pfiles_cid.FILENAME)),solog_dir])
 				progress+=1
-		self.dataQuality_ui.pushButton_copy.setEnabled(False)
+
 		self.dataQuality_ui.progressBar_copy.setMaximum(progress)
 
-		cthread = threading.Thread(target=self.runCopyQueue)
-		cthread.start()
+		self.dataQuality_ui.pushButton_copy.setEnabled(False)
+		self.dataQuality_ui.pushButton_copy.setText('Cancel')
+
+		self.disconnect(self.dataQuality_ui.pushButton_copy,QtCore.SIGNAL('clicked()'), self.copyProgramFiles)
+		self.connect(self.dataQuality_ui.pushButton_copy,QtCore.SIGNAL('clicked()'), self.stopCopyProgramFiles)
+
+		self.cthread = threading.Thread(target=self.runCopyQueue)
+		self.cthread_stop = threading.Event()
+
+		logging.debug('Start thread')
+		self.cthread.start()
+		self.dataQuality_ui.pushButton_copy.setEnabled(True)
 		
 				#shutil.copy2(,solog_dir)
 				#progress += p4
@@ -792,18 +1213,69 @@ FROM FILE: {fimg}
 
 	def runCopyQueue(self):
 
+		import grenameF
+		import good_class
+		grenameF.i.soar(_doprint=0)
+		grenameF.i.soi(_doprint=0)
+
+		session_CID = self.Session()
+
 		progress = 0
 		lqueue = self.copy_queue.qsize()
 
 		while not self.copy_queue.empty():
 			record = self.copy_queue.get()
-			#print record
-			shutil.copy2(*record)
+
+			logging.debug( 'Copying {0} -> {1} ...'.format(*record))
+
+			query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME == os.path.basename(record[0]))[:]
+			queryInstrume = session_CID.query(self.Obj_INSTRUMENTS[query[0].INSTRUME]).filter(self.Obj_INSTRUMENTS[query[0].INSTRUME].FILENAME == record[0])[:]			
+
+			if len(queryInstrume) == 1 and os.path.dirname(record[0]) != record[1]:
+
+				shutil.copy2(*record)
+
+				query[0].PATH = record[1]
+				queryInstrume[0].FILENAME = os.path.join(record[1],query[0].FILENAME)
+
+				if query[0].INSTRUME == 'Goodman Spectrograph':
+					_image_ = good_class.Single(os.path.join(record[1],query[0].FILENAME))
+					gname = grenameF.Rename(_image_,True)
+					t_index = self.ui.tableDB.model().createIndex(query[0].id-1,self.FilenameColumn)
+					query[0].FILENAME = os.path.basename(gname)
+					queryInstrume[0].FILENAME = gname
+					self.ui.tableDB.model().setData(t_index,os.path.basename(gname),QtCore.Qt.DisplayRole)
+				if query[0].INSTRUME == 'SOI':
+					logging.debug('SOIFIXHEADER: {0}'.format(query[0].FILENAME))
+					grenameF.i.soifixheader(input=os.path.join(record[1],query[0].FILENAME))
+					
+				session_CID.commit()
+
 			progress+=1
 			self.emit(QtCore.SIGNAL("copyProgress(int)"),progress)    
+
+			if self.cthread_stop.isSet():
+				self.emit(QtCore.SIGNAL("copyProgress(int)"),0)    
+				logging.debug('runCopy: Queue size: {0} [Emptying queue]'.format( self.copy_queue.qsize() ))
+				with self.copy_queue.mutex:
+					self.copy_queue.queue.clear()
+				logging.debug( 'runCopy: Queue size should be zero: {0}'.format(self.copy_queue.qsize() ))
+
+		self.cthread_stop.clear()
+		logging.debug('Copy done')
 		self.emit(QtCore.SIGNAL("copyDone()"))    
 
 		
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+
+	def stopCopyProgramFiles(self):
+		self.cthread_stop.set()
 #
 #
 ################################################################################################
@@ -823,7 +1295,259 @@ FROM FILE: {fimg}
 #
 #
 	def enableCopyButton(self):
-		self.dataQuality_ui.pushButton_copy.setEnabled(True)
+
+		self.dataQuality_ui.pushButton_copy.setText('Copy Files')
+		self.disconnect(self.dataQuality_ui.pushButton_copy,QtCore.SIGNAL('clicked()'), self.stopCopyProgramFiles)
+		self.connect(self.dataQuality_ui.pushButton_copy,QtCore.SIGNAL('clicked()'), self.copyProgramFiles)
+
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+
+	def makeReport(self):
+
+		session = self.Session()
+
+		q_cal = session.query(self.Obj_DQ).filter(self.Obj_DQ.PID == str(self.dataQuality_ui.comboBox.currentText()))[:]
+		q_repo = session.query(self.Obj_RDB).filter(self.Obj_RDB.DATASET == '{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))))[:]
+
+		if len(q_repo) == 0:
+			logging.debug('No information on database for project {0}'.format(str(self.dataQuality_ui.comboBox.currentText())))
+			return -1
+		#
+		# start with calibrations
+		#
+		_repo = '''
+- Calibrations:
+
+'''
+		_calNote = '\n'
+		Count = [0,
+			 1,
+			 1,
+			 1]
+
+		ctype = ['bias','dark','flatfield']
+
+		for i in range(len(ctype)):
+			qq = session.query(self.Obj_CDQ).filter(self.Obj_CDQ.PID == self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))).filter(self.Obj_CDQ.DATASET == '{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText())))).filter(self.Obj_CDQ.OBJECT == ctype[i])[:]
+			
+			for j in range(len(qq)):
+				
+				config = qq[j].CONFIG
+				nf = qq[j].NCONF				
+
+				note = self.dqStatus[int(qq[j].STATUS)]
+				cnote = ''
+				if len(qq[j].CONFIGNOTE) > 1:
+					note += '{0}'.format(Count[int(qq[j].STATUS)])
+					cnote = '{0}: {1}\n'.format(note,qq[j].CONFIGNOTE)
+					Count[int(qq[j].STATUS)] += 1
+		
+				if int(qq[j].STATUS) > 0:
+					_calNote = _calNote + cnote
+					_repo += '     {ctype}: {CONFIG} {NFILES} [{STAT}]\n'.format(CONFIG = config,
+												     NFILES = int(nf),
+												     STAT=note,
+												     ctype=ctype[i])
+
+
+		_repo +=self._separator
+
+		_repo += '''
+- Science:
+
+'''
+		
+		query = session.query(self.Obj_FDQ).filter(self.Obj_FDQ.PID==str(self.dataQuality_ui.comboBox.currentText()))[:]
+
+		for i in range(len(query)):
+			if int(query[i].FIELD) > 0:
+				_repo += '''
+- {OBJ}:
+\tFIELD: [{FLD}]
+'''.format(OBJ=query[i].OBJECT,FLD=self.dqStatus[int(query[i].FIELD)])
+				query2 = session.query(self.Obj_CDQ).filter(self.Obj_CDQ.DATASET == query[i].DATASET).filter(self.Obj_CDQ.OBJECT == query[i].OBJECT)[:]
+				for j in range(len(query2)):
+					if int(query2[j].STATUS) > 0:
+						note = self.dqStatus[int(query2[j].STATUS)]
+						if len(query2[j].CONFIGNOTE) > 1:
+							note += '{0}'.format(Count[int(query2[j].STATUS)])
+							_calNote = _calNote + '{0}: {1}\n'.format(note,query2[j].CONFIGNOTE)
+							Count[int(query2[j].STATUS)] += 1
+							
+						_repo += '\t{CFG} {NFLS} [{STAT}]\n'.format(CFG=query2[j].CONFIG,
+											    NFLS=query2[j].NCONF,
+											    STAT=note)
+		_repo += self._separator
+
+		_repo += '''
+- Notes:
+
+'''
+
+		_repo += _calNote
+
+
+
+		#
+		# Finishing
+		#
+		self.dataQuality_ui.REPORT.setText( _repo )
+		q_repo[0].REPORT = _repo
+
+		session.commit()
+
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+
+	def updateSelectedColumn(self):
+
+		sIndex = self.ui.tableDB.selectedIndexes()
+
+		self.dataQuality_ui.lineEdit_SelectedCol.setText(self.ui.tableDB.model().headerData(sIndex[0].column(),QtCore.Qt.Horizontal, QtCore.Qt.DisplayRole).toString())
+
+		firstCol = sIndex[0]
+		workCol = []
+		for i in range(len(sIndex)):
+			if sIndex[i].column() == firstCol.column():
+				workCol.append(sIndex[i])
+		self.unmatch = False
+		self.matchVals = []
+		if firstCol.column() in self.ExtraEditableColumns:
+			self.dataQuality_ui.pushButton_RunReplace.setEnabled(True)
+			self.dataQuality_ui.pushButton_loadfromfile.setEnabled(True)
+			fval = self.ui.tableDB.model().getData(firstCol.row(),firstCol.column())
+			flen = len(fval)
+
+#			self.dataQuality_ui.lineEdit_ComunVal.setText(flen)
+#			self.dataQuality_ui.lineEdit_ReplaceBy.setText(flen)
+
+			self.unmatch = False
+			for i in range(len(workCol)):
+				if len(self.ui.tableDB.model().getData(workCol[i].row(),workCol[i].column())) != flen:
+					self.dataQuality_ui.lineEdit_ComunVal.setText('<UNMACHED>')
+					self.dataQuality_ui.lineEdit_ReplaceBy.setText(fval)
+					self.unmatch = True
+					self.dataQuality_ui.textEdit_BatchDialog.setText('''Unmached tables. This hapens when the values have different sizes. The entire values will be replaced by the value in the \'replace by\' box. 
+
+Warning: Do not use this style for filename replacement.
+''')
+					break
+			if not self.unmatch:
+
+				for i in range(len(fval)):
+					_tmpMatch = []
+					_flagUnMatch = False
+					for j in range(len(workCol)):
+						oval = self.ui.tableDB.model().getData(workCol[j].row(),workCol[j].column())[i]
+						_tmpMatch.append(oval)
+						if fval[i] != oval:# or _flagUnMatch:
+							fval = fval[:i] + '?' + fval[i+1:]
+							_flagUnMatch = True
+							#break
+					if _flagUnMatch:
+						self.matchVals.append(_tmpMatch)
+
+				self.dataQuality_ui.lineEdit_ComunVal.setText(fval)
+				self.dataQuality_ui.lineEdit_ReplaceBy.setText(fval)
+				self.dataQuality_ui.textEdit_BatchDialog.setText('''Mached tables. This hapens when the values have same sizes. All '?' in the 'replace by' box will be replaced by the appropriate value on each element in the other they appear. 
+
+Warning: If you are doing filename replacement do not delete any '?' in the user field, unless you REALLY REALLY know what you are doing. Otherwise, feel free to do so, knowing that I will replace the remaining '?' by the order they appear in the entry.
+''')
+				
+			
+		else:
+			self.dataQuality_ui.pushButton_RunReplace.setEnabled(False)
+			self.dataQuality_ui.pushButton_loadfromfile.setEnabled(False)
+			self.dataQuality_ui.lineEdit_ComunVal.setText('')
+			self.dataQuality_ui.lineEdit_ReplaceBy.setText('')
+
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+	def runUpdateSelectedColumn(self):
+
+		sIndex = self.ui.tableDB.selectedIndexes()
+		workCol = []
+
+		for i in range(len(sIndex)):
+			if sIndex[i].column() == sIndex[0].column():
+				workCol.append(sIndex[i])
+
+		if self.unmatch:
+			for i in range(len(workCol)):
+				self.CommitDBTable(workCol[i],str(self.dataQuality_ui.lineEdit_ReplaceBy.text()))
+				self.ui.tableDB.model().setData(workCol[i],str(self.dataQuality_ui.lineEdit_ReplaceBy.text()),QtCore.Qt.DisplayRole)
+		else:
+			for i in range(len(workCol)):
+				newVal = str(self.dataQuality_ui.lineEdit_ReplaceBy.text())
+				oldVal = self.ui.tableDB.model().getData(workCol[i].row(),workCol[i].column())
+				for j in range(len(self.matchVals)):
+					idx = newVal.find('?')
+					if idx >= 0:
+						newVal = newVal[:idx] + self.matchVals[j][i] + newVal[idx+1:]
+				self.CommitDBTable(workCol[i],newVal)
+				self.ui.tableDB.model().setData(workCol[i],newVal,QtCore.Qt.DisplayRole)
+		self.dataQuality_ui.textEdit_BatchDialog.setText('Replace done.')
+
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+	def loadUpdateSelectedColumnFromFile(self):
+		
+		filename = str(QtGui.QFileDialog.getOpenFileName(self, 
+								 'Selecione arquivo com entradas para colunas',
+								 filter='Text files (*.txt)'))
+		if filename:
+			logging.debug(filename)
+			fcont = np.loadtxt(filename,dtype='S',usecols=(0,),ndmin=1)
+			sIndex = self.ui.tableDB.selectedIndexes()
+			workCol = []
+			for i in range(len(sIndex)):
+				if sIndex[i].column() == sIndex[0].column():
+					workCol.append(sIndex[i])
+
+			if len(fcont) != len(workCol):
+				self.dataQuality_ui.textEdit_BatchDialog.setText('Size of input list \'{0}\'[{1}] and selected columns [{2}] does not match.'.format(os.path.basename(filename),len(fcont),len(workCol)))
+			else:
+				mess = '''File {0} selected and successfuly readed. 
+
+{1}
+'''
+				self.dataQuality_ui.textEdit_BatchDialog.setText(mess.format(os.path.basename(filename),'Running...'))
+				for i in range(len(workCol)):
+					logging.debug(fcont[i])
+					self.CommitDBTable(workCol[i],str(fcont[i]))
+					self.ui.tableDB.model().setData(workCol[i],str(fcont[i]),QtCore.Qt.DisplayRole)
+
+				self.dataQuality_ui.textEdit_BatchDialog.setText(mess.format(os.path.basename(filename),'Done...'))				
+
+		else:
+			logging.debug('No file selected')
+			self.dataQuality_ui.textEdit_BatchDialog.setText('No file selected.')
+
+		
+#
+#
+################################################################################################
 
 ################################################################################################
 #

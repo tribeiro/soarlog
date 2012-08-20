@@ -146,6 +146,14 @@ frameListDataQualityDB = {'id_tvDB' : Column('id_tvDB',Integer),
 			  'PATH'		:	Column('PATH',String)		,
 			  'DATASET'       :	Column('DATASET',String)	}
 
+reportDB = { 'PID'      : Column('PID',String)      ,
+	     'PI'       : Column('PI' ,String)      ,
+             'INSTRUME' : Column('INSTRUME',String) ,
+	     'SETUP'    : Column('SETUP',String)    ,
+	     'TIMESPENT': Column('TIMESPENT',REAL),
+	     'TIMEVALID': Column('TIMEVALID',REAL),
+	     'DATASET'  : Column('DATASET',String)  ,
+	     'REPORT'   : Column('REPORT', TEXT)     }
 #
 #
 ##################################################################################################################################		

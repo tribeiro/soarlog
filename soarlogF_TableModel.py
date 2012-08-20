@@ -47,7 +47,7 @@ class ComboBoxDelegate(QtGui.QItemDelegate):
 	def setModelData(self, editor, model, index):
 		value = editor.currentIndex()
 		_inst = index.model().getData(index.row(),13)
-		print value,len(self.itemslist[_inst])
+		#print value,len(self.itemslist[_inst])
 		model.setData( index, self.itemslist[_inst][value],QtCore.Qt.EditRole)
 
 	def updateEditorGeometry( self, editor, option, index ):
@@ -161,7 +161,7 @@ class SOLogTableModel(QtCore.QAbstractTableModel):
 
     def insertRow(self,index, parent=QtCore.QModelIndex()):
 	
-        print index, self.rowCount(None)
+#        print index, self.rowCount(None)
 		
 #        self.beginInsertRows(self.createIndex(parent,0),index,index)
         self.beginInsertRows(parent,index,index)
@@ -177,7 +177,7 @@ class SOLogTableModel(QtCore.QAbstractTableModel):
 						
     def removeRows(self,index,count,parent=QtCore.QModelIndex()):
 
-	    self.beginRemoveRows(parent,index,index+count)
+	    self.beginRemoveRows(parent,index,index+count-1)
 
 	    for i in range(index,index+count):
 		    self.arraydata.pop(index)
@@ -196,7 +196,7 @@ class SOLogTableModel(QtCore.QAbstractTableModel):
 		
     def mimeData(self, indexes):
         mimedata = QtCore.QMimeData()
-        print indexes[0].row(),indexes[0].column()
+        #print indexes[0].row(),indexes[0].column()
         mimedata.setData('text/xml', self.arraydata[indexes[0].row()][indexes[0].column()])
         self.dragIndex = indexes[0]
         return mimedata
@@ -205,7 +205,7 @@ class SOLogTableModel(QtCore.QAbstractTableModel):
         self.beginMoveRows(parent, self.dragIndex.row(),self.dragIndex.row() , parent, parent.row())		
         self.arraydata.insert(parent.row(), self.arraydata.pop(self.dragIndex.row()))
         self.dropParent = parent
-        print 'dropMimeData %s %s %s %s' % (data.data('text/xml'), self.dragIndex.row(), row, parent.row()) 
+        #print 'dropMimeData %s %s %s %s' % (data.data('text/xml'), self.dragIndex.row(), row, parent.row()) 
         self.endMoveRows()
         return True
 
