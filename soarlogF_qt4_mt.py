@@ -957,7 +957,7 @@ Time Spent:
 			# Frames infos
 			#
 			
-			query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+proj_id2[i]+'%'))[:]
+			query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+proj_id[i]+'%'))[:]
 			obj_list = self.getObjects(query)
 
 			logging.debug(obj_list)

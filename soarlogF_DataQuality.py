@@ -98,11 +98,13 @@ class DataQuality():
 		self.connect(self.dataQuality_ui.comboBox_config, QtCore.SIGNAL('currentIndexChanged(int)'), self.readCDQ)
 		self.connect(self.dataQuality_ui.tabWidget, QtCore.SIGNAL('currentChanged(int)'),self.setDqMessage)
 		self.connect(self.dataQuality_ui.pushButton_slog,QtCore.SIGNAL('clicked()'), self.genSOARLOG)
+		self.connect(self.dataQuality_ui.pushButton_sRep,QtCore.SIGNAL('clicked()'), self.saveReport)
 		self.connect(self.dataQuality_ui.pushButton_copy,QtCore.SIGNAL('clicked()'), self.copyProgramFiles)
 		self.connect(self.dataQuality_ui.pushButton_exclude,QtCore.SIGNAL('clicked()'), self.excludeFilesFromProgram)
 		self.connect(self.dataQuality_ui.pushButton_filtertable,QtCore.SIGNAL('clicked()'), self.filterMainTable)
 		self.connect(self.dataQuality_ui.pushButton_RunReplace,QtCore.SIGNAL('clicked()'), self.runUpdateSelectedColumn)
 		self.connect(self.dataQuality_ui.pushButton_loadfromfile,QtCore.SIGNAL('clicked()'), self.loadUpdateSelectedColumnFromFile)
+		self.connect(self.dataQuality_ui.pushButton_save2file,QtCore.SIGNAL('clicked()'), self.saveSelectedColumnToFile)
 		self.connect(self.dataQuality_ui.comboBiasConf, QtCore.SIGNAL('currentIndexChanged(int)'), self.readBiasConf)
 		self.connect(self.dataQuality_ui.comboDarkConf, QtCore.SIGNAL('currentIndexChanged(int)'), self.readDarkConf)
 		self.connect(self.dataQuality_ui.comboFlatConf, QtCore.SIGNAL('currentIndexChanged(int)'), self.readFlatConf)
@@ -245,14 +247,17 @@ filenames) unless you REALLY know what you are doing.
 			try:
 				fwhm = float( self.dataQuality_ui.lineEdit_7.text() )
 			except:
+				logging.debug('Could not convert fhwm to float... got {0}'.format(self.dataQuality_ui.lineEdit_7.text()))
 				fwhm = 0.
 				pass
 			ell = 0.
 			try:
 				ell = float( self.dataQuality_ui.lineEdit_8.text() )
 			except:
+				logging.debug('Could not convert elipticity to float... got {0}'.format(self.dataQuality_ui.lineEdit_8.text()))
 				ell = 0.
 				pass
+			
 
 			dqinf = {	'SEMESTER'	: 	self.semester_ID[:-4]	,\
 					'PID'		: 	str(self.dataQuality_ui.comboBox.currentText())		,\
@@ -272,19 +277,22 @@ filenames) unless you REALLY know what you are doing.
 			try:
 				fwhm = float( self.dataQuality_ui.lineEdit_7.text() )
 			except:
+				logging.debug('Could not convert fhwm to float... got {0}'.format(self.dataQuality_ui.lineEdit_7.text()))
 				fwhm = 0.
 				pass
 			ell = 0.
 			try:
 				ell = float( self.dataQuality_ui.lineEdit_8.text() )
 			except:
+				logging.debug('Could not convert elipticity to float... got {0}'.format(self.dataQuality_ui.lineEdit_8.text()))
 				ell = 0.
 				pass
+
 			query[0].FIELD = str( self.dataQuality_ui.comboBox_FIELD.currentIndex() )
 			query[0].FIELDNOTE = str( self.dataQuality_ui.lineEdit_5.text() )
 			#query[0].CONFIG = str( self.dataQuality_ui.comboBox_6.currentIndex() )		
 			#query[0].CONFIGNOTE = str( self.dataQuality_ui.lineEdit_6.text() )		
-			query[0].FHWM = fwhm			
+			query[0].FWHM = fwhm			
 			query[0].E = ell
 
 		querycfg = session.query(self.Obj_CDQ).filter(self.Obj_CDQ.OBJECT == str(self.dataQuality_ui.comboBox_Object.currentText())).filter( 
@@ -360,11 +368,16 @@ filenames) unless you REALLY know what you are doing.
 		if len(query) > 0:
 			vtime = query[0].VALIDTIME
 			otime = query[0].OBSTIME
+
 			logging.debug('Obs Time: {0}\nValid Time: {1}'.format(otime,vtime))
 			if otime > 0.:
+				self.dataQuality_ui.obsTime.setMinimumTime(QtCore.QTime(0.,0.))
+				self.dataQuality_ui.validTime.setMaximumTime(QtCore.QTime(23.,0.))
 				self.dataQuality_ui.obsTime.setTime(QtCore.QTime( int(otime) , int( np.ceil(60.*(otime-np.floor(otime)) ) ) ))
 				self.dataQuality_ui.validTime.setTime(QtCore.QTime( int(vtime) , int( np.ceil(60.*(vtime-np.floor(vtime)) ) ) ) )
 			else:
+				self.dataQuality_ui.obsTime.setMinimumTime(QtCore.QTime(0.,0.))
+				self.dataQuality_ui.validTime.setMaximumTime(QtCore.QTime(23.,0.))
 				self.dataQuality_ui.obsTime.setTime(QtCore.QTime(*self.calcTime(str(self.dataQuality_ui.comboBox.currentText()))))
 				self.dataQuality_ui.validTime.setTime(QtCore.QTime(*self.calcTime(str(self.dataQuality_ui.comboBox.currentText()))))
 
@@ -525,6 +538,7 @@ filenames) unless you REALLY know what you are doing.
 			self.dataQuality_ui.comboBox_6.setCurrentIndex( 0 )
 			self.dataQuality_ui.lineEdit_5.setText( str( query[0].FIELDNOTE) )
 			self.dataQuality_ui.lineEdit_6.setText( '' )
+			logging.debug('fwhm = {0} , ell = {1}'.format(query[0].FWHM,query[0].E))
 			self.dataQuality_ui.lineEdit_7.setText( str( query[0].FWHM) )
 			self.dataQuality_ui.lineEdit_8.setText( str( query[0].E) )
 		else:
@@ -942,7 +956,7 @@ filenames) unless you REALLY know what you are doing.
 
 			conf,nfiles = self.getConf(query2)
 
-			query2 = session_CID.query(self.Obj_CDQ).filter(self.Obj_CDQ.CONFIG == conf[0]).filter(self.Obj_CDQ.OBJECT == query[0].TYPE)[:]
+			query2 = session_CID.query(self.Obj_CDQ).filter(self.Obj_CDQ.CONFIG.like(conf[0]+'%')).filter(self.Obj_CDQ.OBJECT == query[0].TYPE)[:]
 
 			logging.debug('{0} {1} {2} {3}'.format(query2[0].OBJECT,query2[0].CONFIG,query2[0].NCONF, query[0].TYPE))
 			
@@ -1080,37 +1094,25 @@ FROM FILE: {fimg}
 
 		pid = self.semester_ID.format(ipid)
 
-		query = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.PID==pid).filter(self.Obj_FLDQ.TYPE=='bias')[:]
+		ctype = ['bias','flatfield','dark']
 
-		if len(query) > 0:
-			query2 = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME == query[0].FILENAME)[:]
+		for cal in ctype:
+			query = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.PID==pid).filter(self.Obj_FLDQ.TYPE==cal)[:]
 
-			logCalib += tmp_logCalib.format(type='BIAS',
-							fimg=query[0].FILENAME,
-							limg=query[-1].FILENAME,
-							conf=self.getConf(query2)[0][0])
+			if len(query) > 0:
+				query2 = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME == query[0].FILENAME)[:]
+				conf = self.getConf(query2,cal)[0]
+				logging.debug('--> {0} | {1} | {2}'.format(len(query2),conf,query[0].FILENAME))
+				if len(conf) == 0:
+					query2 = session_CID.query(self.Obj_CID).filter(self.Obj_CID.id == query[0].id_tvDB)[:]
+					conf = self.getConf(query2,cal)[0]
+					logging.debug('---> {0} | {1} | {2}'.format(len(query2),conf,query[0].FILENAME))
 
-		query = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.PID==pid).filter(self.Obj_FLDQ.TYPE=='flatfield')[:]
+				logCalib += tmp_logCalib.format(type=str.upper(cal),
+								fimg=query[0].FILENAME,
+								limg=query[-1].FILENAME,
+								conf=conf[0])
 
-		if len(query) > 0:
-			query2 = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME == query[0].FILENAME)[:]
-
-			logCalib += tmp_logCalib.format(type='FLAT',
-							fimg=query[0].FILENAME,
-							limg=query[-1].FILENAME,
-							conf=self.getConf(query2)[0][0])
-		
-		query = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.PID==pid).filter(self.Obj_FLDQ.TYPE=='dark')[:]
-		
-		if len(query) > 0:
-			query2 = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME == query[0].FILENAME)[:]
-
-			logCalib += tmp_logCalib.format(type='DARK',
-							fimg=query[0].FILENAME,
-							limg=query[-1].FILENAME,
-							conf=self.getConf(query2)[0][0])
-
-		logging.debug( '--> {0} {1}'.format(pid,logCalib ))
 
 		return logCalib
 
@@ -1139,8 +1141,12 @@ FROM FILE: {fimg}
 			fp = open(solog_file , 'w')
 
 			try:
-				hdr = subprocess.Popen(['logheader.py'],stdout=fp,stderr=fp)
-				hdr.wait()
+				fp2 = open(self.logfile,'r')
+				for i in range(15):
+					fp.write(fp2.readline())
+				fp2.close()
+				#hdr = subprocess.Popen(['logheader.py'],stdout=fp,stderr=fp)
+				#hdr.wait()
 			except:
 				hdr = 'No header\n'
 				fp.write(hdr)
@@ -1236,7 +1242,8 @@ FROM FILE: {fimg}
 
 			query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME == os.path.basename(record[0]))[:]
 			queryInstrume = session_CID.query(self.Obj_INSTRUMENTS[query[0].INSTRUME]).filter(self.Obj_INSTRUMENTS[query[0].INSTRUME].FILENAME == record[0])[:]			
-
+			queryFLDQ = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.FILENAME == query[0].FILENAME)[:]
+			
 			if len(queryInstrume) == 1 and os.path.dirname(record[0]) != record[1]:
 
 				shutil.copy2(*record)
@@ -1250,6 +1257,8 @@ FROM FILE: {fimg}
 					t_index = self.ui.tableDB.model().createIndex(query[0].id-1,self.FilenameColumn)
 					query[0].FILENAME = os.path.basename(gname)
 					queryInstrume[0].FILENAME = gname
+					queryFLDQ[0].FILENAME = os.path.basename(gname)
+					
 					self.ui.tableDB.model().setData(t_index,os.path.basename(gname),QtCore.Qt.DisplayRole)
 				if query[0].INSTRUME == 'SOI':
 					logging.debug('SOIFIXHEADER: {0}'.format(query[0].FILENAME))
@@ -1359,7 +1368,7 @@ FROM FILE: {fimg}
 					_repo += '     {ctype}: {CONFIG} {NFILES} [{STAT}]\n'.format(CONFIG = config,
 												     NFILES = int(nf),
 												     STAT=note,
-												     ctype=ctype[i])
+												     ctype=str.upper(ctype[i]))
 
 
 		_repo +=self._separator
@@ -1389,6 +1398,7 @@ FROM FILE: {fimg}
 						_repo += '\t{CFG} {NFLS} [{STAT}]\n'.format(CFG=query2[j].CONFIG,
 											    NFLS=query2[j].NCONF,
 											    STAT=note)
+				_repo += '\tSeeing = {0}" | E = {1}\n'.format(query[i].FWHM,query[i].E)
 		_repo += self._separator
 
 		_repo += '''
@@ -1551,6 +1561,85 @@ Warning: If you are doing filename replacement do not delete any '?' in the user
 			self.dataQuality_ui.textEdit_BatchDialog.setText('No file selected.')
 
 		
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+	def saveSelectedColumnToFile(self):
+		
+		filename = str(QtGui.QFileDialog.getSaveFileName(self, 
+								 'Selecione arquivo para salvar dados das colunas',
+								 filter='Text files (*.txt)'))
+		if filename:
+			sIndex = self.ui.tableDB.selectedIndexes()
+			workCol = []
+
+			for i in range(len(sIndex)):
+				if sIndex[i].column() == sIndex[0].column():
+					workCol.append(sIndex[i])
+
+			self.dataQuality_ui.textEdit_BatchDialog.setText('Saving {0} data from column {1} to {2}.'.format(len(workCol),
+															  str(self.tm.headerData(sIndex[0].column(),
+																	     QtCore.Qt.Horizontal,
+																	     QtCore.Qt.DisplayRole).toString())
+															  , filename))
+			fp = open(filename,'w')
+			for i in range(len(workCol)):
+				fp.write('{0}\n'.format(self.ui.tableDB.model().getData(workCol[i].row(),workCol[i].column())))
+			fp.close()
+
+		else:
+			self.dataQuality_ui.textEdit_BatchDialog.setText('No file selected.')
+
+		
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+	def saveReport(self):
+		
+		filename = str(QtGui.QFileDialog.getSaveFileName(self, 
+								 'Selecione arquivo para salvar data quality.',
+								 filter='Text files (*.txt)'))
+
+		if filename:
+			session = self.Session()
+
+			q_repo = session.query(self.Obj_RDB)[:]
+
+			fp = open(filename,'w')
+
+			for i in range(len(q_repo)):
+				tm_h = q_repo[i].TIMESPENT
+				tm_m = int( (tm_h - np.floor(tm_h))*60.)
+				otime = '{hh}:{mm}'.format(hh=int(np.floor(tm_h)),mm=tm_m)
+				tm_h = q_repo[i].TIMEVALID
+				tm_m = int( (tm_h - np.floor(tm_h))*60.)
+				vtime = '{hh}:{mm}'.format(hh=int(np.floor(tm_h)),mm=tm_m)
+				fp.write('''   PROJECT: {PID}
+        PI: {PI}
+INSTRUMENT: {INST}
+  OBS-TIME: {OTIME}
+VALID-TIME: {VTIME}
+'''.format(PID=q_repo[i].PID,PI=q_repo[i].PI,INST=q_repo[i].INSTRUME,OTIME=otime,VTIME=vtime))
+
+				fp.write(self._separator)
+
+				fp.write(q_repo[i].REPORT)
+				
+				fp.write(self._separator)
+				fp.write(self._separator)
+		else:
+			return -1
+
+		return 0
+
 #
 #
 ################################################################################################
