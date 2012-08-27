@@ -66,7 +66,7 @@ class DataQuality():
 					#
 					# Data Quality has not began yet! Including project files in database
 					#
-					query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+prj[i]+'%' ) ).filter(sqlalchemy.not_(self.Obj_CID.INSTRUME == 'NOTE'))[:]
+					query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+prj[i]+'%' ) ).filter(sqlalchemy.not_(self.Obj_CID.INSTRUME.like('%NOTE%')))[:]
 					for ii in range(len(query)):
 						iquery = qInst = session_CID.query(self.Obj_INSTRUMENTS[query[ii].INSTRUME].id).filter(self.Obj_INSTRUMENTS[query[ii].INSTRUME].FILENAME.like('%'+query[ii].FILENAME))[:]
 						entry = self.Obj_FLDQ(id_tvDB=query[ii].id,
@@ -384,7 +384,7 @@ filenames) unless you REALLY know what you are doing.
 		# Seting up object list
 		#
 
-		query2 = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+str(self.dataQuality_ui.comboBox.currentText())+'%'))[:]
+		query2 = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+str(self.dataQuality_ui.comboBox.currentText())+'%')).filter(sqlalchemy.not_(self.Obj_CID.INSTRUME.like('NOTE')))[:]
 		obj_list = self.getObjects(query2)
 
 		dataset = '{date}-{PID}'
@@ -405,7 +405,7 @@ filenames) unless you REALLY know what you are doing.
 			for j in range(len(query_CDQ)):
 				obsConf.append(query_CDQ[j].CONFIG)
 
-			query_CID = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+str(self.dataQuality_ui.comboBox.currentText())+'%')).filter(self.Obj_CID.OBJECT.like(obj_list[i]+'%'))[:]
+			query_CID = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+str(self.dataQuality_ui.comboBox.currentText())+'%')).filter(self.Obj_CID.OBJECT.like(obj_list[i]+'%')).filter(sqlalchemy.not_(self.Obj_CID.INSTRUME.like('NOTE')))[:]
 			frameobsConf,frameobsCount = self.getConf(query_CID)
 
 			for j in range(len(frameobsConf)):
@@ -841,7 +841,7 @@ filenames) unless you REALLY know what you are doing.
 			qq = session.query(self.Obj_CID).filter(self.Obj_CID.id == idx+1)[:]
 			query.append(qq[0])
 
-		fconf,nconf = self.getConf(query)
+		fconf,nconf = self.getConf(query,obj)
 
 		for i in range(len(fconf)):
 
@@ -1028,7 +1028,7 @@ filenames) unless you REALLY know what you are doing.
 ################################################################################################
 #
 #
-	def getConf(self,query):
+	def getConf(self,query,obj=None):
 		'''
 Receives query list from ObjCID and return an array with string configuration. 
 This function is only and interface to instrument selection function. After
@@ -1040,7 +1040,13 @@ which handles the query and return a string with the instrument configuration.
 
 		for i in range(len(query)):
 
-			obsConf.append( frame_infos.instConfDict[query[i].INSTRUME](query[i]) )
+			conf = frame_infos.instConfDict[query[i].INSTRUME](query[i])
+			if obj:
+				conf += ' ' 
+				conf += str(query[i].OBJECT)
+			obsConf.append( conf )
+
+				
 		
 		uConf = np.unique(obsConf)
 		nConf = np.zeros(len(uConf))
