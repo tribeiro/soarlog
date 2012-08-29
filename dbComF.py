@@ -147,7 +147,7 @@ class soarDB():
 				def __init__(self,**template):
 					for info in template.keys():
 						self.__dict__[info] = template[info]
-						logging.debug('{0} = {1}'.format(info,template[info]))
+						#logging.debug('{0} = {1}'.format(info,template[info]))
 					frame_id = Column('frame_id',Integer, ForeignKey('SoarLogTVDB.id'))
 
 			self.Obj_INSTRUMENTS[_inst] = type(FrameINST(**instTemplate))

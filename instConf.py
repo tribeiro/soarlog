@@ -2,7 +2,7 @@
 from PyQt4 import QtCore,QtGui,uic,QtSql
 from sqlalchemy import Column,Integer,String,TEXT
 from sqlalchemy import FLOAT as REAL
-
+import numpy as np
 
 def GOODMAN_RDMODE(query):
 	

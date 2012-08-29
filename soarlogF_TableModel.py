@@ -1,6 +1,7 @@
 
 from PyQt4 import QtCore,QtGui,uic,QtSql
 import operator
+import sys,logging
 
 class myQSqlTableModel(QtSql.QSqlTableModel):
 
@@ -144,9 +145,22 @@ class SOLogTableModel(QtCore.QAbstractTableModel):
     def setData(self, index, value, role):
         """ if a item is edited, this command is called value.toString() constains the new value cahnge here to have it evaluate stuff!"""
 
+	xvalue = value
+	if index.row() < 0 or index.column() < 0:
+		return False
+
         try:
-            self.arraydata[index.row()][index.column()] = QtCore.QVariant(value.toString())
+
+	    if type(value) == type(QtCore.QVariant()):
+		    self.arraydata[index.row()][index.column()] = value
+		    #logging.debug('{0} {1} {2}'.format(index.row(),index.column(),value.toString()))
+	    else:
+		    self.arraydata[index.row()][index.column()] = QtCore.QVariant(value)
+		    xvalue = QtCore.QVariant(value)
         except AttributeError:
+            logging.debug('Exception in setData {0}'.format(value))
+	    logging.debug(sys.exc_info()[1])
+		    
             try:
                 self.arraydata[index.row()][index.column()] = value
             except:
@@ -155,7 +169,7 @@ class SOLogTableModel(QtCore.QAbstractTableModel):
         self.dataChanged.emit(index, index)
 
         if role == QtCore.Qt.EditRole:
-			self.commitDB(index)
+		self.commitDB(index)
 
         return True
 
@@ -167,7 +181,6 @@ class SOLogTableModel(QtCore.QAbstractTableModel):
         self.beginInsertRows(parent,index,index)
 
 #        print self.arraydata
-
         self.arraydata.append( ['']*self.columnCount(parent)) #len(self.arraydata[0]) )
         self.endInsertRows()
         return True

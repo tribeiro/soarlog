@@ -908,7 +908,10 @@ filenames) unless you REALLY know what you are doing.
 		new = 0
 
 		for i in range(len(indexes)):
-			fname = self.ui.tableDB.model().getData(indexes[i].row(),self.FilenameColumn)
+			idx = self.ui.tableDB.model().index(indexes[i].row(),self.FilenameColumn)
+			fname = self.ui.tableDB.model().data(idx)
+			if type(fname) == type(QtCore.QVariant):
+				fname = fname.toString()
         		query = session_CID.query(self.Obj_CID.id,self.Obj_CID.INSTRUME,self.Obj_CID.PATH).filter(self.Obj_CID.FILENAME == fname)[:]
         		qInst = session_CID.query(self.Obj_INSTRUMENTS[query[0].INSTRUME].id).filter(self.Obj_INSTRUMENTS[query[0].INSTRUME].FILENAME.like('%'+fname))[:]
         		vals = {'id_tvDB':query[0].id,
@@ -950,13 +953,13 @@ filenames) unless you REALLY know what you are doing.
 
 		for i in range(len(sIndex)-1,-1,-1):
 			
-			query = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.FILENAME == str(sIndex[i].data().toString() ) )[:]
+			query = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.PID == self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))).filter(self.Obj_FLDQ.FILENAME == str(sIndex[i].data().toString() ) )[:]
 
 			query2 = session_CID.query(self.Obj_CID).filter(self.Obj_CID.id == query[0].id_tvDB)[:]
 
 			conf,nfiles = self.getConf(query2)
 
-			query2 = session_CID.query(self.Obj_CDQ).filter(self.Obj_CDQ.CONFIG.like(conf[0]+'%')).filter(self.Obj_CDQ.OBJECT == query[0].TYPE)[:]
+			query2 = session_CID.query(self.Obj_CDQ).filter(self.Obj_FLDQ.PID == self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))).filter(self.Obj_CDQ.CONFIG.like(conf[0]+'%')).filter(self.Obj_CDQ.OBJECT == query[0].TYPE)[:]
 
 			logging.debug('{0} {1} {2} {3}'.format(query2[0].OBJECT,query2[0].CONFIG,query2[0].NCONF, query[0].TYPE))
 			
@@ -1027,7 +1030,7 @@ filenames) unless you REALLY know what you are doing.
 	def unfilterMainTable(self):
 
 		self.dataQuality_ui.pushButton_filtertable.setEnabled(False)
-		for i in range(self.ui.tableDB.model().rowCount(None)):
+		for i in range(self.ui.tableDB.model().rowCount()):
 			if self.ui.tableDB.isRowHidden(i):
 				self.ui.tableDB.setRowHidden(i,False)
 
@@ -1442,7 +1445,7 @@ FROM FILE: {fimg}
 		if firstCol.column() in self.ExtraEditableColumns:
 			self.dataQuality_ui.pushButton_RunReplace.setEnabled(True)
 			self.dataQuality_ui.pushButton_loadfromfile.setEnabled(True)
-			fval = self.ui.tableDB.model().getData(firstCol.row(),firstCol.column())
+			fval = self.ui.tableDB.model().data(firstCol).toString()
 			flen = len(fval)
 
 #			self.dataQuality_ui.lineEdit_ComunVal.setText(flen)
@@ -1450,7 +1453,7 @@ FROM FILE: {fimg}
 
 			self.unmatch = False
 			for i in range(len(workCol)):
-				if len(self.ui.tableDB.model().getData(workCol[i].row(),workCol[i].column())) != flen:
+				if len(self.ui.tableDB.model().data(workCol[i]).toString()) != flen:
 					self.dataQuality_ui.lineEdit_ComunVal.setText('<UNMACHED>')
 					self.dataQuality_ui.lineEdit_ReplaceBy.setText(fval)
 					self.unmatch = True
@@ -1465,7 +1468,7 @@ Warning: Do not use this style for filename replacement.
 					_tmpMatch = []
 					_flagUnMatch = False
 					for j in range(len(workCol)):
-						oval = self.ui.tableDB.model().getData(workCol[j].row(),workCol[j].column())[i]
+						oval = self.ui.tableDB.model().data(workCol[j]).toString()[i]
 						_tmpMatch.append(oval)
 						if fval[i] != oval:# or _flagUnMatch:
 							fval = fval[:i] + '?' + fval[i+1:]
@@ -1511,7 +1514,7 @@ Warning: If you are doing filename replacement do not delete any '?' in the user
 		else:
 			for i in range(len(workCol)):
 				newVal = str(self.dataQuality_ui.lineEdit_ReplaceBy.text())
-				oldVal = self.ui.tableDB.model().getData(workCol[i].row(),workCol[i].column())
+				oldVal = self.ui.tableDB.model().data(workCol[i])
 				for j in range(len(self.matchVals)):
 					idx = newVal.find('?')
 					if idx >= 0:
@@ -1588,7 +1591,7 @@ Warning: If you are doing filename replacement do not delete any '?' in the user
 															  , filename))
 			fp = open(filename,'w')
 			for i in range(len(workCol)):
-				fp.write('{0}\n'.format(self.ui.tableDB.model().getData(workCol[i].row(),workCol[i].column())))
+				fp.write('{0}\n'.format(self.ui.tableDB.model().data(workCol[i])))
 			fp.close()
 
 		else:

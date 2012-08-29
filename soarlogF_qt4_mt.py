@@ -69,7 +69,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 		self.Queue = args[0]
 		self.recordQueue = args[1]
 		self.commitLock = threading.RLock()
-		self.emmitFileEventLock = threading.RLock()
+		self.emmitFileEventLock = threading.Lock()
 		
 	##########################################################
 	# See if configuration directory exists. Create one 
@@ -169,12 +169,28 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 
 	def updateTable(self,infos):
 	
-		index = self.tm.rowCount(None)
+            index = self.ui.tableDB.model().rowCount()
 		
-		self.tm.insertRow(index) #,self.tm.createIndex(index,-1))
+            self.emmitFileEventLock.acquire()
+            
+            try:
+                test = self.ui.tableDB.model().sourceModel().insertRow(index) #,self.tm.createIndex(index,-1))
 
-		for i in range(len( infos ) ):
-			self.tm.setData(self.tm.createIndex(index,i) ,infos[i]  ,QtCore.Qt.DisplayRole)
+                check = np.zeros(len(infos)) == 0
+                for i in range(len( infos ) ):
+                    #logging.debug(infos[i])
+                    iidx = self.ui.tableDB.model().sourceModel().createIndex(index,i)
+                    check[i] = self.ui.tableDB.model().sourceModel().setData(iidx,infos[i],None)
+                    #check[i] = self.ui.tableDB.model().setData(SOLogTableModel.createIndex(index,i,self.tm) ,infos[i])
+                
+
+                #self.ui.tableDB.model().setData(self.ui.tableDB.model().index(index,0) ,infos[0])
+            except:
+                logging.debug('Exception in updateTable')
+                logging.debug(sys.exc_info()[1])
+                pass
+            finally:
+                self.emmitFileEventLock.release()
 #
 #
 ################################################################################################
@@ -205,6 +221,8 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 			else: 
 				d = ds9.ds9(_targets[1].split(' ')[1])
 			d.set('preserve regions yes')
+                        d.set('preserve pan yes')
+                        d.set('preserve scale yes')
 		
 			if os.path.isfile(frame):
 				
@@ -225,9 +243,12 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 						return 0
 					elif query.INSTRUME == 'Spartan IR Camera':
 						query2 = session_CID.query(self.Obj_INSTRUMENTS['Spartan IR Camera']).filter(self.Obj_INSTRUMENTS['Spartan IR Camera'].FILENAME.like(frame))[0]
+						zoom = d.get('zoom')
+                                                pan = d.get('pan')
+
 						if self.ui.actionSpartan_showall.isChecked():
 							if query2.DETSERNO == '102':
-								zoom = d.get('zoom')
+								#zoom = d.get('zoom')
 								d.set('frame clear')
 								d.set('zoom '+zoom)
 							d.set('file mosaic iraf {0}'.format(frame))
@@ -240,6 +261,8 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 							d.set('zoom to fit')
 						if self.ui.actionZscale.isChecked():
 							d.set('scale mode zscale')
+                                                d.set('pan to '+pan)
+                                                        
 						return 0					
 					elif query.INSTRUME == 'OSIRIS':
 						data = pyfits.getdata(frame)
@@ -299,11 +322,18 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 		
 		#self.tm = SOLogTableModel(self.getCIDdata(),[self.header_CID[i] for i in self.ShowInfoOrder ],self, commitDB=self.emmitTableDataChanged)
 		
-		self.tm = SOLogTableModel(self.getTableData(), databaseF.frame_infos.tvDB.keys(),self ,commitDB=self.emmitTableDataChanged)
-		
+		tm = SOLogTableModel(self.getTableData(), databaseF.frame_infos.tvDB.keys(),self ,commitDB=self.emmitTableDataChanged)
+                self.tm = QtGui.QSortFilterProxyModel(self)
+                self.tm.setSourceModel(tm)
+                self.searchText = ''
+                self.searchColumn = -1
+                self.searchInitialized = False
 		self.ui.tableDB.setModel(self.tm)
 		self.ui.tableDB.keyPressEvent = self.handleKeyEvent
 		self.ui.tableDB.setSelectionMode(self.ui.tableDB.SingleSelection)
+                hh = self.ui.tableDB.horizontalHeader()
+                hh.setStretchLastSection(True)
+
 		
 		font = QtGui.QFont("Courier New", 8)
 		self.ui.tableDB.setFont(font)
@@ -435,6 +465,15 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 			self.ui.tableDB.model().changeEditableColumns(self.ExtraEditableColumns)
 		else:
 			self.ui.tableDB.model().changeEditableColumns([self.CommentColumn])
+
+                #
+                # Reset search engine when user modify editable role.
+                #
+                if len(self.searchText) > 0:
+                    self.searchText = ''
+                    self.searchInitialized = False
+                    self.filterTable()
+                    self.ui.tableDB.model().reset() #invalidateFilter()
 #
 #
 ################################################################################################
@@ -534,9 +573,12 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 		#pref_ui = PrefMenu([ tbHeader[i] for i in self.ShowInfoOrder],self.ui.tableDB)
 		pref_ui = PrefMenu(tbHeader, self.ShowInfoOrder,self.ui.tableDB)
 		
-		pref_ui.show()
+                self.initThreadLock.acquire()
+
+                try:
+                    pref_ui.show()
 		
-		if pref_ui.exec_():
+                    if pref_ui.exec_():
 #			print 'Changes will be performed'
 #
 # Change order of table headers
@@ -545,16 +587,16 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 
 			for i in range(len(tbHeader)):
 #				print i,tbHeader.index(pref_ui.listSort.model().getData(i,0))
-				self.MoveColumn([ tbHeader.index(pref_ui.listSort.model().getData(i,0)),i ])
+                            self.MoveColumn([ tbHeader.index(pref_ui.listSort.model().getData(i,0)),i ])
 
 #
 # Show/hide Table columns 
 #
 			for i in range(len(tbHeader)):
-				if not pref_ui.listVis.isRowHidden(i):
-					self.ui.tableDB.showColumn(i)
-				if not pref_ui.listHide.isRowHidden(i):
-					self.ui.tableDB.hideColumn(i)	
+                            if not pref_ui.listVis.isRowHidden(i):
+                                self.ui.tableDB.showColumn(i)
+                            if not pref_ui.listHide.isRowHidden(i):
+                                self.ui.tableDB.hideColumn(i)	
 
 #
 # Save changes
@@ -575,10 +617,18 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 
 			
 
-		else:
+                    else:
 			logging.debug('No changes made to Layout')
 
+                except: 
+                    logging.debug('Exception in Preferences')
+                finally:
+                    self.initThreadLock.release()
+                    if self.Queue.qsize() > 0:
+                        self.runQueue()
+                    
 		logging.debug('[DONE]')
+
 		return 0
 
 		
@@ -785,7 +835,16 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 #
 #
 	def emmitTableDataChanged(self,index):
-		self.emit(QtCore.SIGNAL("TableDataChanged(QModelIndex,QString)"),index,'%s' % self.ui.tableDB.model().data(index,QtCore.Qt.DisplayRole).toString())    
+            #self.emmitFileEventLock.acquire()
+            #try:
+            if not self.emmitFileEventLock.locked():
+                try:
+                    new_index = self.ui.tableDB.model().index(index.row(),index.column())
+                    self.emit(QtCore.SIGNAL("TableDataChanged(QModelIndex,QString)"),new_index,self.ui.tableDB.model().data(new_index).toString())
+                    logging.debug('emmitTableDataChanged')
+                except:
+                    logging.debug('Exception in emmitTableDataChanged')
+                
 
 #
 #
@@ -875,7 +934,9 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
                         fnames[ff] = fnames[ff][id01:id01+id02]
 		
 		proj_id = np.unique(fnames)
-		
+
+		if len(proj_id) == 0:
+                    return [],[],0
 		mask = np.array([len(proj_id[i]) > 0 for i in range(len(proj_id))])
 
 		proj_id = proj_id[mask]
@@ -1252,39 +1313,14 @@ Time Spent:
 
 		#print 'tableItemSelected'
 		
-		try:
-			if self.currentSelectedItem == 0:
-				self.currentSelectedItem = index
-				text = self.ui.tableDB.model().getData(index.row(),self.CommentColumn)
-				if type(text) == type(QtCore.QVariant()):
-					text = text.toString()
-				self.ui.lineFrameComment.setText(text)	
-				return 0		
-			elif self.currentSelectedItem.row() == index.row():
-				return -1
-			else:
-				self.currentSelectedItem = index
-				text = self.ui.tableDB.model().getData(index.row(),self.CommentColumn)
-				if type(text) == type(QtCore.QVariant()):
-					text = text.toString()
-				self.ui.lineFrameComment.setText(text)
-				return 0
-		except:
-			self.currentSelectedItem = index
-			text = self.ui.tableDB.model().getData(index.row(),self.CommentColumn)
-			if type(text) == type(QtCore.QVariant()):
-				text = text.toString()
-			self.ui.lineFrameComment.setText(text)	
-#			imtype = self.ui.tableDB.model().getData(index.row(),self.ImtypeColumn)
-#			try:
-#				imtypeIndex = self.imageTYPE.index(imtype)
-#			except:
-#				imtypeIndex = 0
-#				logging.debug(sys.exc_info()[1])
-#				pass
-#			self.ui.comboBoxIMGTYPE.setCurrentIndex( imtypeIndex )						
+            self.currentSelectedItem = index
+            commentIndex = self.ui.tableDB.model().index(index.row(),self.CommentColumn)
+            text = self.ui.tableDB.model().data(commentIndex)
+            if type(text) == type(QtCore.QVariant()):
+                text = text.toString()
+            self.ui.lineFrameComment.setText(text)	
 
-			return 0
+            return 0
 
 #
 #
@@ -1296,8 +1332,11 @@ Time Spent:
 
 	def commitComment(self):
 		text = self.ui.lineFrameComment.text()
-		index = self.currentSelectedItem.child(self.currentSelectedItem.row(),self.CommentColumn)#self.model.createIndex(self.currentSelectedItem.row(),self.CommentColumn)
-		self.ui.tableDB.model().setData(index,text,QtCore.Qt.EditRole)
+		index = self.ui.tableDB.model().index(self.currentSelectedItem.row(),self.CommentColumn)
+
+                #self.currentSelectedItem.child(self.currentSelectedItem.row(),self.CommentColumn)#self.model.createIndex(self.currentSelectedItem.row(),self.CommentColumn)
+                #commentIndex = 
+		self.ui.tableDB.model().setData(index,text)
 #		self.model.setData(index,text)
 #		self.model.submitAll()
 
@@ -1311,7 +1350,7 @@ Time Spent:
 	def displaySelected(self,index):
 		
 		session_CID = self.Session()
-
+                
 		query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.id == index.row()+1)[0]
 
 		frame = os.path.join(query.PATH,query.FILENAME)
@@ -1328,7 +1367,9 @@ Time Spent:
 			#print _targets[1].split(' ')[1]
 			d = ds9.ds9(_targets[0])#.split(' ')[1])
 		d.set('preserve regions yes')
-				
+                d.set('preserve pan yes')
+                d.set('preserve scale yes')
+	
 		if os.path.isfile(frame):
 
 			try:
@@ -1347,11 +1388,17 @@ Time Spent:
 						#frame2 = frame#[detIndex-1]='%'
 						frame2 = frame[:detIndex-1]+'%.fits'
 						query2 = session_CID.query(self.Obj_INSTRUMENTS['Spartan IR Camera']).filter(self.Obj_INSTRUMENTS['Spartan IR Camera'].FILENAME.like(frame2))[::]
+
 						zoom = d.get('zoom')
+                                                pan = d.get('pan')
+                                                #logging.debug(pan)
 						d.set('frame clear')
-						d.set('zoom '+zoom)
 						for nfile in range(len(query2)):
 							d.set('file mosaic iraf {0}'.format(query2[nfile].FILENAME))
+						d.set('zoom '+zoom)
+                                                d.set('pan to '+pan)
+                                                #
+
 					else:
 						zoom = d.get('zoom')
 						d.set('frame clear')
@@ -1396,24 +1443,74 @@ Time Spent:
 ################################################################################################
 #
 #
+        def filterTable(self):
+            
+            if self.searchInitialized:
+                self.ui.tableDB.model().setFilterRegExp(QtCore.QRegExp(self.searchText, QtCore.Qt.CaseInsensitive,QtCore.QRegExp.Wildcard))
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+
 
 	def handleKeyEvent(self,event):
 		
 		#self.commitComment()
+		rr = QtGui.QTableWidget.keyPressEvent(self.ui.tableDB, event)
+
 		if len(self.ui.tableDB.selectedIndexes()) > 0:
 			if self.ui.tableDB.selectedIndexes()[0].column() == self.CommentColumn:
 				try:
-					self.ui.lineFrameComment.setText( self.ui.tableDB.model().getData(self.ui.tableDB.selectedIndexes()[0].row(),self.CommentColumn).toString() )
+                                    #commentIndex = self.ui.tableDB.model().index(index.row(),self.CommentColumn)
+                                    text = self.ui.tableDB.model().data(self.ui.tableDB.selectedIndexes()[0])
+                                    if type(text) == type(QtCore.QVariant()):
+                                        text = text.toString()
+                                    self.ui.lineFrameComment.setText( text )
 				except AttributeError:
-					self.ui.lineFrameComment.setText( self.ui.tableDB.model().getData(self.ui.tableDB.selectedIndexes()[0].row(),self.CommentColumn) )
+                                    text = self.ui.tableDB.model().data(self.ui.tableDB.selectedIndexes()[0])
+                                    self.ui.lineFrameComment.setText( text )
+                                    pass
+                                return rr
 					
 			
-		rr = QtGui.QTableWidget.keyPressEvent(self.ui.tableDB, event)
-		
 		if event.key() == QtCore.Qt.Key_Down or event.key() == QtCore.Qt.Key_Up or event.key() == QtCore.Qt.Key_Right or event.key() == QtCore.Qt.Key_Left:
 			
 			self.tableItemSelected(self.ui.tableDB.selectedIndexes()[0])
-		
+                elif event.isAutoRepeat():
+                    return rr
+                elif event.key() == QtCore.Qt.Key_Escape:
+                    logging.debug('Escape pressed')
+                    self.searchText = ''
+                    self.filterTable()
+                    self.ui.tableDB.model().invalidateFilter()
+                    self.searchInitialized = False
+                    return rr
+                elif not self.searchInitialized:
+                    self.searchInitialized = True
+                    itemselection = self.ui.tableDB.selectedIndexes()
+                    self.searchText += event.text()
+                    if len(itemselection) > 0:
+                        if itemselection[0].column() not in self.ui.tableDB.model().sourceModel().EditableColumns:
+                            self.ui.tableDB.model().setFilterKeyColumn(itemselection[0].column())
+                            self.lastSearchColumn = itemselection[0].column()
+                    elif self.lastSearchColumn >= 0 and self.lastSearchColumn not in self.ui.tableDB.model().EditableColumns:
+                        self.ui.tableView.model().setFilterKeyColumn(self.lastSearchColumn)
+                    else:
+                        self.searchInitialized = False
+                        return rr
+                elif event.key() == QtCore.Qt.Key_Return and self.searchInitialized:
+                    self.filterTable()
+                    return rr
+                elif len(self.searchText) > 2:
+                    self.searchText += event.text()
+                    self.filterTable()
+                else:
+                    self.searchText += event.text()
+
+                logging.debug(self.searchText)
 		return rr
 		
 
