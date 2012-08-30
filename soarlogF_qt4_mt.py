@@ -331,7 +331,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
                 self.searchInitialized = False
 		self.ui.tableDB.setModel(self.tm)
 		self.ui.tableDB.keyPressEvent = self.handleKeyEvent
-		self.ui.tableDB.setSelectionMode(self.ui.tableDB.SingleSelection)
+		#self.ui.tableDB.setSelectionMode(self.ui.tableDB.SingleSelection)
                 hh = self.ui.tableDB.horizontalHeader()
                 hh.setStretchLastSection(True)
 
@@ -1335,14 +1335,22 @@ Time Spent:
 #
 
 	def commitComment(self):
-		text = self.ui.lineFrameComment.text()
-		index = self.ui.tableDB.model().index(self.currentSelectedItem.row(),self.CommentColumn)
 
-                #self.currentSelectedItem.child(self.currentSelectedItem.row(),self.CommentColumn)#self.model.createIndex(self.currentSelectedItem.row(),self.CommentColumn)
-                #commentIndex = 
-		self.ui.tableDB.model().setData(index,text)
-#		self.model.setData(index,text)
-#		self.model.submitAll()
+		text = self.ui.lineFrameComment.text()
+                indexes = self.ui.tableDB.selectedIndexes()
+
+		if len(indexes) > 0:
+
+                    workIndexes = [] 
+                    workRow = []
+
+                    for i in range(len(indexes)):
+                        if indexes[i].row() not in workRow:
+                            workRow.append(indexes[i].row())
+                            workIndexes.append(self.ui.tableDB.model().sourceModel().createIndex(indexes[i].row(),self.CommentColumn))
+
+                    for i in range(len(workIndexes)):
+                        self.ui.tableDB.model().sourceModel().setData(workIndexes[i],text,QtCore.Qt.EditRole)
 
 #
 #
