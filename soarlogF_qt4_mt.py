@@ -15,6 +15,7 @@ Ribeiro, T. 2011.
 
 #from soarlogF_GUI import *
 from soarlogF_TableModel import *
+from mylineedit import *
 import sys,os,shutil
 
 import thread
@@ -171,7 +172,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 	
             index = self.ui.tableDB.model().rowCount()
 		
-            self.emmitFileEventLock.acquire()
+            #self.emmitFileEventLock.acquire()
             
             try:
                 test = self.ui.tableDB.model().sourceModel().insertRow(index) #,self.tm.createIndex(index,-1))
@@ -180,7 +181,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
                 for i in range(len( infos ) ):
                     #logging.debug(infos[i])
                     iidx = self.ui.tableDB.model().sourceModel().createIndex(index,i)
-                    check[i] = self.ui.tableDB.model().sourceModel().setData(iidx,infos[i],None)
+                    check[i] = self.ui.tableDB.model().sourceModel().setData(iidx,infos[i],QtCore.Qt.DisplayRole)
                     #check[i] = self.ui.tableDB.model().setData(SOLogTableModel.createIndex(index,i,self.tm) ,infos[i])
                 
 
@@ -189,8 +190,8 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
                 logging.debug('Exception in updateTable')
                 logging.debug(sys.exc_info()[1])
                 pass
-            finally:
-                self.emmitFileEventLock.release()
+            #finally:
+            #    self.emmitFileEventLock.release()
 #
 #
 ################################################################################################
@@ -326,7 +327,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
                 self.tm = QtGui.QSortFilterProxyModel(self)
                 self.tm.setSourceModel(tm)
                 self.searchText = ''
-                self.searchColumn = -1
+                self.searchColumn = self.FilenameColumn # Default is filename
                 self.searchInitialized = False
 		self.ui.tableDB.setModel(self.tm)
 		self.ui.tableDB.keyPressEvent = self.handleKeyEvent
@@ -372,7 +373,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 		self.connect(self.ui.actionHideCB, QtCore.SIGNAL('triggered()'),self.HideCB)
 		self.connect(self.ui.actionEnable_Disable_Table_Edit, QtCore.SIGNAL('triggered()'),self.enableDisableTableEdit)
 
-		self.connect(self.ui.addFrameComment, QtCore.SIGNAL('clicked()'),self.commitComment)
+		#self.connect(self.ui.addFrameComment, QtCore.SIGNAL('clicked()'),self.commitComment)
 		
 		self.connect(self.ui.addNoteButton, QtCore.SIGNAL('clicked()'),self.askForCommentLinePID)
 		
@@ -383,7 +384,10 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 		self.connect(self.ui.tableDB,QtCore.SIGNAL("doubleClicked(const QModelIndex&)"), self.displaySelected)
 		#self.connect(self.ui.tableDB,QtCore.SIGNAL("columnResized()"), self.saveColumnWidth)
 		
-		self.connect(self.ui.lineFrameComment,QtCore.SIGNAL('returnPressed()'),self.commitComment)
+                self.connect(self.ui.lineFrameComment,QtCore.SIGNAL('searchPressed()'),self.setSearchCommentLine)
+
+                self.initializeCommentLine()
+
 					 
 		header = databaseF.frame_infos.tvDB
 
@@ -1446,7 +1450,20 @@ Time Spent:
         def filterTable(self):
             
             if self.searchInitialized:
-                self.ui.tableDB.model().setFilterRegExp(QtCore.QRegExp(self.searchText, QtCore.Qt.CaseInsensitive,QtCore.QRegExp.Wildcard))
+                logging.debug(str(self.ui.lineFrameComment.text()))
+                self.ui.tableDB.model().setFilterRegExp(QtCore.QRegExp(str(self.ui.lineFrameComment.text()), QtCore.Qt.CaseInsensitive,QtCore.QRegExp.Wildcard))
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+        def clearFilterTable(self):
+            
+            if self.searchInitialized:
+                self.ui.lineFrameComment.setText('')
+                self.ui.tableDB.model().setFilterRegExp(QtCore.QRegExp('', QtCore.Qt.CaseInsensitive,QtCore.QRegExp.Wildcard))
 #
 #
 ################################################################################################
@@ -1475,44 +1492,110 @@ Time Spent:
                                     pass
                                 return rr
 					
-			
 		if event.key() == QtCore.Qt.Key_Down or event.key() == QtCore.Qt.Key_Up or event.key() == QtCore.Qt.Key_Right or event.key() == QtCore.Qt.Key_Left:
 			
 			self.tableItemSelected(self.ui.tableDB.selectedIndexes()[0])
-                elif event.isAutoRepeat():
-                    return rr
-                elif event.key() == QtCore.Qt.Key_Escape:
-                    logging.debug('Escape pressed')
-                    self.searchText = ''
-                    self.filterTable()
-                    self.ui.tableDB.model().invalidateFilter()
-                    self.searchInitialized = False
-                    return rr
-                elif not self.searchInitialized:
-                    self.searchInitialized = True
-                    itemselection = self.ui.tableDB.selectedIndexes()
-                    self.searchText += event.text()
-                    if len(itemselection) > 0:
-                        if itemselection[0].column() not in self.ui.tableDB.model().sourceModel().EditableColumns:
-                            self.ui.tableDB.model().setFilterKeyColumn(itemselection[0].column())
-                            self.lastSearchColumn = itemselection[0].column()
-                    elif self.lastSearchColumn >= 0 and self.lastSearchColumn not in self.ui.tableDB.model().EditableColumns:
-                        self.ui.tableView.model().setFilterKeyColumn(self.lastSearchColumn)
-                    else:
-                        self.searchInitialized = False
-                        return rr
-                elif event.key() == QtCore.Qt.Key_Return and self.searchInitialized:
-                    self.filterTable()
-                    return rr
-                elif len(self.searchText) > 2:
-                    self.searchText += event.text()
-                    self.filterTable()
-                else:
-                    self.searchText += event.text()
+                elif event.modifiers() == QtCore.Qt.ControlModifier and event.key() == QtCore.Qt.Key_F:
+                    self.setSearchCommentLine()
+                elif event.key() == QtCore.Qt.Key_Escape and self.searchInitialized:
+                    self.clearFilterTable()
 
-                logging.debug(self.searchText)
+#                elif event.isAutoRepeat():
+#                    return rr
+#                elif event.key() == QtCore.Qt.Key_Escape:
+#                    logging.debug('Escape pressed')
+#                    self.searchText = ''
+#                    self.filterTable()
+#                    self.ui.tableDB.model().invalidateFilter()
+#                    self.searchInitialized = False
+#                    return rr
+#                elif not self.searchInitialized:
+#                    self.searchInitialized = True
+#                    itemselection = self.ui.tableDB.selectedIndexes()
+#                    self.searchText += event.text()
+#                    if len(itemselection) > 0:
+#                        if itemselection[0].column() not in self.ui.tableDB.model().sourceModel().EditableColumns:
+#                            self.ui.tableDB.model().setFilterKeyColumn(itemselection[0].column())
+#                            self.lastSearchColumn = itemselection[0].column()
+#                    elif self.lastSearchColumn >= 0 and self.lastSearchColumn not in self.ui.tableDB.model().EditableColumns:
+#                        self.ui.tableView.model().setFilterKeyColumn(self.lastSearchColumn)
+#                    else:
+#                        self.searchInitialized = False
+#                        return rr
+#                elif event.key() == QtCore.Qt.Key_Return and self.searchInitialized:
+#                    self.filterTable()
+#                    return rr
+#                elif len(self.searchText) > 2:
+#                    self.searchText += event.text()
+#                    self.filterTable()
+#                else:
+#                    self.searchText += event.text()
+#
+#                logging.debug(self.searchText)
 		return rr
 		
+                
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+        def setSearchCommentLine(self):
+            if not self.searchInitialized:
+                self.initializeSearch()
+            else:
+                self.initializeCommentLine()
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+
+        def initializeSearch(self):
+            itemselection = self.ui.tableDB.selectedIndexes()
+            
+            if len(itemselection) > 0:
+                self.ui.tableDB.model().setFilterKeyColumn(itemselection[0].column())
+                self.searchColumn = itemselection[0].column()
+            elif self.searchColumn >= 0:
+                self.ui.tableDB.model().setFilterKeyColumn(self.searchColumn)
+            else:
+                self.searchInitialized = False
+                self.ui.lineFrameComment.text('**[WARNING]: Select a table to search.**')
+                return -1
+
+            self.ui.labeLineFrameComment.setText('Search:')
+            self.searchInitialized = True
+            self.disconnect(self.ui.lineFrameComment,QtCore.SIGNAL('returnPressed()'),self.commitComment)
+            self.disconnect(self.ui.lineFrameComment,QtCore.SIGNAL('editingFinished()'),self.commitComment)
+            self.connect(self.ui.lineFrameComment,QtCore.SIGNAL('returnPressed()'),self.filterTable)
+            self.connect(self.ui.lineFrameComment,QtCore.SIGNAL('editingFinished()'),self.filterTable)
+            self.connect(self.ui.lineFrameComment,QtCore.SIGNAL('escapePressed()'),self.clearFilterTable)
+
+
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+
+        def initializeCommentLine(self):
+            if self.searchInitialized:
+                self.clearFilterTable()
+            self.ui.labeLineFrameComment.setText('Note:')
+            self.searchInitialized = False
+            self.disconnect(self.ui.lineFrameComment,QtCore.SIGNAL('returnPressed()'),self.filterTable)
+            self.disconnect(self.ui.lineFrameComment,QtCore.SIGNAL('editingFinished()'),self.filterTable)
+            self.disconnect(self.ui.lineFrameComment,QtCore.SIGNAL('escapePressed()'),self.clearFilterTable)
+            self.connect(self.ui.lineFrameComment,QtCore.SIGNAL('returnPressed()'),self.commitComment)
+            self.connect(self.ui.lineFrameComment,QtCore.SIGNAL('editingFinished()'),self.commitComment)
+
 
 #
 #

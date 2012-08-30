@@ -21,33 +21,23 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout_2">
-    <item row="2" column="0">
-     <layout class="QVBoxLayout" name="verticalLayout">
+    <item row="1" column="0">
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
       <item>
-       <widget class="QWidget" name="coomentBarWidget" native="true">
-        <layout class="QVBoxLayout" name="verticalLayout_2">
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_2">
-           <item>
-            <widget class="QLineEdit" name="lineFrameComment"/>
-           </item>
-           <item>
-            <widget class="QPushButton" name="addFrameComment">
-             <property name="text">
-              <string>OK</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="addNoteButton">
-             <property name="text">
-              <string>Note</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-        </layout>
+       <widget class="QLabel" name="labeLineFrameComment">
+        <property name="text">
+         <string>Note:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="MyLineEdit" name="lineFrameComment"/>
+      </item>
+      <item>
+       <widget class="QPushButton" name="addNoteButton">
+        <property name="text">
+         <string>Add Note</string>
+        </property>
        </widget>
       </item>
      </layout>
@@ -221,6 +211,13 @@
    </property>
   </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>MyLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>mylineedit</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

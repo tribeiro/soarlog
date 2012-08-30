@@ -3,6 +3,7 @@ from PyQt4 import QtCore,QtGui,uic,QtSql
 import operator
 import sys,logging
 
+
 class myQSqlTableModel(QtSql.QSqlTableModel):
 
 	def __init__(self,parent,db):
