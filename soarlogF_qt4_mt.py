@@ -466,9 +466,9 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 	def enableDisableTableEdit(self):
 		
 		if self.actionEnable_Disable_Table_Edit.isChecked():
-			self.ui.tableDB.model().changeEditableColumns(self.ExtraEditableColumns)
+			self.ui.tableDB.model().sourceModel().changeEditableColumns(self.ExtraEditableColumns)
 		else:
-			self.ui.tableDB.model().changeEditableColumns([self.CommentColumn])
+			self.ui.tableDB.model().sourceModel().changeEditableColumns([self.CommentColumn])
 
                 #
                 # Reset search engine when user modify editable role.
