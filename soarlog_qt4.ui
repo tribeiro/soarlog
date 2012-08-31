@@ -97,9 +97,16 @@
     <addaction name="actionHideCB"/>
     <addaction name="actionCalibration_Helper"/>
    </widget>
+   <widget class="QMenu" name="menuProcess">
+    <property name="title">
+     <string>Process</string>
+    </property>
+    <addaction name="actionDT"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuView"/>
+   <addaction name="menuProcess"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionGot_to_last_frame">
@@ -208,6 +215,11 @@
   <action name="actionCalibration_Helper">
    <property name="text">
     <string>Calibration Helper</string>
+   </property>
+  </action>
+  <action name="actionDT">
+   <property name="text">
+    <string>Data Transfer</string>
    </property>
   </action>
  </widget>

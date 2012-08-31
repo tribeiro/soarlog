@@ -30,6 +30,7 @@ from soarlogF_watch import __FALSEWATCHER__
 
 from dbComF import *
 from soarlogF_DataQuality import *
+from soarlogF_DataTransfer import *
 
 import time
 
@@ -61,7 +62,7 @@ def LongestCommonSubstring(S1, S2):
     return S1[x_longest-longest: x_longest]
 
 		
-class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
+class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 
 
 	def __init__(self,*args):
@@ -369,6 +370,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality):
 
 		self.connect(self.ui.actionAddComment, QtCore.SIGNAL('triggered()'),self.askForCommentLinePID)
 		self.connect(self.ui.actionDQ, QtCore.SIGNAL('triggered()'),self.startDataQuality)
+		self.connect(self.ui.actionDT, QtCore.SIGNAL('triggered()'),self.startDataTransfer)
 		self.connect(self.ui.actionWI, QtCore.SIGNAL('triggered()'),self.promptWeatherComment)
 		self.connect(self.ui.actionHideCB, QtCore.SIGNAL('triggered()'),self.HideCB)
 		self.connect(self.ui.actionEnable_Disable_Table_Edit, QtCore.SIGNAL('triggered()'),self.enableDisableTableEdit)
