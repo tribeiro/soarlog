@@ -102,8 +102,15 @@ class DataTransfer():
         try:
             yyyy,mm,dd = self.dir.split('/')[-1].split('-')
             if self.dataTransfer_ui.select_instrument.currentText() == 'SPARTAN':
-                dd = int(dd)+1
+                obsdate = datetime.date(int(yyyy),int(mm),int(dd)) + datetime.timedelta(days=1)
+                yyyy = obsdate.year
+                mm = obsdate.month
+                dd = obsdate.day
+            yyyy = '{0:04d}'.format(int(yyyy)) 
+            mm = '{0:02d}'.format(int(mm))
+            dd = '{0:02d}'.format(int(dd))
         except:
+            logging.debug(sys.exc_info()[1])
             yyyy = 'yyyy'
             mm = 'mm'
             dd = 'dd'
