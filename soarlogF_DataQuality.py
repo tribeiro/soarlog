@@ -13,6 +13,7 @@ import os,shutil
 import numpy as np
 import Queue,threading,logging
 import time
+import bz2
 
 uipath = os.path.dirname(__file__)
 
@@ -910,8 +911,8 @@ filenames) unless you REALLY know what you are doing.
 		for i in range(len(indexes)):
 			idx = self.ui.tableDB.model().index(indexes[i].row(),self.FilenameColumn)
 			fname = self.ui.tableDB.model().data(idx)
-			if type(fname) == type(QtCore.QVariant):
-				fname = fname.toString()
+			if type(fname) == QtCore.QVariant:
+				fname = str(fname.toString())
         		query = session_CID.query(self.Obj_CID.id,self.Obj_CID.INSTRUME,self.Obj_CID.PATH).filter(self.Obj_CID.FILENAME == fname)[:]
         		qInst = session_CID.query(self.Obj_INSTRUMENTS[query[0].INSTRUME].id).filter(self.Obj_INSTRUMENTS[query[0].INSTRUME].FILENAME.like('%'+fname))[:]
         		vals = {'id_tvDB':query[0].id,
@@ -1244,33 +1245,58 @@ FROM FILE: {fimg}
 			logging.debug( 'Copying {0} -> {1} ...'.format(*record))
 
 			query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME == os.path.basename(record[0]))[:]
-			queryInstrume = session_CID.query(self.Obj_INSTRUMENTS[query[0].INSTRUME]).filter(self.Obj_INSTRUMENTS[query[0].INSTRUME].FILENAME == record[0])[:]			
-			queryFLDQ = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.FILENAME == query[0].FILENAME)[:]
+			if len(query) > 0:
+				queryInstrume = session_CID.query(self.Obj_INSTRUMENTS[query[0].INSTRUME]).filter(self.Obj_INSTRUMENTS[query[0].INSTRUME].FILENAME == record[0])[:]
+				queryFLDQ = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.FILENAME == query[0].FILENAME)[:]
+			else:
+				queryInstrume = []
+				queryFLDQ = []
 			
-			if len(queryInstrume) == 1 and os.path.dirname(record[0]) != record[1]:
+			if len(queryInstrume) == 1 and os.path.dirname(record[0]) != record[1] and len(queryFLDQ) > 0:
 
-				shutil.copy2(*record)
+				try:
+					shutil.copy2(*record)
 
-				query[0].PATH = record[1]
-				queryInstrume[0].FILENAME = os.path.join(record[1],query[0].FILENAME)
-
-				if query[0].INSTRUME == 'Goodman Spectrograph':
-					_image_ = good_class.Single(os.path.join(record[1],query[0].FILENAME))
-					gname = grenameF.Rename(_image_,True)
-					t_index = self.ui.tableDB.model().createIndex(query[0].id-1,self.FilenameColumn)
-					query[0].FILENAME = os.path.basename(gname)
-					queryInstrume[0].FILENAME = gname
-					queryFLDQ[0].FILENAME = os.path.basename(gname)
+					query[0].PATH = record[1]
+					queryInstrume[0].FILENAME = os.path.join(record[1],query[0].FILENAME)
+					inFile =  os.path.join(record[1],query[0].FILENAME)
+					t_index = self.ui.tableDB.model().sourceModel().createIndex(query[0].id-1,self.FilenameColumn)
 					
-					self.ui.tableDB.model().setData(t_index,os.path.basename(gname),QtCore.Qt.DisplayRole)
-				if query[0].INSTRUME == 'SOI':
-					logging.debug('SOIFIXHEADER: {0}'.format(query[0].FILENAME))
-					grenameF.i.soifixheader(input=os.path.join(record[1],query[0].FILENAME))
+					if query[0].INSTRUME == 'Goodman Spectrograph' and str(query[0].FILENAME).startswith('0'):
+						_image_ = good_class.Single(os.path.join(record[1],query[0].FILENAME))
+						gname = grenameF.Rename(_image_,True)
+
+						query[0].FILENAME = os.path.basename(gname)
+						queryInstrume[0].FILENAME = gname
+						queryFLDQ[0].FILENAME = os.path.basename(gname)
+						os.remove(inFile)
+						inFile = gname
+						self.ui.tableDB.model().sourceModel().setData(t_index,os.path.basename(gname),QtCore.Qt.DisplayRole)
+					if query[0].INSTRUME == 'SOI':
+						logging.debug('SOIFIXHEADER: {0}'.format(query[0].FILENAME))
+						grenameF.i.soifixheader(input=os.path.join(record[1],query[0].FILENAME))
 					
-				session_CID.commit()
+					#session_CID.commit()
+				
+					file(inFile+".bz2", "wb").write(bz2.compress(file(inFile, "rb").read()))
+					os.remove(inFile)
+					inFile = inFile+'.bz2'
+					
+					self.ui.tableDB.model().sourceModel().setData(t_index,os.path.basename(inFile),QtCore.Qt.DisplayRole)
+					logging.debug(inFile)
+					
+					query[0].FILENAME = os.path.basename(inFile)
+					queryInstrume[0].FILENAME = inFile
+										
+
+				except:
+					logging.debug('Exception {0}'.format(sys.exc_info()[1]))
+					pass
+									
 
 			progress+=1
 			self.emit(QtCore.SIGNAL("copyProgress(int)"),progress)    
+			session_CID.commit()
 
 			if self.cthread_stop.isSet():
 				self.emit(QtCore.SIGNAL("copyProgress(int)"),0)    
@@ -1516,7 +1542,7 @@ Warning: If you are doing filename replacement do not delete any '?' in the user
 				newVal = str(self.dataQuality_ui.lineEdit_ReplaceBy.text())
 				oldVal = self.ui.tableDB.model().data(workCol[i])
 				for j in range(len(self.matchVals)):
-					idx = newVal.find('?')
+					idx = str(newVal).find('?')
 					if idx >= 0:
 						newVal = newVal[:idx] + self.matchVals[j][i] + newVal[idx+1:]
 				self.CommitDBTable(workCol[i],newVal)
@@ -1591,7 +1617,7 @@ Warning: If you are doing filename replacement do not delete any '?' in the user
 															  , filename))
 			fp = open(filename,'w')
 			for i in range(len(workCol)):
-				fp.write('{0}\n'.format(self.ui.tableDB.model().data(workCol[i])))
+				fp.write('{0}\n'.format(str(self.ui.tableDB.model().data(workCol[i]).toString() )))
 			fp.close()
 
 		else:
@@ -1621,10 +1647,10 @@ Warning: If you are doing filename replacement do not delete any '?' in the user
 			for i in range(len(q_repo)):
 				tm_h = q_repo[i].TIMESPENT
 				tm_m = int( (tm_h - np.floor(tm_h))*60.)
-				otime = '{hh}:{mm}'.format(hh=int(np.floor(tm_h)),mm=tm_m)
+				otime = '{hh:02d}:{mm:02d}'.format(hh=int(np.floor(tm_h)),mm=tm_m)
 				tm_h = q_repo[i].TIMEVALID
 				tm_m = int( (tm_h - np.floor(tm_h))*60.)
-				vtime = '{hh}:{mm}'.format(hh=int(np.floor(tm_h)),mm=tm_m)
+				vtime = '{hh:02d}:{mm:02d}'.format(hh=int(np.floor(tm_h)),mm=tm_m)
 				fp.write('''   PROJECT: {PID}
         PI: {PI}
 INSTRUMENT: {INST}

@@ -98,7 +98,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 		self.dataCalib = '/data/data_calib/2012B/SO2012B-%s.txt'
 		self.dataStorage = '/data/data_{SID}/{PID}'
 		self.dbname = 'soarlog_{0}.db'
-		self.masterDBName = '.soarMaster.db' # master database.
+		self.masterDBName = '/data/database/soarlog_database.db' # master database.
 		self.CommentColumn = 16
 		self.FilenameColumn = 12
 		self.ImtypeColumn = 11
@@ -732,7 +732,9 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 
 		if not __FALSEWATCHER__:
 			self.notifier.stop()
-				
+
+                self.STATUS = False
+                
 		if len(self.OrderInfoDict.keys()) > 0:
 			np.savetxt(os.path.join(self._CFGFilePath_,self._CFGFiles_['OrderInfo']),zip(self.OrderInfoDict.keys(),self.OrderInfoDict.values()),fmt='%i %i')		
 
