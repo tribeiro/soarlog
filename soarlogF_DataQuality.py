@@ -373,17 +373,25 @@ filenames) unless you REALLY know what you are doing.
 			logging.debug('Obs Time: {0}\nValid Time: {1}'.format(otime,vtime))
 			if otime > 0.:
 				self.dataQuality_ui.obsTime.setMinimumTime(QtCore.QTime(0.,0.))
-				self.dataQuality_ui.validTime.setMaximumTime(QtCore.QTime(23.,0.))
+				self.dataQuality_ui.obsTime.setMaximumTime(QtCore.QTime(23.,0.))
 				self.dataQuality_ui.obsTime.setTime(QtCore.QTime( int(otime) , int( np.ceil(60.*(otime-np.floor(otime)) ) ) ))
+				self.dataQuality_ui.validTime.setMinimumTime(QtCore.QTime(0.,0.))
+				self.dataQuality_ui.validTime.setMaximumTime(QtCore.QTime(23.,0.))
 				self.dataQuality_ui.validTime.setTime(QtCore.QTime( int(vtime) , int( np.ceil(60.*(vtime-np.floor(vtime)) ) ) ) )
 			else:
 				self.dataQuality_ui.obsTime.setMinimumTime(QtCore.QTime(0.,0.))
-				self.dataQuality_ui.validTime.setMaximumTime(QtCore.QTime(23.,0.))
+				self.dataQuality_ui.obsTime.setMaximumTime(QtCore.QTime(23.,0.))
 				self.dataQuality_ui.obsTime.setTime(QtCore.QTime(*self.calcTime(str(self.dataQuality_ui.comboBox.currentText()))))
+				self.dataQuality_ui.validTime.setMinimumTime(QtCore.QTime(0.,0.))
+				self.dataQuality_ui.validTime.setMaximumTime(QtCore.QTime(23.,0.))
 				self.dataQuality_ui.validTime.setTime(QtCore.QTime(*self.calcTime(str(self.dataQuality_ui.comboBox.currentText()))))
 
 		else:
+			self.dataQuality_ui.obsTime.setMinimumTime(QtCore.QTime(0.,0.))
+			self.dataQuality_ui.obsTime.setMaximumTime(QtCore.QTime(23.,0.))
 			self.dataQuality_ui.obsTime.setTime(QtCore.QTime(*self.calcTime(str(self.dataQuality_ui.comboBox.currentText()))))
+			self.dataQuality_ui.validTime.setMinimumTime(QtCore.QTime(0.,0.))
+			self.dataQuality_ui.validTime.setMaximumTime(QtCore.QTime(23.,0.))
 			self.dataQuality_ui.validTime.setTime(QtCore.QTime(*self.calcTime(str(self.dataQuality_ui.comboBox.currentText()))))
 
 		self.dataQuality_ui.comboBox_Object.clear()
