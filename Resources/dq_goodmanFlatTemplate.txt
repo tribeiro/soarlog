@@ -1,0 +1,6 @@
+Flat:
+	{SP_CONF} - {BIN} {RONMODE} - {SLIT}: [{FLAT_STAT}]
+		  Number:  ({NTAKEN}/{NREQUEST})
+		  Counts:  Red  = {CONTS_RED}
+		  	   Mid  = {CONTS_MID}
+			   Blue = {CONTS_BLU}

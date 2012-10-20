@@ -1,0 +1,7 @@
+- {PID} ({PI})
+
+  LOG: [{LOG_STAT}]
+  Calibrations:
+  {CAL_STAT}
+  Science:
+  {SCI_STAT}

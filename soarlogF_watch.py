@@ -1,9 +1,10 @@
 
 import databaseF
-import os
+import sys,os
 from sqlalchemy import create_engine, Column, Table, MetaData, ForeignKey, Integer
 from sqlalchemy.orm import mapper,sessionmaker
 import Queue
+import logging
 
 try:
 
@@ -52,6 +53,7 @@ try:
 					fname = fname[1:findex]+'.fits'
 			
 			except ValueError:
+				logging.debug(sys.exc_info()[1])
 				 # File is not a fits, stop process
 				return -1
 
@@ -81,8 +83,8 @@ try:
 			#self.session.add(entry)
 			self.fileQueue.put(os.path.join(path,fname))
 			
-			if self.fileQueue.qsize() < 2:
-				self.target_event()
+			#if self.fileQueue.qsize() < 2:
+			self.target_event()
 			
 
 			self.Qsize = self.fileQueue.qsize()

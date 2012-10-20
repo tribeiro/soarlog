@@ -2,7 +2,7 @@
 #import sqlachemy
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship, backref
-import frame_infos
+import frame_infos,pyfits
 
 
 '''
@@ -14,6 +14,30 @@ information particular to specific instruments such as filters for imaging camer
 for spectrographs. 
 
 '''
+
+##################################################################################################################################
+#
+# Baseclass with common infos
+#
+class FrameUI(object):
+	'''
+		This class provides a standard UI for interfacing a fits file with a database entry with 
+		sqlalchemy. The user provide a fits file to be used as template and the class takes care
+		of everything else. The class assumes the instrument name is in the header parameter 
+		"INTRUME". If this is not the case, the user may provide the correct parameter via 
+		instHDR argument. 
+	'''
+	
+	def __init__(self,**template):
+		
+		#hdr = pyfits.getheader()
+		
+		for info in template.keys():
+			self.__dict__[info] = template[info]
+#
+# End of class
+#
+##################################################################################################################################		
 
 ##################################################################################################################################
 #

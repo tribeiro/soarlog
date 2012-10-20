@@ -13,8 +13,11 @@ application for in-site automated production of observations log.
 Ribeiro, T. 2011.
 '''
 
-from sqlalchemy import create_engine, Column, Table, MetaData, ForeignKey, Integer
+import pyfits
+
+from sqlalchemy import create_engine, Column, Table, MetaData, ForeignKey, Integer, String
 from sqlalchemy import distinct
+from sqlalchemy.ext.declarative import declarative_base
 
 from sqlalchemy.orm import mapper,sessionmaker
 
@@ -22,12 +25,18 @@ import databaseF
 
 import numpy as np
 
-import os
+import os,sys,shutil
 
 import Queue
 
 #import thread,time
-from threading import Thread
+#from threading import Thread
+import threading 
+import logging
+
+logging.basicConfig(level=logging.DEBUG,
+                    format='[%(levelname)s] (%(threadName)-10s) %(message)s',
+                    )
 
 def function():
 	return -1
@@ -35,6 +44,9 @@ def function():
 
 #class soarDB(threading.Thread):
 class soarDB():
+
+	dbname = 'soarlog.db'
+	masterDBName = '.soarMaster.db'
 
 ################################################################################################
 #
@@ -45,14 +57,7 @@ class soarDB():
 		'''
 			Set up database.
 		'''
-	
-	
-#		threading.Thread.__init__(self)
-		self.Queue = None
-#		self.wake = threading.Event()
 		
-#		self.local = threading.local()
-			
 		#####################################################
 		# Setup database
 		#
@@ -61,142 +66,199 @@ class soarDB():
 		#
 		
 		self.Queue = queue
-
-
-		self.engine = create_engine('sqlite:///soarlog.db' )
+		self.initThreadLock = threading.RLock()
+		
+		self.engine = create_engine('sqlite:///{0}'.format(self.dbname) )
 
 		self.metadata = MetaData()
-	
-		#
-		# Creating a mapper for CID
-		#
-		file_table_CID = Table('SoarLogDB',self.metadata,Column('id', Integer, primary_key=True))
-	
-		for keys in databaseF.frame_infos.CID.keys():
 		
-			file_table_CID.append_column(databaseF.frame_infos.CID[keys])
+		self.Base = declarative_base()
 	
-		#self.metadata.create_all(self.engine)	
-		#file_table.drop(engine)
-
 		#
-		# Creating a mapper for OSIRIS information DB
+		# Creating a mapper for tvDB
 		#
+		file_table_TVDB = Table('SoarLogTVDB',self.metadata,Column('id', Integer, primary_key=True))
 	
-		file_table_OSIRIS = Table('OSIRIS_DB',self.metadata,Column('id', Integer, primary_key=True))
-	
-		for keys in databaseF.frame_infos.OSIRIS_ID.keys():
+		for keys in databaseF.frame_infos.tvDB.keys():
 		
-			file_table_OSIRIS.append_column(databaseF.frame_infos.OSIRIS_ID[keys])
+			file_table_TVDB.append_column(databaseF.frame_infos.tvDB[keys])
 
-		#
-		# Creating a mapper for SPARTAN information DB
-		#
+		class FrameUI(object):
+			def __init__(self,**template):
+				for info in template.keys():
+					self.__dict__[info] = template[info]
+			def __getitem__(self,index):
+				return self.__dict__[index]
+#				for foreignRelation in databaseF.frame_infos.instTemplates.keys():
+#					self.__dict__[foreignRelation.replace(' ','')] = databaseF.relationship(	foreignRelation, uselist=False,
+#																								backref='SoarLogTVDB')
+#				dqId = Column(Integer, ForeignKey('dataQualityDB.id'))
+#				dataQualityDB = relationship("dataQualityDB")
 	
-		file_table_SPARTAN = Table('SPARTAN_DB',self.metadata,Column('id', Integer, primary_key=True))
-	
-		for keys in databaseF.frame_infos.SPARTAN_ID.keys():
+		self.Obj_CID = type(FrameUI(**databaseF.frame_infos.tvDB))
+
+		mapper(	self.Obj_CID,file_table_TVDB)#, properties=relation)	
 		
-			file_table_SPARTAN.append_column(databaseF.frame_infos.SPARTAN_ID[keys])
-
-		#
-		# Creating a mapper for GOODMAN information DB
-		#
-
-		file_table_GOODMAN = Table('GOODMAN_DB',self.metadata,Column('id', Integer, primary_key=True))
-	
-		for keys in databaseF.frame_infos.GOODMAN_ID.keys():
+#				properties={'addresses' : relationship(Address, backref='user', order_by=address.c.id)})
 		
-			file_table_GOODMAN.append_column(databaseF.frame_infos.GOODMAN_ID[keys])
-
-
 		#
-		# Creating a mapper for SOI information DB
+		# Creating a mapper for weather comment
 		#
-
-		file_table_SOI = Table('SOI_DB',self.metadata,Column('id', Integer, primary_key=True))
+		self.file_table_WC = Table('weatherComment',self.metadata,Column('id', Integer, primary_key=True))
 	
-		for keys in databaseF.frame_infos.SOI_ID.keys():
+		self.file_table_WC.append_column(Column('Comment',String))
+	
+		wc_dict = {'Comment' : ''}
+
+		class FrameWC(object):
+			def __init__(self,**template):
+				for info in template.keys():
+					self.__dict__[info] = template[info]
 		
-			file_table_SOI.append_column(databaseF.frame_infos.SOI_ID[keys])
+		self.Obj_WC = type(FrameWC(**wc_dict))
 
+		self.Obj_WC.__name__ = self.Obj_WC.__name__ + '_Comment'
+#		wc_obj = type(self.Obj_WC)
+		mapper(self.Obj_WC,self.file_table_WC)
 
 		#
-		# Creating a mapper for SBIG information DB
+		# Creating a mapper for supported instruments
 		#
-
-		file_table_SBIG = Table('SBIG_DB',self.metadata,Column('id', Integer, primary_key=True))
-	
-		for keys in databaseF.frame_infos.SBIG_ID.keys():
 		
-			file_table_SBIG.append_column(databaseF.frame_infos.SBIG_ID[keys])
+		self.file_table_INSTRUMENTS = {}
+		self.Obj_INSTRUMENTS = {}
+		relation = {}
+		
+		for _inst in databaseF.frame_infos.instTemplates.keys():
+	
+			self.file_table_INSTRUMENTS[_inst] = Table(	_inst.replace(' ',''),self.metadata,
+														Column('id', Integer, primary_key=True),
+														Column('frame_id',Integer, ForeignKey('SoarLogTVDB.id', onupdate="CASCADE", ondelete="CASCADE")))
+			
+			instTemplate = pyfits.getheader(databaseF.frame_infos.instTemplates[_inst])
+			
+			self.file_table_INSTRUMENTS[_inst].append_column(Column('FILENAME',String))
+							
+			for keys in instTemplate.keys():
+		
+				self.file_table_INSTRUMENTS[_inst].append_column(Column(keys,String))
+
+			class FrameINST(object):
+				def __init__(self,**template):
+					for info in template.keys():
+						self.__dict__[info] = template[info]
+						#logging.debug('{0} = {1}'.format(info,template[info]))
+					frame_id = Column('frame_id',Integer, ForeignKey('SoarLogTVDB.id'))
+
+			self.Obj_INSTRUMENTS[_inst] = type(FrameINST(**instTemplate))
+			
+			#'addresses' : relationship(Address, backref='user', order_by=address.c.id)
+
+			mapper(	self.Obj_INSTRUMENTS[_inst],self.file_table_INSTRUMENTS[_inst]) 
+
+		#
+		# Creating a mapper for Data Quality
+		#
+
+		self.file_table_DQ = Table('SoarDataQuality_v1',self.metadata,Column('id', Integer, primary_key=True))
+		
+		for keys in databaseF.frame_infos.dataQualityDB.keys():
+			#print keys
+			self.file_table_DQ.append_column(databaseF.frame_infos.dataQualityDB[keys])
+
+		class dataQualityUI(object):
+			def __init__(self,**template):
+				for info in template.keys():
+					self.__dict__[info] = template[info]
+
+		self.Obj_DQ = type(dataQualityUI(**databaseF.frame_infos.dataQualityDB))
+  
+		self.file_table_frameDQ = Table('SoarFrameDataQuality',self.metadata,Column('id', Integer, primary_key=True))
+		
+		for keys in databaseF.frame_infos.frameDataQualityDB.keys():
+			#print keys
+			self.file_table_frameDQ.append_column(databaseF.frame_infos.frameDataQualityDB[keys])
+
+		class frameDataQualityUI(object):
+			def __init__(self,**template):
+				for info in template.keys():
+					self.__dict__[info] = template[info]
+
+	
+		self.Obj_FDQ = type(frameDataQualityUI(**databaseF.frame_infos.frameDataQualityDB))
+
+		self.file_table_frameListDQ = Table('SoarFrameListDataQuality_v1',self.metadata,Column('id', Integer, primary_key=True))
+		
+		for keys in databaseF.frame_infos.frameListDataQualityDB.keys():
+			#print keys
+			self.file_table_frameListDQ.append_column(databaseF.frame_infos.frameListDataQualityDB[keys])
+
+		class frameListDataQualityUI(object):
+			def __init__(self,**template):
+				for info in template.keys():
+					self.__dict__[info] = template[info]
+
+	
+		self.Obj_FLDQ = type(frameListDataQualityUI(**databaseF.frame_infos.frameListDataQualityDB))
+
+		self.file_table_CDQ = Table('SoarConfigDataQualityDB',self.metadata,Column('id', Integer, primary_key=True))
+		
+		for keys in databaseF.frame_infos.configDataQualityDB.keys():
+			#print keys
+			self.file_table_CDQ.append_column(databaseF.frame_infos.configDataQualityDB[keys])
 
 
-		self.Obj_CID = type(databaseF.CommonFrame(**databaseF.frame_infos.CID))
+		class configDataQualityUI(object):
+			def __init__(self,**template):
+				for info in template.keys():
+					self.__dict__[info] = template[info]
+
 	
-		mapper(self.Obj_CID,file_table_CID)
+		self.Obj_CDQ = type(configDataQualityUI(**databaseF.frame_infos.configDataQualityDB))
+
+		self.file_table_RDB = Table('SoarReportDB',self.metadata,Column('id', Integer, primary_key=True))
+		
+		for keys in databaseF.frame_infos.reportDB.keys():
+			#print keys
+			self.file_table_RDB.append_column(databaseF.frame_infos.reportDB[keys])
+
+
+		class reportUI(object):
+			def __init__(self,**template):
+				for info in template.keys():
+					self.__dict__[info] = template[info]
+
 	
+		self.Obj_RDB = type(reportUI(**databaseF.frame_infos.reportDB))
+
+		#
+		#####
+		#
+
+		mapper(self.Obj_DQ,self.file_table_DQ)#, properties=relation)	
+		mapper(self.Obj_FDQ,self.file_table_frameDQ)#, properties=relation)	
+		mapper(self.Obj_FLDQ,self.file_table_frameListDQ)#, properties=relation)	
+		mapper(self.Obj_CDQ,self.file_table_CDQ)#, properties=relation)	
+		mapper(self.Obj_RDB,self.file_table_RDB)#, properties=relation)	
+		
 		self.metadata.create_all(self.engine)	
 		self.Session = sessionmaker(bind=self.engine)
-
-		self.session_CID = self.Session()
-
-		self.OSIRIS_Obj = type(databaseF.OSIRIS(**databaseF.frame_infos.OSIRIS_ID))
-		self.GOODMAN_Obj = type(databaseF.GOODMAN(**databaseF.frame_infos.GOODMAN_ID))
-		self.SOI_Obj = type(databaseF.SOI(**databaseF.frame_infos.SOI_ID))
-		self.SPARTAN_Obj = type(databaseF.SPARTAN(**databaseF.frame_infos.SPARTAN_ID))
-		self.SBIG_Obj = type(databaseF.SBIG(**databaseF.frame_infos.SBIG_ID))
-
-		mapper(self.OSIRIS_Obj,file_table_OSIRIS)	
-		self.Session_OSIRIS = sessionmaker(bind=self.engine)
-		self.session_OSIRIS = self.Session_OSIRIS()
-
-		mapper(self.SPARTAN_Obj,file_table_SPARTAN)	
-		self.Session_SPARTAN = sessionmaker(bind=self.engine)
-		self.session_SPARTAN = self.Session_SPARTAN()
-
-
-		mapper(self.SBIG_Obj,file_table_SBIG)	
-		self.Session_SBIG = sessionmaker(bind=self.engine)
-		self.session_SBIG = self.Session_SBIG()
-
-
-		mapper(self.GOODMAN_Obj,file_table_GOODMAN)	
-		self.Session_GOODMAN = sessionmaker(bind=self.engine)
-		self.session_GOODMAN = self.Session_GOODMAN()
-
-		mapper(self.SOI_Obj,file_table_SOI)	
-		self.Session_SOI = sessionmaker(bind=self.engine)
-		self.session_SOI = self.Session_SOI()
-
-		self.obj_dict = {'OSIRIS' : self.OSIRIS_Obj,\
-		'Goodman Spectrograph' : self.GOODMAN_Obj ,\
-		'SOI' : self.SOI_Obj ,\
-		'Spartan IR Camera' : self.SPARTAN_Obj,
-		'SBIG ST-L' : self.SBIG_Obj}
-		
-		self.session_dict = {'OSIRIS' : self.session_OSIRIS,\
-		'Goodman Spectrograph' : self.session_GOODMAN,\
-		'SOI' : self.session_SOI ,\
-		'Spartan IR Camera' : self.session_SPARTAN,
-		'SBIG ST-L' : self.session_SBIG}
-
 		#
 		# Setup Done
 		#####################################################	
 
-		self.header_CID = databaseF.frame_infos.CID.keys()
-		self.header_dict = { 'OSIRIS' : databaseF.frame_infos.OSIRIS_ID.keys(),\
-							 'Goodman Spectrograph' : databaseF.frame_infos.GOODMAN_ID.keys() ,\
-							  'SOI' : databaseF.frame_infos.SOI_ID.keys(),\
-							  'Spartan IR Camera' : databaseF.frame_infos.SPARTAN_ID.keys()}
+		session = self.Session()
+		query = session.query(self.Obj_WC.Comment)[:]
+		if len(query) == 0:
+			info = self.Obj_WC(**{'Comment':"No weather comment."})
+			session.add(info)
+			session.commit()
+			#winfo.wi_ui.weatherInfo.setPlainText("No weather comment.")
 
-		self.file_table_CID = file_table_CID
-		self.file_table_dict = {	'OSIRIS'	:	file_table_OSIRIS	,\
-							'SOI'		:	file_table_SOI		,\
-							'Goodman Spectrograph'	:	file_table_GOODMAN ,\
-							'Spartan IR Camera' : file_table_SPARTAN}
-							
+		self.file_table_CID = file_table_TVDB
+		
+		self.rthread = None
+		
 #		self.setDaemon(True)
 
 
@@ -212,93 +274,35 @@ class soarDB():
 	
 		if not filename:
 
-			print '# - Filename is empty ...', filename
+			logging.debug('# - Filename is empty ...')
 			return -1
-		print filename
 		
 		# Checa se esta no banco de dados
 		
 		session = self.Session()
 
-		query = session.query(self.Obj_CID.FILENAME).filter(self.Obj_CID.FILENAME == str(filename))[:]
+		query = session.query(self.Obj_CID.FILENAME).filter(self.Obj_CID.FILENAME == os.path.basename(str(filename)))[:]
 		if len(query) > 0:
-			print 'File %s already in database...' % (str(filename))
+			#print 'File %s already in database...' % (str(filename))
 			return -1
 			
 		infos = databaseF.frame_infos.GetFrameInfos(str(filename))
 
 		if infos == -1:
-			print '# Could not read file %s... ' %(filename)
+			logging.debug('# Could not read file {0}... ' .format(filename))
 			return -1
 		else:
-			entry_CID = self.Obj_CID(**infos[0])
+			entry_CID = self.Obj_CID(**infos[1])
 			
 			session.add(entry_CID)
-			#session_CID.commit()
-			
-			
-			instKey = infos[0]['INSTRUME']
-			#mapper(self.obj_dict[instKey],self.file_table_dict[instKey])	
-			#Session_Inst = sessionmaker(bind=self.engine)
 
-			entry = self.obj_dict[instKey](**infos[1])
+			instKey = infos[0]['INSTRUME']
+
+			entry = self.Obj_INSTRUMENTS[instKey](**infos[1])
 			session.add(entry)
 			session.commit()
-			
-			infos = []
 		
-			#
-			# Pego infos Comuns
-			#
-			for info_id in np.array(self.header_CID):
-
-				cmd = 'info = entry_CID.%s' % (info_id)
-				try:
-					exec cmd
-
-				except AttributeError,KeyError:
-					info = ''
-					pass
-				
-				if info_id == 'FILENAME':
-					info = os.path.basename(info).split('.fits')[0]
-
-				infos.append(str(info))
-			#
-			# Pego infos de instrumento
-			#
-			inst = instKey
-			
-			queryInstrument = entry
-
-			for itr_info_id in range(len(databaseF.frame_infos.ExtraTableHeaders)):
-
-				info_id = databaseF.frame_infos.dictTableHeaders[inst][itr_info_id]
-				
-				info = ''
-				
-				if info_id:
-						
-					cmd = ''
-						
-					if type(info_id) == type('aa'):
-						cmd = 'info = queryInstrument.%s' % (info_id)
-					if type(info_id) == type(['aa']):
-						for itr_info in range(len(info_id)):
-							cmd += 'info += queryInstrument.%s\n' % (info_id[itr_info])
-					if type(info_id) == type(function):
-						cmd = ''
-						info = info_id(queryInstrument)
-								
-					try:
-						exec cmd
-					except AttributeError,KeyError:
-						pass
-				
-				infos.append(str(info))
-			
-
-			return infos
+		return 0
 #
 #
 ################################################################################################
@@ -321,12 +325,10 @@ class soarDB():
 #
 	def runQueue(self):
 	
-#		thread.start_new_thread(self.run,("Thread No:1",2))
-
-		Thread(target=self.run, args=("Thread No:1",2)).start()
-
-		
-		#self.reloadTable()
+		if self.initThreadLock.acquire(False):
+			rthread = threading.Thread(target=self.run)
+			rthread.start()
+			self.initThreadLock.release()
 #
 #
 ################################################################################################
@@ -336,29 +338,42 @@ class soarDB():
 #
 	def run(self,*args):
 
-		#self.wake.wait()
+		self.initThreadLock.acquire()
 		
-		#ff = ''
-		last = ''
-		while not self.Queue.empty():
+		try:
+			#self.wake.wait()
+			session = self.Session()
+			#ff = ''
+
+			logging.debug('Starting queue')
 			
-			ff = self.Queue.get()
-#			print ff
-#			time.sleep(1.0)
-			info = self.AddFrame(ff)
+			fframe = ''
+			query = session.query(self.Obj_CID)[:]
+			if len(query) > 0:
+				fframe = os.path.join(query[-1].PATH,query[-1].FILENAME)
+			while not self.Queue.empty():
+				
+				cframe = self.Queue.get()
+				logging.debug('--> Working on {0}'.format(cframe))
+				info = self.AddFrame(cframe)
+				if info == 0:
+					fframe = cframe
+				logging.debug('Done')
+				
+			logging.debug('Ended queue. Preparing reloadTable')
 
-			if type(info) == type(-1):
-				print 'nothing to do'
-			else:
-				self.updateTable(info)
-				last = ff
-		
-		self.reloadTable(last)
-		
-		#self.wake.clear()
-		
-		#self.run()
+			#query = session.query(self.Obj_CID)[::]
+			#last = os.path.join(query[-1].PATH,query[-1].FILENAME)
+			
+			self.reloadTable(fframe)
 
+			logging.debug('Thread done.')
+							
+			#self.wake.clear()
+			
+			#self.run()
+		finally:
+			self.initThreadLock.release()
 		
 #
 #
@@ -393,57 +408,7 @@ class soarDB():
 					info = ''
 					pass
 				
-				if info_id == 'FILENAME' and info:
-					info = os.path.basename(info).split('.fits')[0]
-
 				indata.append(str(info))
-			print '>>>',len(indata),
-			#
-			# Pego infos de instrumento
-			#
-			inst = queryRes.INSTRUME
-			
-			queryInstrument = []
-					
-			try:
-				queryInstrument = session.query(self.obj_dict[inst]).filter(self.obj_dict[inst].FILENAME == queryRes.FILENAME)[:]
-					
-			except:
-				
-				pass
-
-			if len(queryInstrument) > 0:
-				queryInstrument = queryInstrument[0]
-				
-				for itr_info_id in range(len(databaseF.frame_infos.ExtraTableHeaders)):
-
-					info_id = databaseF.frame_infos.dictTableHeaders[inst][itr_info_id]
-				
-					info = ''
-				
-					if info_id:
-						
-						cmd = ''
-						
-						if type(info_id) == type('aa'):
-							cmd = 'info = queryInstrument.%s' % (info_id)
-						if type(info_id) == type(['aa']):
-							for itr_info in range(len(info_id)):
-								cmd += 'info += queryInstrument.%s\n' % (info_id[itr_info])
-						if type(info_id) == type(function):
-							cmd = ''
-							info = info_id(queryInstrument)
-								
-						try:
-							exec cmd
-						except AttributeError,KeyError:
-							pass
-				
-					indata.append(str(info))
-			else:
-				for i in range(len(databaseF.frame_infos.ExtraTableHeaders)):
-					indata.append([' '])
-			
 			data.append(indata)
 		
 #		data.append([''])
@@ -466,17 +431,64 @@ class soarDB():
 		session = self.Session()
 		
 		editFrame = session.query(self.Obj_CID).filter(self.Obj_CID.id == index.row()+1)[0]
-		
-		OLD_NOTES = editFrame.OBSNOTES
-		
+		if str(editFrame.INSTRUME) != 'NOTE': 
+			editFrameInst = session.query(self.Obj_INSTRUMENTS[editFrame.INSTRUME]).filter(self.Obj_INSTRUMENTS[editFrame.INSTRUME].FILENAME == os.path.join(editFrame.PATH,editFrame.FILENAME))[:]
+
+			if len(editFrameInst) == 0:
+				logging.debug('OPERATION ERROR: No Instrument frame found on database.')
+				raise IOError('OPERATION ERROR: No Instrument frame found on database.')
+
+		#OLD_NOTES = editFrame.OBSNOTES
+		#
 		#print '---------------'
 		#print OLD_NOTES
 		#print '---------------'
 		#print OBSNOTES
 		#print '---------------'		
-		
-		editFrame.OBSNOTES = '%s' % OBSNOTES
+		if index.column() == 16:
+			editFrame.OBSNOTES = '{0}'.format(OBSNOTES)
+		if index.column() == 0:
+			editFrame.OBJECT = '{0}'.format(OBSNOTES)
+			editFrameInst[0].OBJECT = '{0}'.format(OBSNOTES)
+			logging.debug(os.path.join(str(editFrame.PATH),str(editFrame.FILENAME)))
+			hdu = pyfits.open(os.path.join(str(editFrame.PATH),str(editFrame.FILENAME)),mode='update')
+			if editFrame.INSTRUME == 'Goodman Spectrograph':
+				hdu[0].header.update('PARAM0', hdu[0].header['PARAM0'],"CCD Temperature, C")
+				hdu[0].header.update('PARAM61',hdu[0].header['PARAM61'],"Low Temp Limit, C")
+				hdu[0].header.update('PARAM62',hdu[0].header['PARAM62'],"CCD Temperature Setpoint, C")
+				hdu[0].header.update('PARAM63',hdu[0].header['PARAM63'],"Operational Temp, C")        
+
+
+			#hdu.verify('fix')
+			hdu[0].header.update('OBJECT', '{0}'.format(OBSNOTES))
+			#pyfits.writeto(os.path.join(str(rr.PATH),str(rr.FILENAME)),hdu[0].data,hdu[0].header)
+			hdu.close(output_verify='silentfix')
+		if index.column() == 11:
+			editFrame.IMAGETYP = '{0}'.format(OBSNOTES)
+			try:
+				hdu = pyfits.open(os.path.join(str(editFrame.PATH),str(editFrame.FILENAME)),mode='update')
+				#hdu.verify('fix')
+				hdu[0].header.update(databaseF.frame_infos.INSTRUMENT_TRANSLATE[editFrame.INSTRUME]['IMAGETYP'], '{0}'.format(OBSNOTES))
+				#pyfits.writeto(os.path.join(str(rr.PATH),str(rr.FILENAME)),hdu[0].data,hdu[0].header)
+				hdu.close(output_verify='silentfix')
+			except:
+				pass
+		if index.column() == 12:
+			oldfile = editFrame.FILENAME
+			editFrameInst[0].FILENAME = os.path.join(editFrame.PATH,str(OBSNOTES))
+			try:
+				editFrame.FILENAME = '{0}'.format(OBSNOTES)
+				shutil.copy2(os.path.join(editFrame.PATH,oldfile),os.path.join(editFrame.PATH,str(OBSNOTES)))
+			except IOError:
+				editFrame.FILENAME = oldfile
+				session.commit()
+				raise
+			#	return -1
+
+			
+			
 		session.commit()
+		return 0
 		
 #
 #

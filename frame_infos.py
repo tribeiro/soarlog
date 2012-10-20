@@ -1,18 +1,31 @@
 
-from sqlalchemy import Column,Integer,String
+
+from sqlalchemy import Column,Integer,String,TEXT
 from sqlalchemy import FLOAT as REAL
 import pyfits
-import time,os
+import time,os,sys
 import numpy as np
-
+from instConf import *
 
 '''
 	Basic definition of header parameters contained in each database.
 '''
 
+
 # defines the image header parameter for instrument!
 
 _INSTRUME = {'OSIRIS':'INSTRUME','GOODMAN':'INSTRUME','SOI':'INSTRUME','SPARTAN':'INSTRUME','SBIG ST-L' : 'INSTRUME'}
+
+instTemplates = {'Goodman Spectrograph' : os.path.join(os.path.dirname(__file__),'Resources/goodmanTemplate.fits'),
+'OSIRIS' : os.path.join(os.path.dirname(__file__),'Resources/osirisTemplate.fits'),
+'SOI' : os.path.join(os.path.dirname(__file__),'Resources/soiTemplate.fits'),
+'Spartan IR Camera' : os.path.join(os.path.dirname(__file__),'Resources/spartanTemplate.fits')}
+
+instConfDict = {'Goodman Spectrograph' : instConfGoodman,
+'OSIRIS' : instConfOSIRIS,
+'SOI' : instConfSOI,
+'Spartan IR Camera' : instConfSPARTAN}
+
 SPARTAN = 'Spartan IR Camera'
 
 ##################################################################################################################################
@@ -33,9 +46,115 @@ CID = { 'FILENAME' : Column('FILENAME',String)	,\
 		'RA' : Column('RA',String)				,\
 		'DEC' : Column('DEC',String)			,\
 		'EQUINOX': Column('EQUINOX',String)		,\
-		'OBSNOTES' :Column('OBSNOTES',String)	,\
+		'OBSNOTES' :Column('OBSNOTES',TEXT)	,\
 		'SEEING' : Column('SEEING',String)		}
 
+#
+#
+##################################################################################################################################		
+
+##################################################################################################################################
+#
+# Table View Database
+
+tvDB = { 'FILENAME' : Column('FILENAME',String)	,\
+		'PATH' : Column('PATH',String)			,\
+		'OBJECT' : Column('OBJECT',String)		,\
+		'IMAGETYP' : Column('IMAGETYP',String)	,\
+		'TIMEOBS' : Column('TIMEOBS',String)	,\
+		'DATEOBS' : Column('DATEOBS',String)	,\
+		'EXPTIME' : Column('EXPTIME',REAL)		,\
+		'JD' : Column('JD',String)				,\
+		'OBSERVER' : Column('OBSERVER',String)	,\
+		'INSTRUME' : Column('INSTRUME',String)	,\
+		'OBSERVAT' : Column('OBSERVAT',String)	,\
+		'AIRMASS' : Column('AIRMASS',REAL)		,\
+		'RA' : Column('RA',String)				,\
+		'DEC' : Column('DEC',String)			,\
+		'EQUINOX': Column('EQUINOX',String)		,\
+		'OBSNOTES' : Column('OBSNOTES',String)	,\
+		'SEEING' : Column('SEEING',String)		,\
+		'FILTER' : Column('FILTER',String)		,\
+		'FILTER2': Column('FILTER2',String)		,\
+		'SLIT': Column('SLIT',String)			,\
+		'GRATING' : Column('GRATING',String)	,\
+		'FOCUS'	: Column('FOCUS',String)		,\
+		'CAM_ANGLE': Column('CAM_ANGLE',String)	,\
+		'GRT_ANGLE'	: Column('GRT_ANGLE',String),\
+		'RON_MODE'	: Column('RON_MODE',String)	,\
+		'BINNING'	: Column('BINNING',String)	,\
+		'PA'	: Column('PA',String)			,\
+		'SP_CONF' : Column('SP_CONF',String)	}
+
+
+#
+#
+##################################################################################################################################		
+
+##################################################################################################################################
+#
+# data Quality Database. It is related to tvDB and instrument db.
+
+dataQualityDB = {	'TYPE'		: Column('TYPE',String)			,\
+					'SEMESTER'	: Column('SEMESTER',String)		,\
+					'PID'		: Column('PID',String)			,\
+					'DATASET'	: Column('DATASET',String)		,\
+					'DQNOTE'	: Column('DQNOTE',TEXT)			,\
+					'BIAS'		: Column('BIAS',String)			,\
+					'DARK'		: Column('DARK',String)			,\
+					'FLATFIELD'	: Column('FLATFIELD',String)	,\
+					'BIASNOTE'	: Column('BIASNOTE',TEXT)			,\
+					'DARKNOTE'	: Column('DARKNOTE',TEXT)			,\
+					'FLATFIELDNOTE'	: Column('FLATFIELDNOTE',TEXT)	,\
+					'FROMDB'	: Column('FROMDB',String),
+					'OBSTIME'  : Column('OBSTIME',REAL),
+					'VALIDTIME'  : Column('VALIDTIME',REAL)}
+
+
+#
+#
+##################################################################################################################################		
+
+##################################################################################################################################
+#
+# object specific data quality database. it is related to dataQualityDB
+
+frameDataQualityDB = {	'SEMESTER'	: Column('SEMESTER',String)		,\
+					'PID'		: Column('PID',String)			,\
+					'DATASET'	: Column('DATASET',String)		,\
+					'OBJECT'	: Column('OBJECT',String)		,\
+					'FIELD'	: Column('FIELD',String)		,\
+					'FIELDNOTE'	: Column('FIELDNOTE',String)		,\
+					'CONFIG'	: Column('CONFIG',Integer)		,\
+					'CONFIGNOTE': Column('CONFIGNOTE',String)	,\
+					'FWHM'	: Column('FWHM',REAL)		,\
+					'E'	      : Column('E',REAL)}
+
+configDataQualityDB = {         'PID'		: Column('PID',String)			,\
+				'DATASET'	: Column('DATASET',String)		,\
+				'NCONF'	        : Column('NCONF',Integer)		,\
+				'OBJECT'	: Column('OBJECT',String)		,\
+				'CONFIG'	: Column('CONFIG',String)		,\
+				'STATUS'	: Column('STATUS',String)		,\
+				'CONFIGNOTE'    : Column('CONFIGNOTE',String)		}
+
+frameListDataQualityDB = {'id_tvDB' : Column('id_tvDB',Integer),
+                          'id_INSTRUME' : Column('id_INSTRUME',Integer),
+			  'PID'		:	Column('PID',String)		,
+			  'TYPE'		:	Column('TYPE',Integer)		,
+			  'SUBTYPE'	:	Column('SUBTYPE',Integer)	,
+			  'FILENAME'	:	Column('FILENAME',String)	,
+			  'PATH'		:	Column('PATH',String)		,
+			  'DATASET'       :	Column('DATASET',String)	}
+
+reportDB = { 'PID'      : Column('PID',String)      ,
+	     'PI'       : Column('PI' ,String)      ,
+             'INSTRUME' : Column('INSTRUME',String) ,
+	     'SETUP'    : Column('SETUP',String)    ,
+	     'TIMESPENT': Column('TIMESPENT',REAL),
+	     'TIMEVALID': Column('TIMEVALID',REAL),
+	     'DATASET'  : Column('DATASET',String)  ,
+	     'REPORT'   : Column('REPORT', TEXT)     }
 #
 #
 ##################################################################################################################################		
@@ -76,12 +195,26 @@ OSIRIS_TRANSLATE_CID = { 'FILENAME' : 'FILENAME'	,\
 		'RA' : 'RA'				,\
 		'DEC' : 'DEC'			,\
 		'EQUINOX': 'EQUINOX'	,\
-		'SEEING' : None}
+		'SEEING' : 'SEEING'}
 		#,\
 		#'SEEING' : 'SEEING'	
 		#}
 
+#
+# Translation of OSIRIS header to TableViewDataBase (tvDB)
+#
 
+OSIRIS_TV = {	'FILTER'	:	'FILTERID'		,
+				'FILTER2'	:	'PREFLTID'		,
+				'SLIT'		:	'SLITID'		,
+				'GRATING'	:	'GRATNGID'		,
+				'FOCUS'		:	'CAMFOCUS'		,
+				'CAM_ANGLE'	:	None			,
+				'GRT_ANGLE'	:	'GRATTILT'		,
+				'RON_MODE'	:	'NCOADDS'		,
+				'BINNING'	:	'CAMERAID'		,
+				'PA'		:	'DECPANGL'		,
+				'SP_CONF'	:	'MODE'			 }
 
 #
 #
@@ -144,8 +277,19 @@ GOODMAN_TRANSLATE_CID = {'FILENAME' : 'FILENAME'	,\
 		'SEEING' : 'SEEING'
 
 }
-#,\
-#		'SEEING' : 'SEEING'			,\
+
+		
+GOODMAN_TV = {	'FILTER'	:	'FILTER'		,
+				'FILTER2'	:	'FILTER2'		,
+				'SLIT'		:	'SLIT'			,
+				'GRATING'		:	'GRATING'		,
+				'FOCUS'		:	'CAM_FOC'		,
+				'CAM_ANGLE'	:	'CAM_ANG'		,
+				'GRT_ANGLE'	:	'GRT_ANG'		,
+				'RON_MODE'	:	GOODMAN_RDMODE	,
+				'BINNING'	:	'CCDSUM'		,
+				'PA'		:	'POSANGLE'		,
+				'SP_CONF'	:	GOODMAN_SPCONF	 }
 
 #
 #
@@ -179,10 +323,20 @@ SOI_TRANSLATE_CID = {'FILENAME' : 'FILENAME'  ,\
 		'RA' : 'RA'				,\
 		'DEC' : 'DEC'			,\
 		'EQUINOX': 'RADECEQ'	,\
-		'SEEING' : 'SEEING'		
+		'SEEING' : 'DIMMSEE'		
 }
-	#,\
-	#	'SEEING' : 'SEEING'			,\
+				
+SOI_TV = {		'FILTER'	:	'FILTER1'		,
+				'FILTER2'	:	'FILTER2'		,
+				'SLIT'		:	None			,
+				'GRATING'		:	None			,
+				'FOC'		:	'TELFOCUS'		,
+				'CAM_ANGLE'	:	None			,
+				'GRT_ANGLE'	:	None			,
+				'RON_MODE'	:	None			,
+				'BINNING'	:	'CCDSUM'		,
+				'PA'		:	'DECPANGL'		,
+				'SP_CONF'	:	None			 }
 
 #
 #
@@ -353,8 +507,20 @@ SPARTAN_TRANSLATE_CID = {'FILENAME' : 'FILENAME'  ,\
 		'EQUINOX': 'RADECEQ'	,\
 		'SEEING' : 'SEEING'		
 }
-	#,\
-	#	'SEEING' : 'SEEING'			,\
+
+
+SPARTAN_TV = {	'FILTER'	:	'FILTER'		,
+				'FILTER2'	:	'PUPIL'			,
+				'SLIT'		:	'MASK'			,
+				'GRATING'		:	None			,
+				'FOC'		:	'TELFOCUS'		,
+				'CAM_ANGLE'	:	None			,
+				'GRT_ANGLE'	:	None			,
+				'RON_MODE'	:	None			,
+				'BINNING'	:	None			,
+				'PA'		:	'DECPANGL'		,
+				'SP_CONF'	:	None			 }
+
 
 #
 #
@@ -377,12 +543,25 @@ SBIG_TRANSLATE_CID = {'FILENAME' : 'FILENAME'  ,\
 		'SEEING' : 'BSCALE'		
 }
 
+SBIG_TV = {		'FILTER'	:	None			,
+				'FILTER2'	:	None			,
+				'SLIT'		:	None			,
+				'GRATING'		:	None			,
+				'FOC'		:	None			,
+				'CAM_ANGLE'	:	None			,
+				'GRT_ANGLE'	:	None			,
+				'RON_MODE'	:	None			,
+				'BINNING'	:	None			,
+				'PA'		:	None			,
+				'SP_CONF'	:	None			 }
+
+
 SBIG_ID  = {  'FILENAME'	: Column('FILENAME',String) ,\
 'BZERO' : Column('BZERO',String)       }
 
 ##################################################################################################################################
 #
-# Dictionary of instrument translation
+# Dictionaries of instrument translation
 
 INSTRUMENT_TRANSLATE = { 'OSIRIS' : OSIRIS_TRANSLATE_CID ,\
 'Goodman Spectrograph' : GOODMAN_TRANSLATE_CID ,\
@@ -396,6 +575,19 @@ INSTRUMENT_DB = { 'OSIRIS' : OSIRIS_ID	,\
 'Spartan IR Camera' : SPARTAN_ID,\
 'SBIG ST-L' : SBIG_ID}
 
+INSTRUMENT_TV = { 'OSIRIS' : OSIRIS_TV	,\
+'Goodman Spectrograph' : GOODMAN_TV	,\
+'SOI' : SOI_TV ,\
+'Spartan IR Camera' : SPARTAN_TV,\
+'SBIG ST-L' : SBIG_TV}
+
+#imageTYPE = ['','OBJECT','FLAT','DFLAT','BIAS','ZERO','DARK','COMP','FAILED','Object'] 
+
+imageTYPE = {'OSIRIS' : ['OBJECT','FLAT','ZERO','COMP','DARK','FAILED'],
+'Goodman Spectrograph' : ['OBJECT','COMP','FLAT','BIAS','FAILED'],
+'Spartan IR Camera' : ['Object','Flat-Field','Dark','FAILED'],
+'SOI' : ['ZERO','DFLAT','OBJECT','FAILED']}
+
 #
 #
 ##################################################################################################################################
@@ -407,7 +599,7 @@ INSTRUMENT_DB = { 'OSIRIS' : OSIRIS_ID	,\
 ExtraTableHeaders=['FILTER' ,\
 		'FILTER2'			,\
 		'SLIT'				,\
-		'GRT'			,\
+		'GRATING'			,\
 		'FOC'				,\
 		'CAM ANG'		,\
 		'GRT ANG'		,\
@@ -416,75 +608,6 @@ ExtraTableHeaders=['FILTER' ,\
 		'PA'			,\
 		'SP CONF']
 
-def GOODMAN_RDMODE(query):
-	
-	RD = {'330' : '100kHz', '130' : '200kHz' , '30' : '400kHz'}
-	return RD[query.PARAM26] + ' ATT' + query.PARAM27
-
-def GOODMAN_SPCONF(query):
-	'''
-		GOODMAN SP configuration.
-	'''
-	
-	# Grating
-	grt = '' #query.GRATNGID.split('_')[1]
-	if query.GRATING == '<NO GRATING>':
-		return 'ACQ'
-	else:
-		grt = query.GRATING.split('_')[1]
-	
-	# Filter (yes or no)
-	filter = ''
-	
-	if query.FILTER != '<NO FILTER>' or query.FILTER2 != '<NO FILTER>':
-		filter = 'F'
-	
-	# Region 300() 600(custom,red,mid,blue) 1200(custom,m1,m2,m3,m4,m5,m6,m7)
-	
-	spcfg = ''
-	
-
-	grtAng = [  5. ,   7. ,  10. ,  12. ,  16.3,  18.7,  20.2,  22.2,  24.8, 27.4,  30.1]
-	camAng = [ 11. ,  17. ,  20. ,  27. ,  29.5,  34.4,  39.4,  44.4,  49.6, 54.8,  60.2]
-	
-	if grt == '600' and ( np.abs(float(query.CAM_ANG) - camAng[1]) < 1.0 or np.abs(float(query.GRT_ANG) - grtAng[1]) < 1.0):
-		
-		spcfg = 'b'
-
-	elif grt == '600' and ( np.abs(float(query.CAM_ANG) - camAng[2]) < 1.0 or np.abs(float(query.GRT_ANG) - grtAng[2]) < 1.0):
-		
-		spcfg = 'm'
-
-	elif grt == '600' and ( np.abs(float(query.CAM_ANG) - camAng[3]) < 1.0 or np.abs(float(query.GRT_ANG) - grtAng[3]) < 1.0):
-		
-		spcfg = 'r'
-
-	elif grt == '1200' and ( np.abs(float(query.CAM_ANG) - camAng[4]) < 1.0 or np.abs(float(query.GRT_ANG) - grtAng[4]) < 1.0):
-			spcfg = 'm1'
-
-	elif grt == '1200' and ( np.abs(float(query.CAM_ANG) - camAng[5]) < 1.0 or np.abs(float(query.GRT_ANG) - grtAng[5]) < 1.0):
-			spcfg = 'm2'
-
-	elif grt == '1200' and ( np.abs(float(query.CAM_ANG) - camAng[6]) < 1.0 or np.abs(float(query.GRT_ANG) - grtAng[6]) < 1.0):
-			spcfg = 'm3'
-
-	elif grt == '1200' and ( np.abs(float(query.CAM_ANG) - camAng[7]) < 1.0 or np.abs(float(query.GRT_ANG) - grtAng[7]) < 1.0):
-			spcfg = 'm4'
-
-	elif grt == '1200' and ( np.abs(float(query.CAM_ANG) - camAng[8]) < 1.0 or np.abs(float(query.GRT_ANG) - grtAng[8]) < 1.0):
-			spcfg = 'm5'
-
-	elif grt == '1200' and ( np.abs(float(query.CAM_ANG) - camAng[9]) < 1.0 or np.abs(float(query.GRT_ANG) - grtAng[9]) < 1.0):
-			spcfg = 'm6'
-
-	elif grt == '1200' and ( np.abs(float(query.CAM_ANG) - camAng[10]) < 1.0 or np.abs(float(query.GRT_ANG) - grtAng[10]) < 1.0):
-			spcfg = 'm7'
-	
-	else:
-		spcfg = 'C'
-	
-	return grt+filter+spcfg
-		
 	
 
 TableTranslate_GOODMAN = ['FILTER' ,\
@@ -572,16 +695,8 @@ def GetFrameInfos(filename):
 	
 	FExists = False
 	
-	##
-	## Try to read the file 10 times (with 1s sleep) before giving up
-	##
-	#for i in range(10):
 	try:
-		hdulist = pyfits.open(filename,ignore_missing_end=True)
-
-
-		#	FExists = True
-
+		hdulist = pyfits.open(filename,ignore_missing_end=True)		
 	except IOError:
 		print '[FAILED - IOError]: ',filename
 		return -1 # Could not read file for some reason
@@ -589,31 +704,22 @@ def GetFrameInfos(filename):
 	try:
 		hdulist.verify('fix')
 	except:
-		print '[FAILED - verify]: ',filename
+		#print '[FAILED - verify]: ',filename
 		pass #return -1
 
-	hdr = hdulist[0].header
+	try:
+		hdr = hdulist[1].header
+	except IndexError:
+		try:
+			hdr = hdulist[0].header
+		except:
+			return -1
+	except:
+		return -1
 
 	hdulist.close()
 		
-		#	time.sleep(1.0)
-		#	pass
-		#if FExists:
-		#	break
-#	except ValueError:
-#		print "Warning: %s " % (filename)
-#		os.utime(filename,None)
-#		return -1
-		
-	#if not FExists:
-	#	raise IOError('File %s cannot be opened'%(filename))
-	#
-	# Descobre qual o instrumento 
-	#
 	instru_try = np.unique(_INSTRUME.values())
-	
-	#print filename
-	#hdr_out['FILENAME'] = filename
 	
 	INSTRUMENT = None
 	
@@ -631,33 +737,68 @@ def GetFrameInfos(filename):
 		return -1
 	
 	TRANSLATE_CID = INSTRUMENT_TRANSLATE[INSTRUMENT]
-	PARTICULAR_DB = INSTRUMENT_DB[INSTRUMENT]
+	PARTICULAR_DB = INSTRUMENT_TV[INSTRUMENT]
 	
-	#if INSTRUMENT == 'OSIRIS':
+	#
+	# Get all info on file header (error free)
+	#
+	for key in hdr.keys():
+		if key != 'FILENAME':
+			try:
+				if str(hdr[key]).find('.core.Undef') > 0:
+					hdr_out[key] = 0
+				else:
+					hdr_out[key] = hdr[key]
+			except:
+				hdr_out[key] = -1
+
+	#
+	# Build info for TableViewDatabase (tvDB)
+	#
+	for key in tvDB.keys():
+		hdr_inst[key] = ''
+	
 	for key in TRANSLATE_CID.keys():
-		if key != 'FILENAME' and TRANSLATE_CID[key]:
+		if key != 'FILENAME':
 		
 			try:
 				if str(hdr[TRANSLATE_CID[key]]).find('.core.Undef') > 0:
-					hdr_out[key] = 0
+					hdr_inst[key] = 0
 				else:
-					hdr_out[key] = hdr[TRANSLATE_CID[key]]
-			except:
-				hdr_out[key] = -1
-				#print hdr[TRANSLATE_CID[key]]
-						
-	for key in PARTICULAR_DB.keys():
-		if key != 'FILENAME':
-			try:
-				hdr_inst[key] = hdr[key]
-				#print key,hdr[key]
+					hdr_inst[key] = hdr[TRANSLATE_CID[key]]
 			except KeyError,ValueError:
+				print '--> Exception on CID:',sys.exc_info()[1],key
+				hdr_inst[key] = '0'
+
+
+	for key in PARTICULAR_DB.keys():
+		if key != 'FILENAME' or key != 'PATH':
+			try:
+				if type(PARTICULAR_DB[key]) == type('aa'):
+					hdr_inst[key] = hdr[PARTICULAR_DB[key]]
+				if type(PARTICULAR_DB[key]) == type(['aa']):
+					for itr_info in range(len(PARTICULAR_DB[key])):
+						hdr_inst[key] += hdr[PARTICULAR_DB[key][itr_info]]
+				if type(PARTICULAR_DB[key]) == type(GOODMAN_RDMODE):
+					hdr_inst[key] = PARTICULAR_DB[key](hdr)
+			except:
+				print '--> Exception',sys.exc_info()[1]
 				hdr_inst[key] = ''
-				
+				pass
+			
 	hdr_out['FILENAME'] = filename
-	hdr_out['OBSNOTES'] = ''
-	hdr_inst['FILENAME'] = filename
+	hdr_inst['OBSNOTES'] = ''
+	hdr_inst['FILENAME'] = os.path.basename(filename)
+	hdr_inst['PATH'] = os.path.dirname(filename)	
 	return hdr_out,hdr_inst #filename,INSTRUMENT
+#
+#
+##################################################################################################################################
+
+##################################################################################################################################
+#
+#
+
 #
 #
 ##################################################################################################################################
@@ -691,3 +832,7 @@ def frameLog(dbEntry):
 		return '\n'
 
 	
+#
+#
+##################################################################################################################################
+

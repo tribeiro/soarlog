@@ -17,40 +17,18 @@ Ribeiro, T., June 2011.
 from soarlogF_qt4_mt import *
 
 MasterQueue = Queue.Queue()
+recordQueue = Queue.Queue()
 
 if __name__ == "__main__":
 
 	
-	#root = tk.Tk()
-
-	#usergui = SoarLog(root)
-
-	#root.mainloop()
-	
 	root = QtGui.QApplication(sys.argv)
 	
-	usergui = SoarLog(MasterQueue)
-	
-	db = soarDB(MasterQueue)
-#	db.start()
-	
-	usergui.getTableData = db.getTableData
-	
-	usergui.runQueue = db.runQueue
-	usergui.CommitDBTable = db.CommitDBTable 
+	usergui = SoarLog(MasterQueue,recordQueue)
 	
 	usergui.initGUI()
 		
 	usergui.initWatch()
-	usergui.session_CID = db.session_CID
-	usergui.Obj_CID = db.Obj_CID
-	usergui.SPARTAN_Obj = db.SPARTAN_Obj
-	usergui.GOODMAN_Obj = db.GOODMAN_Obj
-	usergui.OSIRIS_Obj = db.OSIRIS_Obj
-	usergui.SOI_Obj = db.SOI_Obj
-	
-	db.reloadTable = usergui.emmitReloadTableEvent
-	db.updateTable = usergui.updateTable
 
 	usergui.show()
 	

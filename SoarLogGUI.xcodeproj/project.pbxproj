@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXFileReference section */
+		F119161615459D150012D00C /* askPID.ui */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = askPID.ui; sourceTree = "<group>"; };
+		F1E63DE21562047A0044BFC1 /* soarlogF_DataQuality.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = soarlogF_DataQuality.py; sourceTree = "<group>"; };
 		F1EE35AA1497E8BB00B29C95 /* databaseF.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = databaseF.py; sourceTree = "<group>"; };
 		F1EE35AB1497E8BB00B29C95 /* dbComF.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = dbComF.py; sourceTree = "<group>"; };
 		F1EE35AC1497E8BB00B29C95 /* filehandleF.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = filehandleF.py; sourceTree = "<group>"; };
@@ -26,6 +28,7 @@
 		F19485F71509F9D1003098CC /* gui */ = {
 			isa = PBXGroup;
 			children = (
+				F1E63DE21562047A0044BFC1 /* soarlogF_DataQuality.py */,
 				F1F70199149A8AFA00E4FD6E /* dataquality.ui */,
 				F1F7019A149A8AFA00E4FD6E /* getweatherinfo.ui */,
 				F1EE35AE1497E8BB00B29C95 /* preferences.ui */,
@@ -46,6 +49,7 @@
 				F1EE35AF1497E8BB00B29C95 /* soar_setupF.py */,
 				F1EE35B11497E8BB00B29C95 /* soarlog.py */,
 				F1EE35B21497E8BB00B29C95 /* soarlogF_qt4_mt.py */,
+				F119161615459D150012D00C /* askPID.ui */,
 				F1EE35B31497E8BB00B29C95 /* soarlogF_TableModel.py */,
 			);
 			sourceTree = "<group>";
