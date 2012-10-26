@@ -13,7 +13,31 @@ def GOODMAN_SPCONF(query):
 	'''
 		GOODMAN SP configuration.
 	'''
+
+	_GconfMap_300  = { ''  : [ 5. , 11.]}
 	
+	_GconfMap_400  = { 'b' : [6.5 , 13.],
+			   'r' : [ 8. , 16.]} # Check the 400r configuration!
+
+	_GconfMap_600  = { 'b' : [ 7. , 17.],
+			   'm' : [10. , 20.],
+			   'r' : [12. , 27.]}
+		
+	_GconfMap_1200 = {'m0'  :       [16.3,26.0],
+			  'm1'	:	[16.3,29.5],
+			  'm2'	:	[18.7,34.4],
+			  'm3'	:	[20.2,39.4],
+			  'm4'	:	[22.2,44.4],
+			  'm5'	:	[24.8,49.6],
+			  'm6'	:	[27.4,54.8],
+			  'm7'	:	[30.1,60.2]}
+
+	_Gratings = {'300' : _GconfMap_300,
+		     '400' : _GconfMap_400,
+		     '600' : _GconfMap_600,
+		     '1200': _GconfMap_1200,}
+	
+
 	# Grating
 	grt = '' #query.GRATNGID.split('_')[1]
 	if query['GRATING'] == '<NO GRATING>':
@@ -31,47 +55,21 @@ def GOODMAN_SPCONF(query):
 	
 	spcfg = ''
 	
-
-	grtAng = [  5. ,   7. ,  10. ,  12. ,  16.3,  18.7,  20.2,  22.2,  24.8, 27.4,  30.1]
-	camAng = [ 11. ,  17. ,  20. ,  27. ,  29.5,  34.4,  39.4,  44.4,  49.6, 54.8,  60.2]
+	grt_a,cam_a = float(query['GRT_ANG']),float(query['CAM_ANG'])
+	grt_d,cam_d = grt_a,cam_a
+	Gconf = _Gratings[grt]
+	for key in Gconf.keys():
+		dg = np.abs(grt_a-Gconf[key][0])
+		dc = np.abs(cam_a-Gconf[key][1])
+		if dg+dc < grt_d+cam_d:
+			spcfg = key
+			grt_d = dg
+			cam_d = dc
+			
+	if grt_d > 1.0 or cam_d > 1.0:
+		spcfg = spcfg + 'C'
 	
-	if grt == '600' and ( np.abs(float(query['CAM_ANG']) - camAng[1]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[1]) < 1.0):
-		
-		spcfg = 'b'
-
-	elif grt == '600' and ( np.abs(float(query['CAM_ANG']) - camAng[2]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[2]) < 1.0):
-		
-		spcfg = 'm'
-
-	elif grt == '600' and ( np.abs(float(query['CAM_ANG']) - camAng[3]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[3]) < 1.0):
-		
-		spcfg = 'r'
-
-	elif grt == '1200' and ( np.abs(float(query['CAM_ANG']) - camAng[4]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[4]) < 1.0):
-			spcfg = 'm1'
-
-	elif grt == '1200' and ( np.abs(float(query['CAM_ANG']) - camAng[5]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[5]) < 1.0):
-			spcfg = 'm2'
-
-	elif grt == '1200' and ( np.abs(float(query['CAM_ANG']) - camAng[6]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[6]) < 1.0):
-			spcfg = 'm3'
-
-	elif grt == '1200' and ( np.abs(float(query['CAM_ANG']) - camAng[7]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[7]) < 1.0):
-			spcfg = 'm4'
-
-	elif grt == '1200' and ( np.abs(float(query['CAM_ANG']) - camAng[8]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[8]) < 1.0):
-			spcfg = 'm5'
-
-	elif grt == '1200' and ( np.abs(float(query['CAM_ANG']) - camAng[9]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[9]) < 1.0):
-			spcfg = 'm6'
-
-	elif grt == '1200' and ( np.abs(float(query['CAM_ANG']) - camAng[10]) < 1.0 or np.abs(float(query['GRT_ANG']) - grtAng[10]) < 1.0):
-			spcfg = 'm7'
-	
-	else:
-		spcfg = 'C'
-	
-	return grt+filter+spcfg
+	return grt+spcfg+filter
 		
 
 
