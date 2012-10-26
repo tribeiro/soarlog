@@ -64,7 +64,6 @@ def LongestCommonSubstring(S1, S2):
 		
 class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 
-
 	def __init__(self,*args):
 	
 		super(SoarLog, self).__init__()
@@ -373,6 +372,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 		self.connect(self.ui.actionDT, QtCore.SIGNAL('triggered()'),self.startDataTransfer)
 		self.connect(self.ui.actionWI, QtCore.SIGNAL('triggered()'),self.promptWeatherComment)
 		self.connect(self.ui.actionHideCB, QtCore.SIGNAL('triggered()'),self.HideCB)
+                self.connect(self.ui.actionCalibration_Helper, QtCore.SIGNAL('triggered()'),self.Calibration_Helper)
 		self.connect(self.ui.actionEnable_Disable_Table_Edit, QtCore.SIGNAL('triggered()'),self.enableDisableTableEdit)
 
 		#self.connect(self.ui.addFrameComment, QtCore.SIGNAL('clicked()'),self.commitComment)
@@ -1728,6 +1728,20 @@ Time Spent:
 		self.updateTable(infos)
 		self.emmitReloadTableEvent('Note')
 
+################################################################################################
+#
+#
+	def Calibration_Helper(self):
+
+		self.calibhelp_ui = CalibHelper()
+		
+		self.calibhelp_ui.show()
+		
+		self.calibhelp_ui.exec_()
+#
+#
+################################################################################################
+
 #
 #
 ################################################################################################
@@ -1903,17 +1917,19 @@ class PrefMenu(QtGui.QDialog):
 #
 #
 	def doNothing(self,ii):
-		return 0
+            return 0
 #
 #
 ################################################################################################
 
+
+
 #
 #
 ################################################################################################
-# END OF CLASS SoarLog
+# END OF CLASS PrefMenu
 ################################################################################################
-# START OF CLASS PrefMenu
+# START OF CLASS DataQualityUI
 ################################################################################################
 #
 #
@@ -1940,9 +1956,9 @@ class DataQualityUI(QtGui.QDialog):
 #
 #
 ################################################################################################
-# END OF CLASS SoarLog
+# END OF CLASS DataQualityUI
 ################################################################################################
-# START OF CLASS PrefMenu
+# START OF CLASS WeatherInfo
 ################################################################################################
 #
 #
@@ -1965,3 +1981,32 @@ class WeatherInfo(QtGui.QDialog):
 #
 #
 ################################################################################################
+
+#
+#
+################################################################################################
+# END OF CLASS WeatherInfo
+################################################################################################
+# START OF CLASS CalibHelper
+################################################################################################
+#
+#
+
+class CalibHelper(QtGui.QDialog):
+	
+    ########################################################################################
+    #
+    #	
+	
+    def __init__(self):
+                            
+        QtGui.QDialog.__init__(self)
+		
+        ##########################################################
+        #
+        # Set up preferences menu
+        self.pid_ui = uic.loadUi(os.path.join(uipath,'calibhelper.ui'),self)
+
+        #
+        #
+        ########################################################################################
