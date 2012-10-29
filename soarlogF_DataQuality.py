@@ -1731,7 +1731,7 @@ VALID-TIME: {VTIME}
 		q_repo = session.query(self.Obj_RDB)[:]
 
 		for i in range(len(q_repo)):
-			mq_rep = sMaster.query(self.Obj_RDB).filter(self.Obj_RDB.PID == q_repo[i].PID, self.Obj_RDB.DATASET == q_repo[i].DATASET)[:]
+			mq_rep = sMaster.query(self.Obj_RDB).filter(self.Obj_RDB.PID == q_repo[i].PID).filter(self.Obj_RDB.DATASET == q_repo[i].DATASET)[:]
 			if len(mq_rep) > 0:
 				mq_rep[0].clone(q_repo[i],self.file_table_RDB)
 			else:
@@ -1755,8 +1755,7 @@ VALID-TIME: {VTIME}
 
 		for i in range(len(q_fdq)):
 			if len(q_fdq[i].OBJECT) > 1:
-				mq_fdq = sMaster.query(self.Obj_FDQ).filter(self.Obj_FDQ.OBJECT == q_fdq[i].OBJECT, 
-															self.Obj_FDQ.PID == q_fdq[i].PID)[:]
+				mq_fdq = sMaster.query(self.Obj_FDQ).filter(self.Obj_FDQ.OBJECT == q_fdq[i].OBJECT).filter(self.Obj_FDQ.PID == q_fdq[i].PID)[:]
 			
 				if len(mq_fdq) == 0:
 					mq_fdq = self.Obj_FDQ()
@@ -1781,8 +1780,7 @@ VALID-TIME: {VTIME}
 		q_cdq = session.query(self.Obj_CDQ)[:]
 
 		for i in range(len(q_cdq)):
-			mq_cdq = sMaster.query(self.Obj_CDQ).filter(self.Obj_CDQ.DATASET == q_cdq[i].DATASET,
-														self.Obj_CDQ.CONFIG == q_cdq[i].CONFIG)[:]
+			mq_cdq = sMaster.query(self.Obj_CDQ).filter(self.Obj_CDQ.DATASET == q_cdq[i].DATASET).filter(self.Obj_CDQ.CONFIG == q_cdq[i].CONFIG)[:]
 			
 			if len(mq_cdq) == 0:
 				mq_cdq = self.Obj_CDQ()
