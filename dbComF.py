@@ -69,6 +69,7 @@ class soarDB():
 		self.initThreadLock = threading.RLock()
 		
 		self.engine = create_engine('sqlite:///{0}'.format(self.dbname) )
+		self.masterEngine = create_engine('sqlite:///{0}'.format(self.masterDBName) )
 
 		self.metadata = MetaData()
 		
@@ -114,6 +115,11 @@ class soarDB():
 			def __init__(self,**template):
 				for info in template.keys():
 					self.__dict__[info] = template[info]
+			def clone(self,source,table):
+				for c in table.c:
+					if not c.name.endswith('id'):
+						setattr(self, c.name, getattr(source, c.name))
+
 		
 		self.Obj_WC = type(FrameWC(**wc_dict))
 
@@ -149,6 +155,11 @@ class soarDB():
 						self.__dict__[info] = template[info]
 						#logging.debug('{0} = {1}'.format(info,template[info]))
 					frame_id = Column('frame_id',Integer, ForeignKey('SoarLogTVDB.id'))
+				def clone(self,source,table):
+					for c in table.c:
+						if not c.name.endswith('id'):
+							setattr(self, c.name, getattr(source, c.name))
+
 
 			self.Obj_INSTRUMENTS[_inst] = type(FrameINST(**instTemplate))
 			
@@ -171,6 +182,12 @@ class soarDB():
 				for info in template.keys():
 					self.__dict__[info] = template[info]
 
+			def clone(self,source,table):
+				for c in table.c:
+					if not c.name.endswith('id'):
+						setattr(self, c.name, getattr(source, c.name))
+
+
 		self.Obj_DQ = type(dataQualityUI(**databaseF.frame_infos.dataQualityDB))
   
 		self.file_table_frameDQ = Table('SoarFrameDataQuality',self.metadata,Column('id', Integer, primary_key=True))
@@ -183,6 +200,12 @@ class soarDB():
 			def __init__(self,**template):
 				for info in template.keys():
 					self.__dict__[info] = template[info]
+
+			def clone(self,source,table):
+				for c in table.c:
+					if not c.name.endswith('id'):
+						setattr(self, c.name, getattr(source, c.name))
+
 
 	
 		self.Obj_FDQ = type(frameDataQualityUI(**databaseF.frame_infos.frameDataQualityDB))
@@ -197,6 +220,10 @@ class soarDB():
 			def __init__(self,**template):
 				for info in template.keys():
 					self.__dict__[info] = template[info]
+			def clone(self,source,table):
+				for c in table.c:
+					if not c.name.endswith('id'):
+						setattr(self, c.name, getattr(source, c.name))
 
 	
 		self.Obj_FLDQ = type(frameListDataQualityUI(**databaseF.frame_infos.frameListDataQualityDB))
@@ -212,6 +239,13 @@ class soarDB():
 			def __init__(self,**template):
 				for info in template.keys():
 					self.__dict__[info] = template[info]
+	
+			def clone(self,source,table):
+				for c in table.c:
+					if not c.name.endswith('id'):
+						setattr(self, c.name, getattr(source, c.name))
+
+
 
 	
 		self.Obj_CDQ = type(configDataQualityUI(**databaseF.frame_infos.configDataQualityDB))
@@ -227,6 +261,10 @@ class soarDB():
 			def __init__(self,**template):
 				for info in template.keys():
 					self.__dict__[info] = template[info]
+			def clone(self,source,table):
+				for c in table.c:
+					if not c.name.endswith('id'):
+						setattr(self, c.name, getattr(source, c.name))
 
 	
 		self.Obj_RDB = type(reportUI(**databaseF.frame_infos.reportDB))
@@ -243,6 +281,10 @@ class soarDB():
 		
 		self.metadata.create_all(self.engine)	
 		self.Session = sessionmaker(bind=self.engine)
+
+		self.metadata.create_all(self.masterEngine)	
+		self.MasterSession = sessionmaker(bind=self.masterEngine)
+
 		#
 		# Setup Done
 		#####################################################	

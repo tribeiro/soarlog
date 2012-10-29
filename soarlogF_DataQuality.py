@@ -1243,6 +1243,7 @@ FROM FILE: {fimg}
 		grenameF.i.soi(_doprint=0)
 
 		session_CID = self.Session()
+		session_Master = self.MasterSession()
 
 		progress = 0
 		lqueue = self.copy_queue.qsize()
@@ -1253,9 +1254,13 @@ FROM FILE: {fimg}
 			logging.debug( 'Copying {0} -> {1} ...'.format(*record))
 
 			query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME == os.path.basename(record[0]))[:]
+			newFileNAME = os.path.basename(record[0])
+			newFilePATH = record[1]
+
 			if len(query) > 0:
 				queryInstrume = session_CID.query(self.Obj_INSTRUMENTS[query[0].INSTRUME]).filter(self.Obj_INSTRUMENTS[query[0].INSTRUME].FILENAME == record[0])[:]
 				queryFLDQ = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.FILENAME == query[0].FILENAME)[:]
+
 			else:
 				queryInstrume = []
 				queryFLDQ = []
@@ -1265,21 +1270,21 @@ FROM FILE: {fimg}
 				try:
 					shutil.copy2(*record)
 
-					query[0].PATH = record[1]
-					queryInstrume[0].FILENAME = os.path.join(record[1],query[0].FILENAME)
+					#query[0].PATH = record[1]
+					#queryInstrume[0].FILENAME = os.path.join(record[1],query[0].FILENAME)
 					inFile =  os.path.join(record[1],query[0].FILENAME)
 					t_index = self.ui.tableDB.model().sourceModel().createIndex(query[0].id-1,self.FilenameColumn)
 					
-					if query[0].INSTRUME == 'Goodman Spectrograph' and str(query[0].FILENAME).startswith('0'):
+					if query[0].INSTRUME == 'Goodman Spectrograph':
 						_image_ = good_class.Single(os.path.join(record[1],query[0].FILENAME))
 						gname = grenameF.Rename(_image_,True)
 
-						query[0].FILENAME = os.path.basename(gname)
-						queryInstrume[0].FILENAME = gname
-						queryFLDQ[0].FILENAME = os.path.basename(gname)
+						newFileNAME = os.path.basename(gname)
+						newFilePATH = os.path.dirname(gname)
+						
 						os.remove(inFile)
 						inFile = gname
-						self.ui.tableDB.model().sourceModel().setData(t_index,os.path.basename(gname),QtCore.Qt.DisplayRole)
+						#self.ui.tableDB.model().sourceModel().setData(t_index,os.path.basename(gname),QtCore.Qt.DisplayRole)
 					if query[0].INSTRUME == 'SOI':
 						logging.debug('SOIFIXHEADER: {0}'.format(query[0].FILENAME))
 						grenameF.i.soifixheader(input=os.path.join(record[1],query[0].FILENAME))
@@ -1288,23 +1293,45 @@ FROM FILE: {fimg}
 				
 					file(inFile+".bz2", "wb").write(bz2.compress(file(inFile, "rb").read()))
 					os.remove(inFile)
+					newFileNAME = newFileNAME + '.bz2'
 					inFile = inFile+'.bz2'
 					
-					self.ui.tableDB.model().sourceModel().setData(t_index,os.path.basename(inFile),QtCore.Qt.DisplayRole)
+					#self.ui.tableDB.model().sourceModel().setData(t_index,os.path.basename(inFile),QtCore.Qt.DisplayRole)
 					logging.debug(inFile)
-					
-					query[0].FILENAME = os.path.basename(inFile)
-					queryInstrume[0].FILENAME = inFile
+					queryMaster = session_Master.query(self.Obj_CID).filter(self.Obj_CID.FILENAME == newFileNAME).filter(self.Obj_CID.PATH == newFilePATH)[:]
+					if len(queryMaster) == 0:
+						logging.debug('Adding file {0} to master database...'.format(newFileNAME))
+						
+						newEntry = self.Obj_CID()
+						for c in self.file_table_CID.c:
+							if not c.name.endswith('id'):
+								setattr(newEntry, c.name, getattr(query[0], c.name))
+
+						newEntry.FILENAME = newFileNAME
+						newEntry.PATH = os.path.abspath(newFilePATH)
+
+						session_Master.add(newEntry)
+
+						newEntry = self.Obj_INSTRUMENTS[query[0].INSTRUME]()
+						for c in self.file_table_INSTRUMENTS[query[0].INSTRUME].c:
+							if not c.name.endswith('id'):
+								setattr(newEntry, c.name, getattr(queryInstrume[0], c.name))
+
+						newEntry.FILENAME = os.path.join(os.path.abspath(newFilePATH),newFileNAME)
+
+						session_Master.add(newEntry)
+
+					#queryInstrume[0].FILENAME = inFile
 										
 
 				except:
-					logging.debug('Exception {0}'.format(sys.exc_info()[1]))
+					logging.exception('Exception {0}'.format(sys.exc_info()[2]))
 					pass
 									
 
 			progress+=1
 			self.emit(QtCore.SIGNAL("copyProgress(int)"),progress)    
-			session_CID.commit()
+			session_Master.commit()
 
 			if self.cthread_stop.isSet():
 				self.emit(QtCore.SIGNAL("copyProgress(int)"),0)    
@@ -1645,6 +1672,8 @@ Warning: If you are doing filename replacement do not delete any '?' in the user
 								 'Selecione arquivo para salvar data quality.',
 								 filter='Text files (*.txt)'))
 
+		self.purgeDQ2MDB()
+
 		if filename:
 			session = self.Session()
 
@@ -1686,6 +1715,85 @@ VALID-TIME: {VTIME}
 #
 	def purge2MasterDB(self):
 		
+		return 0
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+	def purgeDQ2MDB(self):
+
+		session = self.Session()
+		sMaster = self.MasterSession()
+
+		q_repo = session.query(self.Obj_RDB)[:]
+
+		for i in range(len(q_repo)):
+			mq_rep = sMaster.query(self.Obj_RDB).filter(self.Obj_RDB.PID == q_repo[i].PID, self.Obj_RDB.DATASET == q_repo[i].DATASET)[:]
+			if len(mq_rep) > 0:
+				mq_rep[0].clone(q_repo[i],self.file_table_RDB)
+			else:
+				mq_rep = self.Obj_RDB()
+				mq_rep.clone(q_repo[i],self.file_table_RDB)
+				sMaster.add(mq_rep)
+
+		q_cal = session.query(self.Obj_DQ)[:]
+
+		for i in range(len(q_cal)):
+			mq_cal = sMaster.query(self.Obj_DQ).filter(self.Obj_DQ.DATASET == q_cal[i].DATASET)[:]
+			
+			if len(mq_cal) == 0:
+				mq_cal = self.Obj_DQ()
+				mq_cal.clone(q_cal[i],self.file_table_DQ)
+				sMaster.add(mq_cal)
+			else:
+				mq_cal[0].clone(q_cal[i],self.file_table_DQ)
+
+		q_fdq = session.query(self.Obj_FDQ)[:]
+
+		for i in range(len(q_fdq)):
+			if len(q_fdq[i].OBJECT) > 1:
+				mq_fdq = sMaster.query(self.Obj_FDQ).filter(self.Obj_FDQ.OBJECT == q_fdq[i].OBJECT, 
+															self.Obj_FDQ.PID == q_fdq[i].PID)[:]
+			
+				if len(mq_fdq) == 0:
+					mq_fdq = self.Obj_FDQ()
+					mq_fdq.clone(q_fdq[i],self.file_table_frameDQ)
+					sMaster.add(mq_fdq)
+				else:
+					mq_fdq[0].clone(q_fdq[i],self.file_table_frameDQ)
+
+
+		q_fldq = session.query(self.Obj_FLDQ)[:]
+
+		for i in range(len(q_fldq)):
+			mq_fldq = sMaster.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.id_tvDB == q_fldq[i].id_tvDB)[:]
+			
+			if len(mq_fldq) == 0:
+				mq_fldq = self.Obj_FLDQ()
+				mq_fldq.clone(q_fldq[i],self.file_table_frameListDQ)
+				sMaster.add(mq_fldq)
+			else:
+				mq_fldq[0].clone(q_fldq[i],self.file_table_frameListDQ)
+
+		q_cdq = session.query(self.Obj_CDQ)[:]
+
+		for i in range(len(q_cdq)):
+			mq_cdq = sMaster.query(self.Obj_CDQ).filter(self.Obj_CDQ.DATASET == q_cdq[i].DATASET,
+														self.Obj_CDQ.CONFIG == q_cdq[i].CONFIG)[:]
+			
+			if len(mq_cdq) == 0:
+				mq_cdq = self.Obj_CDQ()
+				mq_cdq.clone(q_cdq[i],self.file_table_CDQ)
+				sMaster.add(mq_cdq)
+			else:
+				mq_cdq[0].clone(q_cdq[i],self.file_table_CDQ)
+
+
+		sMaster.commit()
+
 		return 0
 #
 #
