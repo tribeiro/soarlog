@@ -179,7 +179,10 @@ class DataTransfer():
         remainder = proc.communicate()[0]
         #logging.debug(remainder)
         mn = re.findall(r'Number of files transferred: (\d+)',remainder)
-        self.total_files = int(mn[0])
+        self.total_files = 0
+        if len(mn) > 0:
+            self.total_files = int(mn[0])
+        
 
         if self.total_files > 0:
 
