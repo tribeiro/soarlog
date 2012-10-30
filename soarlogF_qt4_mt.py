@@ -70,7 +70,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 		self.Queue = args[0]
 		self.recordQueue = args[1]
 		self.commitLock = threading.RLock()
-		self.emmitFileEventLock = threading.Lock()
+		#self.emmitFileEventLock = threading.Lock()
 		
 	##########################################################
 	# See if configuration directory exists. Create one 
@@ -126,6 +126,8 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 
 		self.currentSelectedItem = 0 #QtCore.QModelIndex()
 
+		self.start()
+
 		#self.initDB()
 		
 		#self.AskFile2Watch()
@@ -151,7 +153,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 		for f in ff:
 			self.Queue.put(f)
 		
-		self.runQueue()
+		self.wake.set()
 
 #		self.model.select()
 
@@ -362,10 +364,13 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 		self.connect(self.ui.actionPreferences,QtCore.SIGNAL('triggered()'),self.OpenPreferences)
 		self.connect(self, QtCore.SIGNAL('reloadTableEvent(char*)'), self.reloadTable)
 		#self.connect(self, QtCore.SIGNAL('reloadTableEvent()'), self.reloadTable)
-		self.connect(self, QtCore.SIGNAL('runQueueEvent()'), self.runQueue)
+		self.connect(self, QtCore.SIGNAL('runQueueEvent()'), self.wake.set)
 		self.connect(self, QtCore.SIGNAL('TableDataChanged(QModelIndex,QString)'), self.CommitDBTable)
 		
-		self.connect(self, QtCore.SIGNAL('insertRecord()'), self.insertRecord)
+		## Deprecated ################
+		#self.connect(self, QtCore.SIGNAL('insertRecord()'), self.insertRecord)
+		##############################
+
 		#self.connect(self, QtCore.SIGNAL("dataChanged(QModelIndex,QModelIndex)"), self.CommitDBTable)
 
 		self.connect(self.ui.actionAddComment, QtCore.SIGNAL('triggered()'),self.askForCommentLinePID)
@@ -512,7 +517,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 			logging.debug(' Could not read file {0}... '.format(filename))
 			return -1
 		else:
-			self.commitLock.acquire()
+			#self.commitLock.acquire()
 			instKey = infos[0]['INSTRUME']
 			
 			entry = self.Obj_INSTRUMENTS[instKey](**infos[0])
@@ -531,8 +536,8 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 				logging.debug(sys.exc_info()[1])
 				logging.debug('Could not commit to instrument specific database. Will do it later.')
 				pass
-			finally:
-				self.commitLock.release()
+			#finally:
+			#	self.commitLock.release()
 		
 		return 0
 #
@@ -542,7 +547,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 ################################################################################################
 #
 #
-	def insertRecord(self):
+	def insertRecord_Deprecated(self):
 		
 		self.commitLock.acquire()			
 		
@@ -787,7 +792,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 		
 
 
-			self.handler = EventHandler(self.emmitRunQueue,self.Queue)
+			self.handler = EventHandler(self.wake.set,self.Queue)
 			self.notifier = ThreadedNotifier(wm, self.handler)
 			self.notifier.start()
 
@@ -795,6 +800,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 			# Internally, 'handler' is a callable object which on new events will be called like this: handler(new_event)
 			#print self.dir
 			wdd = wm.add_watch(self.dir, mask, rec=True)
+			logging.debug('Watch initialized...')
 
 #
 #
@@ -846,13 +852,13 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 	def emmitTableDataChanged(self,index):
             #self.emmitFileEventLock.acquire()
             #try:
-            if not self.emmitFileEventLock.locked():
-                try:
-                    new_index = self.ui.tableDB.model().index(index.row(),index.column())
-                    self.emit(QtCore.SIGNAL("TableDataChanged(QModelIndex,QString)"),new_index,self.ui.tableDB.model().data(new_index).toString())
-                    logging.debug('emmitTableDataChanged')
-                except:
-                    logging.debug('Exception in emmitTableDataChanged')
+  			#if not self.emmitFileEventLock.locked():
+		try:
+			new_index = self.ui.tableDB.model().index(index.row(),index.column())
+			self.emit(QtCore.SIGNAL("TableDataChanged(QModelIndex,QString)"),new_index,self.ui.tableDB.model().data(new_index).toString())
+			logging.debug('emmitTableDataChanged')
+		except:
+			logging.debug('Exception in emmitTableDataChanged')
                 
 
 #

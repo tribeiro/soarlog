@@ -42,8 +42,8 @@ def function():
 	return -1
 
 
-#class soarDB(threading.Thread):
-class soarDB():
+class soarDB(threading.Thread):
+#class soarDB():
 
 	dbname = 'soarlog.db'
 	masterDBName = '.soarMaster.db'
@@ -64,9 +64,14 @@ class soarDB():
 		#
 		# Database engine, section and metadata definition
 		#
-		
+		logging.debug('Initializing SOAR Database ...')
+
+		threading.Thread.__init__(self)
+
 		self.Queue = queue
-		self.initThreadLock = threading.RLock()
+		self.wake = threading.Event()
+		self.daemon = True 
+		#self.initThreadLock = threading.RLock()
 		
 		self.engine = create_engine('sqlite:///{0}'.format(self.dbname) )
 		self.masterEngine = create_engine('sqlite:///{0}'.format(self.masterDBName) )
@@ -365,12 +370,12 @@ class soarDB():
 ################################################################################################
 #
 #
-	def runQueue(self):
-	
-		if self.initThreadLock.acquire(False):
-			rthread = threading.Thread(target=self.run)
-			rthread.start()
-			self.initThreadLock.release()
+	#def runQueue(self):
+	#
+	#	if self.initThreadLock.acquire(False):
+	#		rthread = threading.Thread(target=self.run)
+	#		rthread.start()
+	#		self.initThreadLock.release()
 #
 #
 ################################################################################################
@@ -380,42 +385,56 @@ class soarDB():
 #
 	def run(self,*args):
 
-		self.initThreadLock.acquire()
+		#self.initThreadLock.acquire()
 		
-		try:
-			#self.wake.wait()
-			session = self.Session()
-			#ff = ''
-
-			logging.debug('Starting queue')
+		while True:
 			
-			fframe = ''
-			query = session.query(self.Obj_CID)[:]
-			if len(query) > 0:
-				fframe = os.path.join(query[-1].PATH,query[-1].FILENAME)
-			while not self.Queue.empty():
-				
-				cframe = self.Queue.get()
-				logging.debug('--> Working on {0}'.format(cframe))
-				info = self.AddFrame(cframe)
-				if info == 0:
-					fframe = cframe
-				logging.debug('Done')
-				
-			logging.debug('Ended queue. Preparing reloadTable')
+			logging.debug('Waiting...')
 
-			#query = session.query(self.Obj_CID)[::]
-			#last = os.path.join(query[-1].PATH,query[-1].FILENAME)
+			self.wake.wait()
+
+			self.commitLock.acquire()
+
+			try:
+
+				session = self.Session()
+				#ff = ''
+
+				logging.debug('Starting queue')
 			
+				fframe = ''
+				query = session.query(self.Obj_CID)[:]
+				if len(query) > 0:
+					fframe = os.path.join(query[-1].PATH,query[-1].FILENAME)
+				while not self.Queue.empty():
+				
+					cframe = self.Queue.get()
+					logging.debug('--> Working on {0}'.format(cframe))
+					info = self.AddFrame(cframe)
+					if info == 0:
+						fframe = cframe
+					logging.debug('Done')
+				
+				logging.debug('Ended queue. Preparing reloadTable')
+
+				#query = session.query(self.Obj_CID)[::]
+				#last = os.path.join(query[-1].PATH,query[-1].FILENAME)
+
+				logging.debug('Thread done.')
+							
+				self.wake.clear()
+
+			finally:
+			
+				self.commitLock.release()
+
+
 			self.reloadTable(fframe)
 
-			logging.debug('Thread done.')
-							
-			#self.wake.clear()
-			
+		logging.warning('Thread ended for some reason!')
 			#self.run()
-		finally:
-			self.initThreadLock.release()
+		#finally:
+		#	self.initThreadLock.release()
 		
 #
 #
@@ -470,66 +489,75 @@ class soarDB():
 		
 		#OBSNOTES = '%s' % self.ui.tableDB.model().data(index,QtCore.Qt.DisplayRole).toString()
 		
-		session = self.Session()
-		
-		editFrame = session.query(self.Obj_CID).filter(self.Obj_CID.id == index.row()+1)[0]
-		if str(editFrame.INSTRUME) != 'NOTE': 
-			editFrameInst = session.query(self.Obj_INSTRUMENTS[editFrame.INSTRUME]).filter(self.Obj_INSTRUMENTS[editFrame.INSTRUME].FILENAME == os.path.join(editFrame.PATH,editFrame.FILENAME))[:]
+		logging.debug('CommitDBTable')
 
-			if len(editFrameInst) == 0:
-				logging.debug('OPERATION ERROR: No Instrument frame found on database.')
-				raise IOError('OPERATION ERROR: No Instrument frame found on database.')
+		self.commitLock.acquire()
 
-		#OLD_NOTES = editFrame.OBSNOTES
-		#
-		#print '---------------'
-		#print OLD_NOTES
-		#print '---------------'
-		#print OBSNOTES
-		#print '---------------'		
-		if index.column() == 16:
-			editFrame.OBSNOTES = '{0}'.format(OBSNOTES)
-		if index.column() == 0:
-			editFrame.OBJECT = '{0}'.format(OBSNOTES)
-			editFrameInst[0].OBJECT = '{0}'.format(OBSNOTES)
-			logging.debug(os.path.join(str(editFrame.PATH),str(editFrame.FILENAME)))
-			hdu = pyfits.open(os.path.join(str(editFrame.PATH),str(editFrame.FILENAME)),mode='update')
-			if editFrame.INSTRUME == 'Goodman Spectrograph':
-				hdu[0].header.update('PARAM0', hdu[0].header['PARAM0'],"CCD Temperature, C")
-				hdu[0].header.update('PARAM61',hdu[0].header['PARAM61'],"Low Temp Limit, C")
-				hdu[0].header.update('PARAM62',hdu[0].header['PARAM62'],"CCD Temperature Setpoint, C")
-				hdu[0].header.update('PARAM63',hdu[0].header['PARAM63'],"Operational Temp, C")        
+		try:
 
+			session = self.Session()
+			
+			editFrame = session.query(self.Obj_CID).filter(self.Obj_CID.id == index.row()+1)[0]
+			if str(editFrame.INSTRUME) != 'NOTE': 
+				editFrameInst = session.query(self.Obj_INSTRUMENTS[editFrame.INSTRUME]).filter(self.Obj_INSTRUMENTS[editFrame.INSTRUME].FILENAME == os.path.join(editFrame.PATH,editFrame.FILENAME))[:]
 
-			#hdu.verify('fix')
-			hdu[0].header.update('OBJECT', '{0}'.format(OBSNOTES))
-			#pyfits.writeto(os.path.join(str(rr.PATH),str(rr.FILENAME)),hdu[0].data,hdu[0].header)
-			hdu.close(output_verify='silentfix')
-		if index.column() == 11:
-			editFrame.IMAGETYP = '{0}'.format(OBSNOTES)
-			try:
+				if len(editFrameInst) == 0:
+					logging.debug('OPERATION ERROR: No Instrument frame found on database.')
+					raise IOError('OPERATION ERROR: No Instrument frame found on database.')
+
+			#OLD_NOTES = editFrame.OBSNOTES
+			#
+			#print '---------------'
+			#print OLD_NOTES
+			#print '---------------'
+			#print OBSNOTES
+			#print '---------------'		
+			if index.column() == 16:
+				editFrame.OBSNOTES = '{0}'.format(OBSNOTES)
+			if index.column() == 0:
+				editFrame.OBJECT = '{0}'.format(OBSNOTES)
+				editFrameInst[0].OBJECT = '{0}'.format(OBSNOTES)
+				logging.debug(os.path.join(str(editFrame.PATH),str(editFrame.FILENAME)))
 				hdu = pyfits.open(os.path.join(str(editFrame.PATH),str(editFrame.FILENAME)),mode='update')
+				if editFrame.INSTRUME == 'Goodman Spectrograph':
+					hdu[0].header.update('PARAM0', hdu[0].header['PARAM0'],"CCD Temperature, C")
+					hdu[0].header.update('PARAM61',hdu[0].header['PARAM61'],"Low Temp Limit, C")
+					hdu[0].header.update('PARAM62',hdu[0].header['PARAM62'],"CCD Temperature Setpoint, C")
+					hdu[0].header.update('PARAM63',hdu[0].header['PARAM63'],"Operational Temp, C")        
+
+
 				#hdu.verify('fix')
-				hdu[0].header.update(databaseF.frame_infos.INSTRUMENT_TRANSLATE[editFrame.INSTRUME]['IMAGETYP'], '{0}'.format(OBSNOTES))
+				hdu[0].header.update('OBJECT', '{0}'.format(OBSNOTES))
 				#pyfits.writeto(os.path.join(str(rr.PATH),str(rr.FILENAME)),hdu[0].data,hdu[0].header)
 				hdu.close(output_verify='silentfix')
-			except:
-				pass
-		if index.column() == 12:
-			oldfile = editFrame.FILENAME
-			editFrameInst[0].FILENAME = os.path.join(editFrame.PATH,str(OBSNOTES))
-			try:
-				editFrame.FILENAME = '{0}'.format(OBSNOTES)
-				shutil.copy2(os.path.join(editFrame.PATH,oldfile),os.path.join(editFrame.PATH,str(OBSNOTES)))
-			except IOError:
-				editFrame.FILENAME = oldfile
-				session.commit()
-				raise
-			#	return -1
+			if index.column() == 11:
+				editFrame.IMAGETYP = '{0}'.format(OBSNOTES)
+				try:
+					hdu = pyfits.open(os.path.join(str(editFrame.PATH),str(editFrame.FILENAME)),mode='update')
+					#hdu.verify('fix')
+					hdu[0].header.update(databaseF.frame_infos.INSTRUMENT_TRANSLATE[editFrame.INSTRUME]['IMAGETYP'], '{0}'.format(OBSNOTES))
+					#pyfits.writeto(os.path.join(str(rr.PATH),str(rr.FILENAME)),hdu[0].data,hdu[0].header)
+					hdu.close(output_verify='silentfix')
+				except:
+					pass
+			if index.column() == 12:
+				oldfile = editFrame.FILENAME
+				editFrameInst[0].FILENAME = os.path.join(editFrame.PATH,str(OBSNOTES))
+				try:
+					editFrame.FILENAME = '{0}'.format(OBSNOTES)
+					shutil.copy2(os.path.join(editFrame.PATH,oldfile),os.path.join(editFrame.PATH,str(OBSNOTES)))
+				except IOError:
+					editFrame.FILENAME = oldfile
+					session.commit()
+					raise
+				#	return -1
 
+				
+				
+			session.commit()
+		finally:
+			self.commitLock.release()
 			
-			
-		session.commit()
 		return 0
 		
 #
