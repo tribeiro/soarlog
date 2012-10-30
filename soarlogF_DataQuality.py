@@ -48,7 +48,7 @@ class DataQuality():
 
 		prj = np.append([''],projInfo[0])#np.append(projInfo[0],['all','Calibration'])
 		dataset = '{date}-{PID}'
-		
+
 		for i in range(len(prj)):
 
 			if i == 0 or len(prj[i]) == 3:
@@ -61,23 +61,26 @@ class DataQuality():
 
 			if len(prj[i]) == 3:
 				query = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.DATASET == dataset.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(prj[i])))[:]
-	
-				if len(query) == 0:
+				query_tvdb = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+prj[i]+'%' ) ).filter(sqlalchemy.not_(self.Obj_CID.INSTRUME.like('%NOTE%')))[:]
+
+				if len(query) < len(query_tvdb):
 					#
-					# Data Quality has not began yet! Including project files in database
+					# There are more files in the database than those in program list! Including project files in database
 					#
-					query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+prj[i]+'%' ) ).filter(sqlalchemy.not_(self.Obj_CID.INSTRUME.like('%NOTE%')))[:]
-					for ii in range(len(query)):
-						iquery = qInst = session_CID.query(self.Obj_INSTRUMENTS[query[ii].INSTRUME].id).filter(self.Obj_INSTRUMENTS[query[ii].INSTRUME].FILENAME.like('%'+query[ii].FILENAME))[:]
-						entry = self.Obj_FLDQ(id_tvDB=query[ii].id,
-								      id_INSTRUME=iquery[0].id,
-								      PID=self.semester_ID.format(prj[i]),
-								      TYPE=query[ii].IMAGETYP,
-								      SUBTYPE='night-obs',
-								      FILENAME=query[ii].FILENAME,
-								      PATH=query[ii].PATH,
-								      DATASET=dataset.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(prj[i])))
-						session_CID.add(entry)
+					#query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+prj[i]+'%' ) ).filter(sqlalchemy.not_(self.Obj_CID.INSTRUME.like('%NOTE%')))[:]
+					for ii in range(len(query_tvdb)):
+						query_fldq = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.id_tvDB == query_tvdb[ii].id)[:]
+						if len(query_fldq) == 0:
+							iquery = qInst = session_CID.query(self.Obj_INSTRUMENTS[query_tvdb[ii].INSTRUME].id).filter(self.Obj_INSTRUMENTS[query_tvdb[ii].INSTRUME].FILENAME.like('%'+query_tvdb[ii].FILENAME))[:]
+							entry = self.Obj_FLDQ(id_tvDB=query_tvdb[ii].id,
+									      id_INSTRUME=iquery[0].id,
+									      PID=self.semester_ID.format(prj[i]),
+									      TYPE=query_tvdb[ii].IMAGETYP,
+									      SUBTYPE='night-obs',
+									      FILENAME=query_tvdb[ii].FILENAME,
+									      PATH=query_tvdb[ii].PATH,
+									      DATASET=dataset.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(prj[i])))
+							session_CID.add(entry)
 				
 		session_CID.commit()                 
 
