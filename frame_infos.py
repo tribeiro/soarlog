@@ -3,7 +3,8 @@
 from sqlalchemy import Column,Integer,String,TEXT
 from sqlalchemy import FLOAT as REAL
 import pyfits
-import time,os,sys
+import time, types
+import os,sys
 import numpy as np
 from instConf import *
 
@@ -494,7 +495,7 @@ SPARTAN_ID = {  'FILENAME'	: Column('FILENAME',String) ,\
 SPARTAN_TRANSLATE_CID = {'FILENAME' : 'FILENAME'  ,\
 		'OBJECT' : 'OBJECT'		,\
 		'IMAGETYP' : 'OBSTYPE'	,\
-		'TIMEOBS' : 'TIME-END'	,\
+		'TIMEOBS' : SPARTAN_OBSTIME	,\
 		'DATEOBS' : 'DATE-OBS'	,\
 		'EXPTIME'  : 'EXPTIME'	,\
 		'JD' : 'MJD-OBS'				,\
@@ -762,10 +763,15 @@ def GetFrameInfos(filename):
 		if key != 'FILENAME':
 		
 			try:
-				if str(hdr[TRANSLATE_CID[key]]).find('.core.Undef') > 0:
-					hdr_inst[key] = 0
-				else:
+				#if str(hdr[TRANSLATE_CID[key]]).find('.core.Undef') > 0:
+				#	hdr_inst[key] = 0
+				#else:
+				if isinstance(TRANSLATE_CID[key], types.StringType):
 					hdr_inst[key] = hdr[TRANSLATE_CID[key]]
+				elif isinstance(TRANSLATE_CID[key],types.FunctionType):
+					hdr_inst[key] = TRANSLATE_CID[key](hdr)
+				else:
+					hdr_inst[key] = '0'
 			except KeyError,ValueError:
 				print '--> Exception on CID:',sys.exc_info()[1],key
 				hdr_inst[key] = '0'
@@ -774,13 +780,15 @@ def GetFrameInfos(filename):
 	for key in PARTICULAR_DB.keys():
 		if key != 'FILENAME' or key != 'PATH':
 			try:
-				if type(PARTICULAR_DB[key]) == type('aa'):
+				if isinstance(PARTICULAR_DB[key], types.StringType):
 					hdr_inst[key] = hdr[PARTICULAR_DB[key]]
-				if type(PARTICULAR_DB[key]) == type(['aa']):
+				elif isinstance(PARTICULAR_DB[key], types.ListType):
 					for itr_info in range(len(PARTICULAR_DB[key])):
 						hdr_inst[key] += hdr[PARTICULAR_DB[key][itr_info]]
-				if type(PARTICULAR_DB[key]) == type(GOODMAN_RDMODE):
+				elif isinstance(PARTICULAR_DB[key], types.FunctionType):
 					hdr_inst[key] = PARTICULAR_DB[key](hdr)
+				else:
+					hdr_inst[key] = ''
 			except:
 				print '--> Exception',sys.exc_info()[1]
 				hdr_inst[key] = ''

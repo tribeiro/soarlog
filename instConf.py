@@ -4,6 +4,11 @@ from sqlalchemy import Column,Integer,String,TEXT
 from sqlalchemy import FLOAT as REAL
 import numpy as np
 
+def SPARTAN_OBSTIME(query):
+
+	return str(query['TIME-END']).split('T')[1]
+
+
 def GOODMAN_RDMODE(query):
 	
 	RD = {330 : '100kHz', 130 : '200kHz' , 30 : '400kHz'}
