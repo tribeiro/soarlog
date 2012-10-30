@@ -102,9 +102,10 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 		self.FilenameColumn = 12
 		self.ImtypeColumn = 11
 		self.ExtraEditableColumns = [0,11,12,16]
-                self.LocalTime = -4
+		self.LocalTime = -4
 		self.AskFile2Watch()
-				
+		self.dqStatus = ['','OK','WARN','FAIL']
+
 		self.logfile = self.logfile.format(self.dir.split('/')[-1])
 		self.dbname  = self.dbname.format(self.dir.split('/')[-1])
 		soarDB.__init__(self,self.Queue)
@@ -1733,11 +1734,112 @@ Time Spent:
 #
 	def Calibration_Helper(self):
 
+		sMaster = self.MasterSession()
+
 		self.calibhelp_ui = CalibHelper()
-		
+
+		#
+		# Set up Calibration Helper UI
+		#
+
+		mquery = sMaster.query(self.Obj_DQ)[:]
+
+		pid = np.unique([mquery[i].PID for i in range(len(mquery))]) # list of project ids
+		self.calibhelp_ui.Instrument.addItem('')	
+
+		for i in range(len(pid)):
+			self.calibhelp_ui.Instrument.addItem(self.semester_ID.format(pid[i]))
+
+		self.connect(self.calibhelp_ui.Instrument, QtCore.SIGNAL('currentIndexChanged(int)'), self.readDates)
+		#self.connect(self.calibhelp_ui.instConfig, QtCore.SIGNAL('currentIndexChanged(int)'), self.readDates)
+		self.connect(self.calibhelp_ui.date      , QtCore.SIGNAL('currentIndexChanged(int)'), self.readCalibrations)
+
 		self.calibhelp_ui.show()
 		
 		self.calibhelp_ui.exec_()
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+	def readDates(self):
+
+		sMaster = self.MasterSession()
+
+		qq = sMaster.query(self.Obj_CDQ).filter(self.Obj_CDQ.PID == str(self.calibhelp_ui.Instrument.currentText()))[:]
+
+		dates = np.unique([qq[i].DATASET for i in range(len(qq))])
+
+		self.disconnect(self.calibhelp_ui.date, QtCore.SIGNAL('currentIndexChanged(int)'), self.readCalibrations)	
+		
+		self.calibhelp_ui.date.clear()
+		self.calibhelp_ui.calibrationInfo.clear()
+
+		self.calibhelp_ui.date.addItem('')
+
+		for i in range(len(dates)):
+			self.calibhelp_ui.date.addItem(dates[i])
+		self.calibhelp_ui.date.setCurrentIndex(0)
+
+		self.connect(self.calibhelp_ui.date, QtCore.SIGNAL('currentIndexChanged(int)'), self.readCalibrations)
+
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+	def readCalibrations(self):
+
+		sMaster = self.MasterSession()
+
+		qq = sMaster.query(self.Obj_CDQ).filter(self.Obj_CDQ.PID == str(self.calibhelp_ui.Instrument.currentText())).filter(self.Obj_CDQ.DATASET == str(self.calibhelp_ui.date.currentText()))[:]
+
+		_repo = '''
+- Calibrations:
+
+'''
+		_calNote = '\n'
+		Count = [0,
+			 1,
+			 1,
+			 1]
+
+		ctype = ['bias','dark','flatfield']
+
+		for i in range(len(ctype)):
+			qq = sMaster.query(self.Obj_CDQ).filter(self.Obj_CDQ.PID == str(self.calibhelp_ui.Instrument.currentText())).filter(self.Obj_CDQ.DATASET == str(self.calibhelp_ui.date.currentText())).filter(self.Obj_CDQ.OBJECT == ctype[i])[:]
+			
+			for j in range(len(qq)):
+				
+				config = qq[j].CONFIG
+				nf = qq[j].NCONF				
+
+				note = self.dqStatus[int(qq[j].STATUS)]
+				cnote = ''
+				if len(qq[j].CONFIGNOTE) > 1:
+					note += '{0}'.format(Count[int(qq[j].STATUS)])
+					cnote = '{0}: {1}\n'.format(note,qq[j].CONFIGNOTE)
+					Count[int(qq[j].STATUS)] += 1
+		
+				if int(qq[j].STATUS) > 0:
+					_calNote = _calNote + cnote
+					_repo += '     {ctype}: {CONFIG} {NFILES} [{STAT}]\n'.format(CONFIG = config,
+												     NFILES = int(nf),
+												     STAT=note,
+												     ctype=str.upper(ctype[i]))
+
+
+		_repo += self._separator
+
+		_repo += _calNote
+
+		self.calibhelp_ui.calibrationInfo.setText( _repo )
+
+
 #
 #
 ################################################################################################

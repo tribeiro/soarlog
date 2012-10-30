@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>640</width>
-    <height>480</height>
+    <width>452</width>
+    <height>333</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -25,13 +25,7 @@
         <enum>QFrame::Raised</enum>
        </property>
        <layout class="QGridLayout" name="gridLayout">
-        <item row="1" column="0">
-         <widget class="QComboBox" name="Instrument"/>
-        </item>
         <item row="1" column="1">
-         <widget class="QComboBox" name="instConfig"/>
-        </item>
-        <item row="1" column="2">
          <widget class="QComboBox" name="date"/>
         </item>
         <item row="0" column="0">
@@ -41,14 +35,10 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="1">
-         <widget class="QLabel" name="label_2">
-          <property name="text">
-           <string>Configuration:</string>
-          </property>
-         </widget>
+        <item row="1" column="0">
+         <widget class="QComboBox" name="Instrument"/>
         </item>
-        <item row="0" column="2">
+        <item row="0" column="1">
          <widget class="QLabel" name="label_3">
           <property name="text">
            <string>Date:</string>
@@ -61,7 +51,7 @@
     </layout>
    </item>
    <item>
-    <widget class="QPlainTextEdit" name="calibrationInfo"/>
+    <widget class="QTextEdit" name="calibrationInfo"/>
    </item>
    <item>
     <widget class="QWidget" name="widget" native="true">

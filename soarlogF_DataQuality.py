@@ -39,7 +39,6 @@ class DataQuality():
 
 		session_CID = self.Session()
 		self.dataQuality_ui = DataQualityUI()
-		self.dqStatus = ['','OK','WARN','FAIL']
   
 		#
 		# Add projects encountered in database
@@ -468,9 +467,20 @@ filenames) unless you REALLY know what you are doing.
 				for i in range(len(instru_list)):
 					instru = instru+instru_list[i]+'/'
 					
+			#
+			# Query master DB and look for PI name. 
+			#
+			sMaster = self.MasterSession()
+
+			mquery = sMaster.query(self.Obj_RDB).filter(self.Obj_RDB.PID == 
+				self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))) [:]
+
+			PI = 'None'
+			if len(mquery) > 0:
+				PI = mquery[0].PI
 
 			vals = {'PID':self.semester_ID.format(  str(self.dataQuality_ui.comboBox.currentText() ) )  ,\
-				'PI' : 'None' ,\
+				'PI' : PI ,\
 				'INSTRUME' :  instru,\
 				'SETUP':'',\
 				'TIMESPENT':0.,\
@@ -696,7 +706,7 @@ filenames) unless you REALLY know what you are doing.
 				session.commit()
 
 			if len(qq) > 1 :
-				logging.debug('WARNING: Found duplicate configuration for {0}'.format(ctype[i]))
+				logging.warning('WARNING: Found duplicate configuration for {0}'.format(ctype[i]))
 			
 		
 #
@@ -1671,9 +1681,6 @@ Warning: If you are doing filename replacement do not delete any '?' in the user
 		filename = str(QtGui.QFileDialog.getSaveFileName(self, 
 								 'Selecione arquivo para salvar data quality.',
 								 filter='Text files (*.txt)'))
-
-		self.purgeDQ2MDB()
-
 		if filename:
 			session = self.Session()
 
@@ -1701,6 +1708,8 @@ VALID-TIME: {VTIME}
 				
 				fp.write(self._separator)
 				fp.write(self._separator)
+
+				self.purgeDQ2MDB()
 		else:
 			return -1
 
