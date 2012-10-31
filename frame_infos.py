@@ -7,6 +7,7 @@ import time, types
 import os,sys
 import numpy as np
 from instConf import *
+import logging
 
 '''
 	Basic definition of header parameters contained in each database.
@@ -746,7 +747,7 @@ def GetFrameInfos(filename):
 	for key in hdr.keys():
 		if key != 'FILENAME':
 			try:
-				if str(hdr[key]).find('.core.Undef') > 0:
+				if str(hdr[key]).find('Undef') > 0:
 					hdr_out[key] = 0
 				else:
 					hdr_out[key] = hdr[key]
@@ -767,9 +768,9 @@ def GetFrameInfos(filename):
 				#	hdr_inst[key] = 0
 				#else:
 				if isinstance(TRANSLATE_CID[key], types.StringType):
-					hdr_inst[key] = hdr[TRANSLATE_CID[key]]
+					hdr_inst[key] = hdr_out[TRANSLATE_CID[key]]
 				elif isinstance(TRANSLATE_CID[key],types.FunctionType):
-					hdr_inst[key] = TRANSLATE_CID[key](hdr)
+					hdr_inst[key] = TRANSLATE_CID[key](hdr_out)
 				else:
 					hdr_inst[key] = '0'
 			except KeyError,ValueError:
