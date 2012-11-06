@@ -359,10 +359,15 @@ class soarDB(threading.Thread):
 #
 
 	def __del__(self):
-		self.session_CID.commit()
-		
-		for session in self.session_dict.values():
-			session.commit()			
+
+		session = self.Session()
+
+		session.commit()
+
+		session = self.MasterSession()
+
+		session.commit()
+
 #
 #
 ################################################################################################
