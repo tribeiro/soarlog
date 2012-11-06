@@ -1611,7 +1611,10 @@ Warning: If you are doing filename replacement do not delete any '?' in the user
 								 filter='Text files (*.txt)'))
 		if filename:
 			logging.debug(filename)
-			fcont = np.loadtxt(filename,dtype='S',usecols=(0,),ndmin=1)
+			fp = open(filename,'r')
+			#fcont = fp.readlines()#np.loadtxt(filename,dtype='S',usecols=(0,),ndmin=1)
+			fcont = [cont.rstrip('\r\n') for cont in fp.readlines()]
+			fp.close()
 			sIndex = self.ui.tableDB.selectedIndexes()
 			workCol = []
 			for i in range(len(sIndex)):
