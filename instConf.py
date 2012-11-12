@@ -53,7 +53,7 @@ def GOODMAN_SPCONF(query):
 	# Filter (yes or no)
 	filter = ''
 	
-	if query['FILTER'] != '<NO FILTER>' or query['FILTER'] != '<NO FILTER>':
+	if query['FILTER'] != '<NO FILTER>' or query['FILTER2'] != '<NO FILTER>':
 		filter = 'F'
 	
 	# Region 300() 600(custom,red,mid,blue) 1200(custom,m1,m2,m3,m4,m5,m6,m7)

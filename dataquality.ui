@@ -294,6 +294,9 @@ data</string>
          </item>
          <item row="4" column="0">
           <widget class="QCheckBox" name="fromDB">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="text">
             <string>From DB</string>
            </property>

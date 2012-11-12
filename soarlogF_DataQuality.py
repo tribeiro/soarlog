@@ -642,7 +642,8 @@ filenames) unless you REALLY know what you are doing.
 		self.connect(self.dataQuality_ui.Bias, QtCore.SIGNAL('clicked()'), self.addBias)
 		self.connect(self.dataQuality_ui.Dark, QtCore.SIGNAL('clicked()'), self.addDark)
 		self.connect(self.dataQuality_ui.FlatField, QtCore.SIGNAL('clicked()'), self.addFlatField)
-
+		
+		self.connect(self.dataQuality_ui.fromDB, QtCore.SIGNAL('stateChanged(int)'), self.biasFromDB)
 
 		self.setUpCalibrationDQProject()
 
@@ -822,6 +823,31 @@ filenames) unless you REALLY know what you are doing.
 
 		self.setUpCalibrationDQProject()
 
+		return 0
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+	def biasFromDB(self,idx):
+
+		sMaster = self.MasterSession()
+
+		self.dataQuality_ui.comboBiasConf.clear()
+			
+		self.dataQuality_ui.comboBiasConf.addItem('')
+
+		if self.dataQuality_ui.fromDB.isChecked():
+
+			ctype = 'bias'
+
+			query = sMaster.query(self.Obj_CDQ).filter( self.Obj_CDQ.OBJECT == ctype )[:]
+
+			for i in range(len(query)):
+				self.dataQuality_ui.comboBiasConf.addItem(query[i].CONFIG)
+		
 		return 0
 #
 #
@@ -1410,6 +1436,11 @@ FROM FILE: {fimg}
 		if len(q_repo) == 0:
 			logging.debug('No information on database for project {0}'.format(str(self.dataQuality_ui.comboBox.currentText())))
 			return -1
+
+        #
+        # Generate review: Total hours of observations, total hours validated, number/list of projets. 
+        #
+        
 		#
 		# start with calibrations
 		#
