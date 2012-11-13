@@ -69,7 +69,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 		super(SoarLog, self).__init__()
 		self.Queue = args[0]
 		self.recordQueue = args[1]
-		self.commitLock = threading.RLock()
+		self.commitLock = threading.Lock()
 		#self.emmitFileEventLock = threading.Lock()
 		
 	##########################################################
@@ -908,9 +908,12 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 			logging.debug(query.Comment)
 			query.Comment = str(winfo.wi_ui.weatherInfo.toPlainText())
 			logging.debug(query.Comment)
-
-			session.flush()			
-			session.commit()
+                        self.commitLock.acquire()
+                        try:
+                            session.flush()			
+                            session.commit()
+                        finally:
+                            self.commitLock.release()
 #			_file = open(self.__FileWeatherComments__,'w')
 #			_file.write(winfo.wi_ui.weatherInfo.toPlainText())
 #			_file.close()
