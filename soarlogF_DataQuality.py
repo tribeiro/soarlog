@@ -1151,18 +1151,32 @@ FROM FILE: {fimg}
 			query = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.PID==pid).filter(self.Obj_FLDQ.TYPE==cal)[:]
 
 			if len(query) > 0:
-				query2 = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME == query[0].FILENAME)[:]
-				conf = self.getConf(query2,cal)[0]
-				logging.debug('--> {0} | {1} | {2}'.format(len(query2),conf,query[0].FILENAME))
+				xconf = []
+				for i in range(len(query)):
+					query2 = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME == query[i].FILENAME)[:]
+					if len(query2) > 0:
+						#print query[i].FILENAME,query2[0].FILENAME,self.getConf(query2,cal)
+						xconf.append(str(self.getConf(query2,cal)[0][0]))
+				conf = np.unique(xconf)
+				#logging.debug('--> {0} | {1} | {2}'.format(len(query2),conf,query[0].FILENAME))
 				if len(conf) == 0:
 					query2 = session_CID.query(self.Obj_CID).filter(self.Obj_CID.id == query[0].id_tvDB)[:]
 					conf = self.getConf(query2,cal)[0]
-					logging.debug('---> {0} | {1} | {2}'.format(len(query2),conf,query[0].FILENAME))
+					#logging.debug('---> {0} | {1} | {2}'.format(len(query2),conf,query[0].FILENAME))
 
-				logCalib += tmp_logCalib.format(type=str.upper(cal),
-								fimg=query[0].FILENAME,
-								limg=query[-1].FILENAME,
-								conf=conf[0])
+				if len(conf) == 1:
+					logCalib += tmp_logCalib.format(type=str.upper(cal),
+									fimg=query[0].FILENAME,
+									limg=query[-1].FILENAME,
+									conf=conf[0])
+				else:
+					for i in range(len(conf)):
+						xmask = np.arange(len(query))[np.array(xconf) == str(conf[i])]
+						logCalib += tmp_logCalib.format(type=str.upper(cal),
+										fimg=query[xmask[0]].FILENAME,
+										limg=query[xmask[-1]].FILENAME,
+										conf=conf[i])
+
 
 
 		return logCalib
@@ -1301,9 +1315,11 @@ FROM FILE: {fimg}
 				queryFLDQ = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.FILENAME == query[0].FILENAME)[:]
 
 			else:
+				logging.debug('No files founded matching. No copy done!')
 				queryInstrume = []
 				queryFLDQ = []
 			
+			print len(queryInstrume),len(queryFLDQ)
 			if len(queryInstrume) == 1 and os.path.dirname(record[0]) != record[1] and len(queryFLDQ) > 0:
 
 				try:
@@ -1725,6 +1741,28 @@ Warning: If you are doing filename replacement do not delete any '?' in the user
 
 			fp = open(filename,'w')
 
+			#
+			# Getting total time observed times validated
+			#
+			tobs = 0.
+			tvalid = 0.
+			for i in range(len(q_repo)):
+				tobs += q_repo[i].TIMESPENT
+				tvalid += q_repo[i].TIMEVALID
+			fp.write(self._separator)
+			fp.write('''- Night summary
+  OBS-TIME: {OTIME}
+VALID-TIME: {VTIME}
+ NProjects: {NPJT}
+'''.format(OTIME = '{hh:02d}:{mm:02d}'.format(hh=int(np.floor(tobs)),mm=int( (tobs - np.floor(tobs))*60.)),
+	   VTIME = '{hh:02d}:{mm:02d}'.format(hh=int(np.floor(tvalid)),mm=int( (tvalid - np.floor(tvalid))*60.)),
+	   NPJT  = len(q_repo)))
+			fp.write(self._separator)
+			fp.write(self._separator)
+
+			#
+			# Saving report for each project
+			#
 			for i in range(len(q_repo)):
 				tm_h = q_repo[i].TIMESPENT
 				tm_m = int( (tm_h - np.floor(tm_h))*60.)

@@ -305,8 +305,9 @@ class soarDB(threading.Thread):
 		self.file_table_CID = file_table_TVDB
 		
 		self.rthread = None
-		
-#		self.setDaemon(True)
+
+		self.daemon = True
+		self.setDaemon(True)
 
 
 #
@@ -495,20 +496,19 @@ class soarDB(threading.Thread):
 		#OBSNOTES = '%s' % self.ui.tableDB.model().data(index,QtCore.Qt.DisplayRole).toString()
 		
 		logging.debug('CommitDBTable')
+		
+		#self.commitLock.acquire()
 
-		self.commitLock.acquire()
+		#try:
+		session = self.Session()
+		
+		editFrame = session.query(self.Obj_CID).filter(self.Obj_CID.id == index.row()+1)[0]
+		if str(editFrame.INSTRUME) != 'NOTE': 
+			editFrameInst = session.query(self.Obj_INSTRUMENTS[editFrame.INSTRUME]).filter(self.Obj_INSTRUMENTS[editFrame.INSTRUME].FILENAME == os.path.join(editFrame.PATH,editFrame.FILENAME))[:]
 
-		try:
-
-			session = self.Session()
-			
-			editFrame = session.query(self.Obj_CID).filter(self.Obj_CID.id == index.row()+1)[0]
-			if str(editFrame.INSTRUME) != 'NOTE': 
-				editFrameInst = session.query(self.Obj_INSTRUMENTS[editFrame.INSTRUME]).filter(self.Obj_INSTRUMENTS[editFrame.INSTRUME].FILENAME == os.path.join(editFrame.PATH,editFrame.FILENAME))[:]
-
-				if len(editFrameInst) == 0:
-					logging.debug('OPERATION ERROR: No Instrument frame found on database.')
-					raise IOError('OPERATION ERROR: No Instrument frame found on database.')
+		if len(editFrameInst) == 0:
+			logging.debug('OPERATION ERROR: No Instrument frame found on database.')
+			raise IOError('OPERATION ERROR: No Instrument frame found on database.')
 
 			#OLD_NOTES = editFrame.OBSNOTES
 			#
@@ -517,48 +517,60 @@ class soarDB(threading.Thread):
 			#print '---------------'
 			#print OBSNOTES
 			#print '---------------'		
-			if index.column() == 16:
-				editFrame.OBSNOTES = '{0}'.format(OBSNOTES)
-			if index.column() == 0:
-				editFrame.OBJECT = '{0}'.format(OBSNOTES)
-				editFrameInst[0].OBJECT = '{0}'.format(OBSNOTES)
-				logging.debug(os.path.join(str(editFrame.PATH),str(editFrame.FILENAME)))
-				hdu = pyfits.open(os.path.join(str(editFrame.PATH),str(editFrame.FILENAME)),mode='update')
-				if editFrame.INSTRUME == 'Goodman Spectrograph':
-					hdu[0].header.update('PARAM0', hdu[0].header['PARAM0'],"CCD Temperature, C")
-					hdu[0].header.update('PARAM61',hdu[0].header['PARAM61'],"Low Temp Limit, C")
-					hdu[0].header.update('PARAM62',hdu[0].header['PARAM62'],"CCD Temperature Setpoint, C")
-					hdu[0].header.update('PARAM63',hdu[0].header['PARAM63'],"Operational Temp, C")        
+		if index.column() == 16:
+			editFrame.OBSNOTES = '{0}'.format(OBSNOTES)
+		if index.column() == 0:
+			editFrame.OBJECT = '{0}'.format(OBSNOTES)
+			editFrameInst[0].OBJECT = '{0}'.format(OBSNOTES)
+			logging.debug(os.path.join(str(editFrame.PATH),str(editFrame.FILENAME)))
+			hdu = pyfits.open(os.path.join(str(editFrame.PATH),str(editFrame.FILENAME)),mode='update')
+			if editFrame.INSTRUME == 'Goodman Spectrograph':
+				hdu[0].header.update('PARAM0', hdu[0].header['PARAM0'],"CCD Temperature, C")
+				hdu[0].header.update('PARAM61',hdu[0].header['PARAM61'],"Low Temp Limit, C")
+				hdu[0].header.update('PARAM62',hdu[0].header['PARAM62'],"CCD Temperature Setpoint, C")
+				hdu[0].header.update('PARAM63',hdu[0].header['PARAM63'],"Operational Temp, C")        
 
 
 				#hdu.verify('fix')
-				hdu[0].header.update('OBJECT', '{0}'.format(OBSNOTES))
+			hdu[0].header.update('OBJECT', '{0}'.format(OBSNOTES))
+			#pyfits.writeto(os.path.join(str(rr.PATH),str(rr.FILENAME)),hdu[0].data,hdu[0].header)
+			hdu.close(output_verify='silentfix')
+		if index.column() == 11:
+			editFrame.IMAGETYP = '{0}'.format(OBSNOTES)
+			try:
+				hdu = pyfits.open(os.path.join(str(editFrame.PATH),str(editFrame.FILENAME)),mode='update')
+				#hdu.verify('fix')
+				hdu[0].header.update(databaseF.frame_infos.INSTRUMENT_TRANSLATE[editFrame.INSTRUME]['IMAGETYP'], '{0}'.format(OBSNOTES))
 				#pyfits.writeto(os.path.join(str(rr.PATH),str(rr.FILENAME)),hdu[0].data,hdu[0].header)
 				hdu.close(output_verify='silentfix')
-			if index.column() == 11:
-				editFrame.IMAGETYP = '{0}'.format(OBSNOTES)
+			except:
+				pass
+		if index.column() == 12:
+			oldfile = editFrame.FILENAME
+			editFrameInst[0].FILENAME = os.path.join(editFrame.PATH,str(OBSNOTES))
+			try:
+				editFrame.FILENAME = '{0}'.format(OBSNOTES)
+				self.commitLock.acquire()
 				try:
-					hdu = pyfits.open(os.path.join(str(editFrame.PATH),str(editFrame.FILENAME)),mode='update')
-					#hdu.verify('fix')
-					hdu[0].header.update(databaseF.frame_infos.INSTRUMENT_TRANSLATE[editFrame.INSTRUME]['IMAGETYP'], '{0}'.format(OBSNOTES))
-					#pyfits.writeto(os.path.join(str(rr.PATH),str(rr.FILENAME)),hdu[0].data,hdu[0].header)
-					hdu.close(output_verify='silentfix')
-				except:
-					pass
-			if index.column() == 12:
-				oldfile = editFrame.FILENAME
-				editFrameInst[0].FILENAME = os.path.join(editFrame.PATH,str(OBSNOTES))
-				try:
-					editFrame.FILENAME = '{0}'.format(OBSNOTES)
 					shutil.copy2(os.path.join(editFrame.PATH,oldfile),os.path.join(editFrame.PATH,str(OBSNOTES)))
-				except IOError:
-					editFrame.FILENAME = oldfile
+				finally:
 					session.commit()
-					raise
-				#	return -1
+					self.commitLock.release()
+
+			except IOError:
+				editFrame.FILENAME = oldfile
+				self.commitLock.acquire()
+				try:
+					session.commit()
+				finally:
+					self.commitLock.release()
+				raise
+			#	return -1
 
 				
 				
+		self.commitLock.acquire()
+		try:
 			session.commit()
 		finally:
 			self.commitLock.release()

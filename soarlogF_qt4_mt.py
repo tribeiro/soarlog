@@ -93,8 +93,8 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 	
 		self.dir = ''
 		self.logfile = 'SOARLOG_{0}.txt'
-		self.semester_ID = 'SO2012B-{0}'
-		self.dataCalib = '/data/data_calib/2012B/SO2012B-%s.txt'
+		self.semester_ID = 'SO2013A-{0}'
+		self.dataCalib = '/data/data_calib/2013A/SO2013A-%s.txt'
 		self.dataStorage = '/data/data_{SID}/{PID}'
 		self.dbname = 'soarlog_{0}.db'
 		self.masterDBName = '/data/database/soarlog_database.db' # master database.
@@ -453,7 +453,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 		#
 		colWidth = []
 		if os.path.isfile(os.path.join(self._CFGFilePath_,self._CFGFiles_['ColumnWidth'])):
-			colWidth = np.loadtxt(os.path.join(self._CFGFilePath_,self._CFGFiles_['ColumnWidth']),dtype='int',unpack=True)
+			colWidth = np.loadtxt(os.path.join(self._CFGFilePath_,self._CFGFiles_['ColumnWidth']),unpack=True)
 
 		for i in range(len(colWidth)):
 			if colWidth[i] > 0:
@@ -910,7 +910,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 			logging.debug(query.Comment)
                         self.commitLock.acquire()
                         try:
-                            session.flush()			
+                            #session.flush()			
                             session.commit()
                         finally:
                             self.commitLock.release()
