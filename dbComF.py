@@ -73,8 +73,8 @@ class soarDB(threading.Thread):
 		self.daemon = True 
 		#self.initThreadLock = threading.RLock()
 		
-		self.engine = create_engine('sqlite:///{0}'.format(self.dbname) )
-		self.masterEngine = create_engine('sqlite:///{0}'.format(self.masterDBName) )
+		self.engine = create_engine('sqlite:///%s'%(self.dbname) )
+		self.masterEngine = create_engine('sqlite:///%s'%(self.masterDBName) )
 
 		self.metadata = MetaData()
 		
@@ -166,7 +166,7 @@ class soarDB(threading.Thread):
 							setattr(self, c.name, getattr(source, c.name))
 
 
-			self.Obj_INSTRUMENTS[_inst] = type(FrameINST(**instTemplate))
+			self.Obj_INSTRUMENTS[_inst] = type(FrameINST(**instTemplate.__dict__))
 			
 			#'addresses' : relationship(Address, backref='user', order_by=address.c.id)
 
@@ -287,8 +287,11 @@ class soarDB(threading.Thread):
 		self.metadata.create_all(self.engine)	
 		self.Session = sessionmaker(bind=self.engine)
 
-		self.metadata.create_all(self.masterEngine)	
-		self.MasterSession = sessionmaker(bind=self.masterEngine)
+		try:
+			self.metadata.create_all(self.masterEngine)	
+			self.MasterSession = sessionmaker(bind=self.masterEngine)
+		except:
+			pass
 
 		#
 		# Setup Done
@@ -337,7 +340,7 @@ class soarDB(threading.Thread):
 		infos = databaseF.frame_infos.GetFrameInfos(str(filename))
 
 		if infos == -1:
-			logging.debug('# Could not read file {0}... ' .format(filename))
+			logging.debug('# Could not read file %s... '%(filename))
 			return -1
 		else:
 			entry_CID = self.Obj_CID(**infos[1])
@@ -415,7 +418,7 @@ class soarDB(threading.Thread):
 				while not self.Queue.empty():
 				
 					cframe = self.Queue.get()
-					logging.debug('--> Working on {0}'.format(cframe))
+					logging.debug('--> Working on %s'%(cframe))
 					info = self.AddFrame(cframe)
 					if info == 0:
 						fframe = cframe
@@ -518,10 +521,10 @@ class soarDB(threading.Thread):
 			#print OBSNOTES
 			#print '---------------'		
 		if index.column() == 16:
-			editFrame.OBSNOTES = '{0}'.format(OBSNOTES)
+			editFrame.OBSNOTES = '%s'%(OBSNOTES)
 		if index.column() == 0:
-			editFrame.OBJECT = '{0}'.format(OBSNOTES)
-			editFrameInst[0].OBJECT = '{0}'.format(OBSNOTES)
+			editFrame.OBJECT = '%s'%(OBSNOTES)
+			editFrameInst[0].OBJECT = '%s'%(OBSNOTES)
 			logging.debug(os.path.join(str(editFrame.PATH),str(editFrame.FILENAME)))
 			hdu = pyfits.open(os.path.join(str(editFrame.PATH),str(editFrame.FILENAME)),mode='update')
 			if editFrame.INSTRUME == 'Goodman Spectrograph':
@@ -532,15 +535,15 @@ class soarDB(threading.Thread):
 
 
 				#hdu.verify('fix')
-			hdu[0].header.update('OBJECT', '{0}'.format(OBSNOTES))
+			hdu[0].header.update('OBJECT', '%s'%(OBSNOTES))
 			#pyfits.writeto(os.path.join(str(rr.PATH),str(rr.FILENAME)),hdu[0].data,hdu[0].header)
 			hdu.close(output_verify='silentfix')
 		if index.column() == 11:
-			editFrame.IMAGETYP = '{0}'.format(OBSNOTES)
+			editFrame.IMAGETYP = '%s'%(OBSNOTES)
 			try:
 				hdu = pyfits.open(os.path.join(str(editFrame.PATH),str(editFrame.FILENAME)),mode='update')
 				#hdu.verify('fix')
-				hdu[0].header.update(databaseF.frame_infos.INSTRUMENT_TRANSLATE[editFrame.INSTRUME]['IMAGETYP'], '{0}'.format(OBSNOTES))
+				hdu[0].header.update(databaseF.frame_infos.INSTRUMENT_TRANSLATE[editFrame.INSTRUME]['IMAGETYP'], '%s'%(OBSNOTES))
 				#pyfits.writeto(os.path.join(str(rr.PATH),str(rr.FILENAME)),hdu[0].data,hdu[0].header)
 				hdu.close(output_verify='silentfix')
 			except:
@@ -549,7 +552,7 @@ class soarDB(threading.Thread):
 			oldfile = editFrame.FILENAME
 			editFrameInst[0].FILENAME = os.path.join(editFrame.PATH,str(OBSNOTES))
 			try:
-				editFrame.FILENAME = '{0}'.format(OBSNOTES)
+				editFrame.FILENAME = '%s'%(OBSNOTES)
 				self.commitLock.acquire()
 				try:
 					shutil.copy2(os.path.join(editFrame.PATH,oldfile),os.path.join(editFrame.PATH,str(OBSNOTES)))

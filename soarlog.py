@@ -22,7 +22,8 @@ recordQueue = Queue.Queue()
 if __name__ == "__main__":
 
 	
-	root = QtGui.QApplication(sys.argv)
+	root = QtGui.QApplication(sys
+.argv)
 	
 	usergui = SoarLog(MasterQueue,recordQueue)
 	

@@ -64,7 +64,7 @@ class DataTransfer():
         if self.total_files == 0:
             self.dataTransfer_ui.label_transfer.setText('NFiles: (waiting)')
         else:
-            self.dataTransfer_ui.label_transfer.setText('NFiles: ({0}/{1})'.format(self.ncopy,self.total_files))
+            self.dataTransfer_ui.label_transfer.setText('NFiles: (%i/%i)'%(self.ncopy,self.total_files))
             self.dataTransfer_ui.verbose_text.setText(self.verboseLine)
 
         if self.STATUS:
@@ -106,9 +106,9 @@ class DataTransfer():
                 yyyy = obsdate.year
                 mm = obsdate.month
                 dd = obsdate.day
-            yyyy = '{0:04d}'.format(int(yyyy)) 
-            mm = '{0:02d}'.format(int(mm))
-            dd = '{0:02d}'.format(int(dd))
+            yyyy = '%04d'%(int(yyyy)) 
+            mm =   '%02d'%(int(mm))
+            dd =   '%02d'%(int(dd))
         except:
             logging.debug(sys.exc_info()[1])
             yyyy = 'yyyy'
@@ -116,9 +116,9 @@ class DataTransfer():
             dd = 'dd'
             pass
         self.currentInstrument = self.dataTransfer_ui.select_instrument.currentIndex()
-        self.dataTransfer_ui.path_instrument.setText(self.instr2path[str(self.dataTransfer_ui.select_instrument.currentText())].format(yyyy=yyyy,
-                                                                                                                                      mm=mm,
-                                                                                                                                      dd=dd))
+        self.dataTransfer_ui.path_instrument.setText(self.instr2path[str(self.dataTransfer_ui.select_instrument.currentText())]%{'yyyy':yyyy,
+                                                                                                                                 'mm':mm,
+                                                                                                                                 'dd':dd})
 #
 #
 ################################################################################################
@@ -162,10 +162,10 @@ class DataTransfer():
     def py_rsync(self):
 
         
-        cmd = self.cmdline.format(instrCpu=self.instr2cpu[str(self.dataTransfer_ui.select_instrument.currentText())],
-                                  instrPath=self.dataTransfer_ui.path_instrument.text(),
-                                  localPath=self.dataTransfer_ui.local_data_path.text()+'/',
-                                  dryrun = '--stats --dry-run' )
+        cmd = self.cmdline%{'instrCpu':self.instr2cpu[str(self.dataTransfer_ui.select_instrument.currentText())],
+                            'instrPath':self.dataTransfer_ui.path_instrument.text(),
+                            'localPath':self.dataTransfer_ui.local_data_path.text()+'/',
+                            'dryrun': '--stats --dry-run' }
 
         self.verboseLine = cmd
         self.dataTransfer_ui.verbose_text.setText(cmd)
@@ -188,10 +188,10 @@ class DataTransfer():
 
             self.emit(QtCore.SIGNAL('copiedFiles(int,int)'),0,self.total_files)
 
-            cmd = self.cmdline.format(instrCpu=self.instr2cpu[str(self.dataTransfer_ui.select_instrument.currentText())],
-                                      instrPath=self.dataTransfer_ui.path_instrument.text(),
-                                      localPath=self.dataTransfer_ui.local_data_path.text()+'/',
-                                      dryrun = '--progress' )
+            cmd = self.cmdline%{'instrCpu':self.instr2cpu[str(self.dataTransfer_ui.select_instrument.currentText())],
+                                'instrPath':self.dataTransfer_ui.path_instrument.text(),
+                                'localPath':self.dataTransfer_ui.local_data_path.text()+'/',
+                                'dryrun': '--progress' }
 
             proc = subprocess.Popen(cmd,
                                     shell=True,
@@ -241,7 +241,7 @@ class DataTransfer():
 #
 
     def updateCopiedFiles(self,nfiles,totfiles):
-        self.dataTransfer_ui.label_transfer.setText('NFiles: ({0}/{1})'.format(nfiles,totfiles))
+        self.dataTransfer_ui.label_transfer.setText('NFiles: (%i/%i)'%(nfiles,totfiles))
         return 0
 #
 #

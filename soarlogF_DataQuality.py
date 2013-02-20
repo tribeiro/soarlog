@@ -47,7 +47,7 @@ class DataQuality():
 		projInfo = self.getProjects()
 
 		prj = np.append([''],projInfo[0])#np.append(projInfo[0],['all','Calibration'])
-		dataset = '{date}-{PID}'
+		dataset = '%(date)s-%(PID)s'
 
 		for i in range(len(prj)):
 
@@ -60,7 +60,7 @@ class DataQuality():
 			#
 
 			if len(prj[i]) == 3:
-				query = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.DATASET == dataset.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(prj[i])))[:]
+				query = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.DATASET == dataset%{'date':self.dir.split('/')[-1],'PID':self.semester_ID%(prj[i])})[:]
 				query_tvdb = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-'+prj[i]+'%' ) ).filter(sqlalchemy.not_(self.Obj_CID.INSTRUME.like('%NOTE%')))[:]
 
 				if len(query) < len(query_tvdb):
@@ -74,12 +74,12 @@ class DataQuality():
 							iquery = qInst = session_CID.query(self.Obj_INSTRUMENTS[query_tvdb[ii].INSTRUME].id).filter(self.Obj_INSTRUMENTS[query_tvdb[ii].INSTRUME].FILENAME.like('%'+query_tvdb[ii].FILENAME))[:]
 							entry = self.Obj_FLDQ(id_tvDB=query_tvdb[ii].id,
 									      id_INSTRUME=iquery[0].id,
-									      PID=self.semester_ID.format(prj[i]),
+									      PID=self.semester_ID%(prj[i]),
 									      TYPE=query_tvdb[ii].IMAGETYP,
 									      SUBTYPE='night-obs',
 									      FILENAME=query_tvdb[ii].FILENAME,
 									      PATH=query_tvdb[ii].PATH,
-									      DATASET=dataset.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(prj[i])))
+									      DATASET=dataset%{'date':self.dir.split('/')[-1],'PID':self.semester_ID%(prj[i])})
 							session_CID.add(entry)
 				
 		session_CID.commit()                 
@@ -126,7 +126,7 @@ class DataQuality():
 		self.connect(self,QtCore.SIGNAL('copyDone()'), self.enableCopyButton)
 
 		self.dataQuality_ui.lineEditSemesterID.setText(self.semester_ID[:-4])
-		self.dataQuality_ui.lineEditPathToData.setText(self.dataStorage.format(SID=self.semester_ID[:-4],PID=self.semester_ID.format('123')))
+		self.dataQuality_ui.lineEditPathToData.setText(self.dataStorage%{'SID':self.semester_ID[:-4],'PID':self.semester_ID%('123')})
 
 
 		#self.setAnimated(True)
@@ -214,7 +214,7 @@ filenames) unless you REALLY know what you are doing.
 			dqinf = {   'TYPE'		: '',\
 					'SEMESTER'	: self.semester_ID[:-4],\
 					'PID'		: str(self.dataQuality_ui.comboBox.currentText()),\
-					'DATASET'	: '{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))),\
+					'DATASET'	: '%(date)s-%(PID)s'%{'date':self.dir.split('/')[-1],'PID':self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText()))},\
 					'DQNOTE'	: '',\
 					'BIAS'		: '',\
 					'DARK'		: '',\
@@ -250,21 +250,21 @@ filenames) unless you REALLY know what you are doing.
 			try:
 				fwhm = float( self.dataQuality_ui.lineEdit_7.text() )
 			except:
-				logging.debug('Could not convert fhwm to float... got {0}'.format(self.dataQuality_ui.lineEdit_7.text()))
+				logging.debug('Could not convert fhwm to float... got %s'%(self.dataQuality_ui.lineEdit_7.text()))
 				fwhm = 0.
 				pass
 			ell = 0.
 			try:
 				ell = float( self.dataQuality_ui.lineEdit_8.text() )
 			except:
-				logging.debug('Could not convert elipticity to float... got {0}'.format(self.dataQuality_ui.lineEdit_8.text()))
+				logging.debug('Could not convert elipticity to float... got %s'%(self.dataQuality_ui.lineEdit_8.text()))
 				ell = 0.
 				pass
 			
 
 			dqinf = {	'SEMESTER'	: 	self.semester_ID[:-4]	,\
 					'PID'		: 	str(self.dataQuality_ui.comboBox.currentText())		,\
-					'DATASET'	: 	'{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))),\
+					'DATASET'	: 	'%(date)s-%(PID)s'%{'date':self.dir.split('/')[-1],'PID':self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText()))},\
 					'OBJECT'	: str(self.dataQuality_ui.comboBox_Object.currentText()),\
 					'FIELD'	: 		str( self.dataQuality_ui.comboBox_FIELD.currentIndex() ),\
 					'FIELDNOTE'	: str( self.dataQuality_ui.lineEdit_5.text() )		,\
@@ -280,14 +280,14 @@ filenames) unless you REALLY know what you are doing.
 			try:
 				fwhm = float( self.dataQuality_ui.lineEdit_7.text() )
 			except:
-				logging.debug('Could not convert fhwm to float... got {0}'.format(self.dataQuality_ui.lineEdit_7.text()))
+				logging.debug('Could not convert fhwm to float... got %s'%(self.dataQuality_ui.lineEdit_7.text()))
 				fwhm = 0.
 				pass
 			ell = 0.
 			try:
 				ell = float( self.dataQuality_ui.lineEdit_8.text() )
 			except:
-				logging.debug('Could not convert elipticity to float... got {0}'.format(self.dataQuality_ui.lineEdit_8.text()))
+				logging.debug('Could not convert elipticity to float... got %s'%(self.dataQuality_ui.lineEdit_8.text()))
 				ell = 0.
 				pass
 
@@ -299,7 +299,7 @@ filenames) unless you REALLY know what you are doing.
 			query[0].E = ell
 
 		querycfg = session.query(self.Obj_CDQ).filter(self.Obj_CDQ.OBJECT == str(self.dataQuality_ui.comboBox_Object.currentText())).filter( 
-							  self.Obj_CDQ.PID == self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText())) ).filter(self.Obj_CDQ.CONFIG == str(self.dataQuality_ui.comboBox_config.currentText()) ) [:]
+							  self.Obj_CDQ.PID == self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText())) ).filter(self.Obj_CDQ.CONFIG == str(self.dataQuality_ui.comboBox_config.currentText()) ) [:]
 
 		if len(querycfg) > 0:
 	
@@ -307,13 +307,13 @@ filenames) unless you REALLY know what you are doing.
 			querycfg[0].STATUS = str( self.dataQuality_ui.comboBox_6.currentIndex() )
 							     
 
-		query = session.query(self.Obj_RDB).filter(self.Obj_RDB.DATASET == '{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))))[:]
+		query = session.query(self.Obj_RDB).filter(self.Obj_RDB.DATASET == '%(date)s-%(PID)s'%{'date':self.dir.split('/')[-1],'PID':self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText()))})[:]
 
 		if len(query) == 0:
 			#
 			# Nothing on the database. Creating default values
 			#
-			query2 = session.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-{0}%'.format(str(self.dataQuality_ui.comboBox.currentText()))))[:]
+			query2 = session.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%%-%s%%'%(str(self.dataQuality_ui.comboBox.currentText()))))[:]
 			instru_list = np.unique([query2[i].INSTRUME for i in range(len(query2))])
 			instru =''
 			if len(instru_list) == 1:
@@ -322,13 +322,13 @@ filenames) unless you REALLY know what you are doing.
 				for i in range(len(instru_list)):
 					instru = instru+instru_list[i]+'/'
 					
-			vals = {'PID':self.semester_ID.format(  str(self.dataQuality_ui.comboBox.currentText() ) )  ,\
+			vals = {'PID':self.semester_ID%(  str(self.dataQuality_ui.comboBox.currentText() ) )  ,\
 				'PI' : 'None' ,\
 				'INSTRUME' :  instru,\
 				'SETUP':'',\
 				'TIMESPENT':otime,\
 				'TIMEVALID':vtime,\
-				'DATASET':'{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))),\
+				'DATASET':'%(date)s-%(PID)s'%{'date':self.dir.split('/')[-1],'PID':self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText()))},\
 				'REPORT': ''}
 			entry = self.Obj_RDB(**vals)
 			session.add(entry)
@@ -372,7 +372,7 @@ filenames) unless you REALLY know what you are doing.
 			vtime = query[0].VALIDTIME
 			otime = query[0].OBSTIME
 
-			logging.debug('Obs Time: {0}\nValid Time: {1}'.format(otime,vtime))
+			logging.debug('Obs Time: %s\nValid Time: %s'%(otime,vtime))
 			if otime > 0.:
 				self.dataQuality_ui.obsTime.setMinimumTime(QtCore.QTime(0.,0.))
 				self.dataQuality_ui.obsTime.setMaximumTime(QtCore.QTime(23.,0.))
@@ -413,7 +413,7 @@ filenames) unless you REALLY know what you are doing.
 
 		dataset = '{date}-{PID}'
 
-		query3 = session_CID.query(self.Obj_FDQ).filter(self.Obj_FDQ.DATASET == dataset.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(  str(self.dataQuality_ui.comboBox.currentText()) )))[:]
+		query3 = session_CID.query(self.Obj_FDQ).filter(self.Obj_FDQ.DATASET == dataset%{'date':self.dir.split('/')[-1],'PID':self.semester_ID%(  str(self.dataQuality_ui.comboBox.currentText()) )})[:]
 
 		for i in range(len(query3)):
 			if len(query3[i].OBJECT) > 0 and query3[i].OBJECT not in obj_list:
@@ -435,8 +435,8 @@ filenames) unless you REALLY know what you are doing.
 			for j in range(len(frameobsConf)):
 				if frameobsConf[j] not in obsConf:
 					obsConf.append(frameobsConf[j])
-					vals = {'PID':self.semester_ID.format(  str(self.dataQuality_ui.comboBox.currentText() ) )  ,\
-				'DATASET':dataset.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(  str(self.dataQuality_ui.comboBox.currentText()) ))		,\
+					vals = {'PID':self.semester_ID%(  str(self.dataQuality_ui.comboBox.currentText() ) )  ,\
+				'DATASET':dataset%{'date':self.dir.split('/')[-1],'PID':self.semester_ID%(  str(self.dataQuality_ui.comboBox.currentText()) )}		,\
 				'NCONF'	        : frameobsCount[j]		,\
 				'OBJECT'	: obj_list[i]		,\
 				'CONFIG'	: frameobsConf[j],\
@@ -456,7 +456,7 @@ filenames) unless you REALLY know what you are doing.
 		# Setting up data data quality report
 		#
 
-		query = session_CID.query(self.Obj_RDB).filter(self.Obj_RDB.DATASET == '{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))))[:]
+		query = session_CID.query(self.Obj_RDB).filter(self.Obj_RDB.DATASET == '%(date)s-%(PID)s'%{'date':self.dir.split('/')[-1],'PID':self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText()))})[:]
 
 		if len(query) == 0:
 			#
@@ -476,19 +476,19 @@ filenames) unless you REALLY know what you are doing.
 			sMaster = self.MasterSession()
 
 			mquery = sMaster.query(self.Obj_RDB).filter(self.Obj_RDB.PID == 
-				self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))) [:]
+				self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText()))) [:]
 
 			PI = 'None'
 			if len(mquery) > 0:
 				PI = mquery[0].PI
 
-			vals = {'PID':self.semester_ID.format(  str(self.dataQuality_ui.comboBox.currentText() ) )  ,\
+			vals = {'PID':self.semester_ID%(  str(self.dataQuality_ui.comboBox.currentText() ) )  ,\
 				'PI' : PI ,\
 				'INSTRUME' :  instru,\
 				'SETUP':'',\
 				'TIMESPENT':0.,\
 				'TIMEVALID':0.,\
-				'DATASET':'{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))),\
+				'DATASET':'%(date)s-%(PID)s'%{'date':self.dir.split('/')[-1],'PID':self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText()))},\
 				'REPORT': ''}
 			entry = self.Obj_RDB(**vals)
 			session_CID.add(entry)
@@ -523,7 +523,7 @@ filenames) unless you REALLY know what you are doing.
 		#
 		# Setting up data quality files
 		#
-		query = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.DATASET == '{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))))[:]
+		query = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.DATASET == '%(date)s-%(PID)s'%{'date':self.dir.split('/')[-1],'PID':self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText()))})[:]
 
 
 		nrow = self.tpfModel.rowCount(None)
@@ -560,7 +560,7 @@ filenames) unless you REALLY know what you are doing.
 			self.dataQuality_ui.comboBox_6.setCurrentIndex( 0 )
 			self.dataQuality_ui.lineEdit_5.setText( str( query[0].FIELDNOTE) )
 			self.dataQuality_ui.lineEdit_6.setText( '' )
-			logging.debug('fwhm = {0} , ell = {1}'.format(query[0].FWHM,query[0].E))
+			logging.debug('fwhm = %s , ell = %s'%(query[0].FWHM,query[0].E))
 			self.dataQuality_ui.lineEdit_7.setText( str( query[0].FWHM) )
 			self.dataQuality_ui.lineEdit_8.setText( str( query[0].E) )
 		else:
@@ -572,14 +572,14 @@ filenames) unless you REALLY know what you are doing.
 			self.dataQuality_ui.lineEdit_8.setText( '0.' )
 		
 		querycfg = session_CID.query(self.Obj_CDQ).filter(self.Obj_CDQ.OBJECT == str(self.dataQuality_ui.comboBox_Object.currentText())).filter( 
-								  self.Obj_CDQ.PID == self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText())))[:]
+								  self.Obj_CDQ.PID == self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText())))[:]
 
 		self.dataQuality_ui.comboBox_config.clear()
 		self.dataQuality_ui.comboBox_config.addItem('')
 		self.dataQuality_ui.comboBox_config.setCurrentIndex(0)
 		self.dataQuality_ui.lineEdit_6.setText( '' )
 
-		logging.debug('{0} {1} {2}'.format( len(querycfg),self.semester_ID.format(self.dataQuality_ui.comboBox.currentText()),str(self.dataQuality_ui.comboBox_Object.currentText()) ))
+		logging.debug('%i %s %s'%( len(querycfg),self.semester_ID%(self.dataQuality_ui.comboBox.currentText()),str(self.dataQuality_ui.comboBox_Object.currentText()) ))
 
 		for i in range(len(querycfg)):
 			self.dataQuality_ui.comboBox_config.addItem(querycfg[i].CONFIG)
@@ -597,7 +597,7 @@ filenames) unless you REALLY know what you are doing.
 		session_CID = self.Session()
 
 		querycfg = session_CID.query(self.Obj_CDQ).filter(self.Obj_CDQ.OBJECT == str(self.dataQuality_ui.comboBox_Object.currentText())).filter( 
-							  self.Obj_CDQ.PID == self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText())) ).filter(
+							  self.Obj_CDQ.PID == self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText())) ).filter(
 							  self.Obj_CDQ.CONFIG == str(self.dataQuality_ui.comboBox_config.currentText()) ) [:]
 
 		if len(querycfg) == 1:
@@ -606,7 +606,7 @@ filenames) unless you REALLY know what you are doing.
 		elif len(querycfg) > 1:
 			self.dataQuality_ui.comboBox_6.setCurrentIndex( 0 )#int(querycfg[0].STATUS ) )
 			self.dataQuality_ui.lineEdit_6.setText( querycfg[0].CONFIGNOTE )
-			logging.debug( 'WARNING: {0}'.format( len(querycfg)))
+			logging.debug( 'WARNING: %s'%( len(querycfg)))
 		else:
 			self.dataQuality_ui.comboBox_6.setCurrentIndex( 0 )
 			self.dataQuality_ui.lineEdit_6.setText( '' )
@@ -671,7 +671,7 @@ filenames) unless you REALLY know what you are doing.
 		ctype = ['bias','dark','flatfield']
 
 		for i in range(len(ctype)):
-			qq = session.query(self.Obj_CDQ).filter(self.Obj_CDQ.PID == self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))).filter(self.Obj_CDQ.DATASET == '{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText())))).filter(self.Obj_CDQ.OBJECT == ctype[i])[:]
+			qq = session.query(self.Obj_CDQ).filter(self.Obj_CDQ.PID == self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText()))).filter(self.Obj_CDQ.DATASET == '%(date)s-%(PID)s'%{'date':self.dir.split('/')[-1],'PID':self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText()))}).filter(self.Obj_CDQ.OBJECT == ctype[i])[:]
 			cb_cal[i].clear()
 			cb_cal[i].addItem('')
 			for j in range(len(qq)):
@@ -702,15 +702,15 @@ filenames) unless you REALLY know what you are doing.
 		session = self.Session()
 
 		for i in range(len(ctype)):
-			qq = session.query(self.Obj_CDQ).filter(self.Obj_CDQ.PID == self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))).filter(self.Obj_CDQ.DATASET == '{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText())))).filter(self.Obj_CDQ.OBJECT == ctype[i]).filter(self.Obj_CDQ.CONFIG == str(cb_calconf[i].currentText()))[:]
-			logging.debug('{0} {1}'.format(ctype[i],len(qq)))
+			qq = session.query(self.Obj_CDQ).filter(self.Obj_CDQ.PID == self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText()))).filter(self.Obj_CDQ.DATASET == '%(date)s-%(PID)s'%{'date':self.dir.split('/')[-1],'PID':self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText()))}).filter(self.Obj_CDQ.OBJECT == ctype[i]).filter(self.Obj_CDQ.CONFIG == str(cb_calconf[i].currentText()))[:]
+			logging.debug('%s %i'%(ctype[i],len(qq)))
 			if len(qq) > 0:
 				qq[0].CONFIGNOTE = str(cb_caltext[i].text())
 				qq[0].STATUS = str(cb_calstat[i].currentIndex())
 				session.commit()
 
 			if len(qq) > 1 :
-				logging.warning('WARNING: Found duplicate configuration for {0}'.format(ctype[i]))
+				logging.warning('WARNING: Found duplicate configuration for %s'%(ctype[i]))
 			
 		
 #
@@ -778,14 +778,14 @@ filenames) unless you REALLY know what you are doing.
 
 		session = self.Session()
 
-		qq = session.query(self.Obj_CDQ).filter(self.Obj_CDQ.PID == self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))).filter(self.Obj_CDQ.DATASET == '{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText())))).filter(self.Obj_CDQ.OBJECT == ctype).filter(self.Obj_CDQ.CONFIG == str(cb_calconf[ctype].currentText()))[:]
+		qq = session.query(self.Obj_CDQ).filter(self.Obj_CDQ.PID == self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText()))).filter(self.Obj_CDQ.DATASET == '%(date)s-%(PID)s'%{'date':self.dir.split('/')[-1],'PID':self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText()))}).filter(self.Obj_CDQ.OBJECT == ctype).filter(self.Obj_CDQ.CONFIG == str(cb_calconf[ctype].currentText()))[:]
 
-		logging.debug('-> {0} {1}'.format(ctype,str(cb_calconf[ctype].currentText())))
+		logging.debug('-> %s %s'%(ctype,str(cb_calconf[ctype].currentText())))
 		for i in range(len(qq)):
-			logging.debug('--> {0} {1}'.format(qq[0].OBJECT,qq[0].CONFIG))
+			logging.debug('--> %s %s'%(qq[0].OBJECT,qq[0].CONFIG))
 
 		if len(qq) > 0:
-			logging.debug('--> {0} {1}'.format(int(qq[0].STATUS),str(qq[0].CONFIGNOTE)))
+			logging.debug('--> %s %s'%(int(qq[0].STATUS),str(qq[0].CONFIGNOTE)))
 			cb_calstat[ctype].setCurrentIndex(int(qq[0].STATUS))
 			cb_caltext[ctype].setText(str(qq[0].CONFIGNOTE))
 
@@ -911,11 +911,11 @@ filenames) unless you REALLY know what you are doing.
 			if not obj:
 				_obj = str(self.dataQuality_ui.comboBox_Object.currentText())
 			else:
-				logging.debug('OBJECT will be changed to user specified {0}'.format(_obj))
+				logging.debug('OBJECT will be changed to user specified %s'%(_obj))
 
 
-			vals = {'PID': self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText())),
-				'DATASET':'{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))),
+			vals = {'PID': self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText())),
+				'DATASET':'%(date)s-%(PID)s'%{'date':self.dir.split('/')[-1],'PID':self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText()))},
 				'NCONF' : nconf[i],
 				'OBJECT': _obj,
 				'CONFIG': fconf[i],
@@ -930,7 +930,7 @@ filenames) unless you REALLY know what you are doing.
 				session.add(entry)
 				session.commit()
 			elif new > 0:
-				logging.debug('Entry already in database, but {0} new files added.'.format(new))
+				logging.debug('Entry already in database, but %s new files added.'%(new))
 				for i in range(len(qq)):
 					qq[0].NCONF += new
 				session.commit()
@@ -964,12 +964,12 @@ filenames) unless you REALLY know what you are doing.
         		qInst = session_CID.query(self.Obj_INSTRUMENTS[query[0].INSTRUME].id).filter(self.Obj_INSTRUMENTS[query[0].INSTRUME].FILENAME.like('%'+fname))[:]
         		vals = {'id_tvDB':query[0].id,
 				'id_INSTRUME' : qInst[0].id,
-				'PID': self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText())),
+				'PID': self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText())),
 				'TYPE': ftype,
 				'SUBTYPE':ftype,
 				'FILENAME':fname,
 				'PATH':query[0].PATH,
-				'DATASET'	: '{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText())))}
+				'DATASET'	: '%(date)s-%(PID)s'%{'date':self.dir.split('/')[-1],'PID':self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText()))}}
         		entry = self.Obj_FLDQ(**vals)		
         		query2 = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.id_tvDB == entry.id_tvDB).filter(self.Obj_FLDQ.DATASET == entry.DATASET)[:]
 
@@ -1001,26 +1001,26 @@ filenames) unless you REALLY know what you are doing.
 
 		for i in range(len(sIndex)-1,-1,-1):
 			
-			query = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.PID == self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))).filter(self.Obj_FLDQ.FILENAME == str(sIndex[i].data().toString() ) )[:]
+			query = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.PID == self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText()))).filter(self.Obj_FLDQ.FILENAME == str(sIndex[i].data().toString() ) )[:]
 
 			query2 = session_CID.query(self.Obj_CID).filter(self.Obj_CID.id == query[0].id_tvDB)[:]
 
 			conf,nfiles = self.getConf(query2)
 
-			query2 = session_CID.query(self.Obj_CDQ).filter(self.Obj_FLDQ.PID == self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))).filter(self.Obj_CDQ.CONFIG.like(conf[0]+'%')).filter(self.Obj_CDQ.OBJECT == query[0].TYPE)[:]
+			query2 = session_CID.query(self.Obj_CDQ).filter(self.Obj_FLDQ.PID == self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText()))).filter(self.Obj_CDQ.CONFIG.like(conf[0]+'%')).filter(self.Obj_CDQ.OBJECT == query[0].TYPE)[:]
 
-			logging.debug('{0} {1} {2} {3}'.format(query2[0].OBJECT,query2[0].CONFIG,query2[0].NCONF, query[0].TYPE))
+			logging.debug('%s %s %s %s'%(query2[0].OBJECT,query2[0].CONFIG,query2[0].NCONF, query[0].TYPE))
 			
 			if len(query2) > 0 :
 
-				logging.debug('NCONF = {0}...'.format(query2[0].NCONF))
+				logging.debug('NCONF = %i...'%(query2[0].NCONF))
 
 				if int(query2[0].NCONF) > 1 :
 					#
 					# If there is still frames left with this configuration on CDQ just decrement NCONF (the files couter).
 					#
 					query2[0].NCONF = query2[0].NCONF-1
-					logging.debug('Decrementing NCONF {0}...'.format(query2[0].NCONF))
+					logging.debug('Decrementing NCONF %i...'%(query2[0].NCONF))
 				else:
 					#
 					# Otherwise, delete entire entry from CDQ
@@ -1056,7 +1056,7 @@ filenames) unless you REALLY know what you are doing.
 		pid = str(self.dataQuality_ui.comboBox.currentText())
 		obj = str(self.dataQuality_ui.comboBox_Object.currentText())
 
-		query = session_CID.query(self.Obj_CID).filter(sqlalchemy.not_(self.Obj_CID.OBJECT.like('{0}%'.format(obj))))[:] 
+		query = session_CID.query(self.Obj_CID).filter(sqlalchemy.not_(self.Obj_CID.OBJECT.like('%s%%'%(obj))))[:] 
 		
 #.filter(self.Obj_CID.FILENAME.like('%-{0}%'.format(pid)))
 
@@ -1143,7 +1143,7 @@ FROM FILE: {fimg}
 
 		logCalib = ''
 
-		pid = self.semester_ID.format(ipid)
+		pid = self.semester_ID%(ipid)
 
 		ctype = ['bias','flatfield','dark']
 
@@ -1165,17 +1165,17 @@ FROM FILE: {fimg}
 					#logging.debug('---> {0} | {1} | {2}'.format(len(query2),conf,query[0].FILENAME))
 
 				if len(conf) == 1:
-					logCalib += tmp_logCalib.format(type=str.upper(cal),
-									fimg=query[0].FILENAME,
-									limg=query[-1].FILENAME,
-									conf=conf[0])
+					logCalib += tmp_logCalib%{'type':str.upper(cal),
+								  'fimg':query[0].FILENAME,
+								  'limg':query[-1].FILENAME,
+								  'conf':conf[0]}
 				else:
 					for i in range(len(conf)):
 						xmask = np.arange(len(query))[np.array(xconf) == str(conf[i])]
-						logCalib += tmp_logCalib.format(type=str.upper(cal),
-										fimg=query[xmask[0]].FILENAME,
-										limg=query[xmask[-1]].FILENAME,
-										conf=conf[i])
+						logCalib += tmp_logCalib%{'type':str.upper(cal),
+									  'fimg':query[xmask[0]].FILENAME,
+									  'limg':query[xmask[-1]].FILENAME,
+									  'conf':conf[i]}
 
 
 
@@ -1194,7 +1194,7 @@ FROM FILE: {fimg}
 
 		for pid in projInfo[0]:
 
-			solog_dir = os.path.join(self.dataStorage.format(SID=self.semester_ID[:-4],PID=self.semester_ID.format(pid)),
+			solog_dir = os.path.join(self.dataStorage%{'SID':self.semester_ID[:-4],'PID':self.semester_ID%(pid)},
 						 self.dir.split('/')[-1])
 
 			if not os.path.exists(solog_dir):
@@ -1245,13 +1245,13 @@ FROM FILE: {fimg}
 
 		for pid in projInfo[0]:
 
-			solog_dir = os.path.join(self.dataStorage.format(SID=self.semester_ID[:-4],PID=self.semester_ID.format(pid)),
+			solog_dir = os.path.join(self.dataStorage%{'SID':self.semester_ID[:-4],'PID':self.semester_ID%(pid)},
 						 self.dir.split('/')[-1])
 
 			if not os.path.exists(solog_dir):
 				os.makedirs(solog_dir)
 
-			pfiles_query = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.PID==self.semester_ID.format(pid))[:]
+			pfiles_query = session_CID.query(self.Obj_FLDQ).filter(self.Obj_FLDQ.PID==self.semester_ID%(pid))[:]
 
 
 			for i in range(len(pfiles_query)):
@@ -1304,7 +1304,7 @@ FROM FILE: {fimg}
 		while not self.copy_queue.empty():
 			record = self.copy_queue.get()
 
-			logging.debug( 'Copying {0} -> {1} ...'.format(*record))
+			logging.debug( 'Copying %s -> %s ...'%record)
 
 			query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME == os.path.basename(record[0]))[:]
 			newFileNAME = os.path.basename(record[0])
@@ -1341,7 +1341,7 @@ FROM FILE: {fimg}
 						inFile = gname
 						#self.ui.tableDB.model().sourceModel().setData(t_index,os.path.basename(gname),QtCore.Qt.DisplayRole)
 					if query[0].INSTRUME == 'SOI':
-						logging.debug('SOIFIXHEADER: {0}'.format(query[0].FILENAME))
+						logging.debug('SOIFIXHEADER: %s'%(query[0].FILENAME))
 						grenameF.i.soifixheader(input=os.path.join(record[1],query[0].FILENAME))
 					
 					#session_CID.commit()
@@ -1355,7 +1355,7 @@ FROM FILE: {fimg}
 					logging.debug(inFile)
 					queryMaster = session_Master.query(self.Obj_CID).filter(self.Obj_CID.FILENAME == newFileNAME).filter(self.Obj_CID.PATH == newFilePATH)[:]
 					if len(queryMaster) == 0:
-						logging.debug('Adding file {0} to master database...'.format(newFileNAME))
+						logging.debug('Adding file %s to master database...'%(newFileNAME))
 						
 						newEntry = self.Obj_CID()
 						for c in self.file_table_CID.c:
@@ -1380,7 +1380,7 @@ FROM FILE: {fimg}
 										
 
 				except:
-					logging.exception('Exception {0}'.format(sys.exc_info()[2]))
+					logging.exception('Exception %s'%(sys.exc_info()[2]))
 					pass
 									
 
@@ -1390,10 +1390,10 @@ FROM FILE: {fimg}
 
 			if self.cthread_stop.isSet():
 				self.emit(QtCore.SIGNAL("copyProgress(int)"),0)    
-				logging.debug('runCopy: Queue size: {0} [Emptying queue]'.format( self.copy_queue.qsize() ))
-				with self.copy_queue.mutex:
-					self.copy_queue.queue.clear()
-				logging.debug( 'runCopy: Queue size should be zero: {0}'.format(self.copy_queue.qsize() ))
+				logging.debug('runCopy: Queue size: %i [Emptying queue]'%( self.copy_queue.qsize() ))
+				#with self.copy_queue.mutex:
+				self.copy_queue.queue.clear()
+				logging.debug( 'runCopy: Queue size should be zero: %i'%(self.copy_queue.qsize() ))
 
 		self.cthread_stop.clear()
 		logging.debug('Copy done')
@@ -1447,10 +1447,10 @@ FROM FILE: {fimg}
 		session = self.Session()
 
 		q_cal = session.query(self.Obj_DQ).filter(self.Obj_DQ.PID == str(self.dataQuality_ui.comboBox.currentText()))[:]
-		q_repo = session.query(self.Obj_RDB).filter(self.Obj_RDB.DATASET == '{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))))[:]
+		q_repo = session.query(self.Obj_RDB).filter(self.Obj_RDB.DATASET == '%(date)s-%(PID)s'%{'date':self.dir.split('/')[-1],'PID':self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText()))})[:]
 
 		if len(q_repo) == 0:
-			logging.debug('No information on database for project {0}'.format(str(self.dataQuality_ui.comboBox.currentText())))
+			logging.debug('No information on database for project %s'%(str(self.dataQuality_ui.comboBox.currentText())))
 			return -1
 
         #
@@ -1473,7 +1473,7 @@ FROM FILE: {fimg}
 		ctype = ['bias','dark','flatfield']
 
 		for i in range(len(ctype)):
-			qq = session.query(self.Obj_CDQ).filter(self.Obj_CDQ.PID == self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText()))).filter(self.Obj_CDQ.DATASET == '{date}-{PID}'.format(date=self.dir.split('/')[-1],PID=self.semester_ID.format(str(self.dataQuality_ui.comboBox.currentText())))).filter(self.Obj_CDQ.OBJECT == ctype[i])[:]
+			qq = session.query(self.Obj_CDQ).filter(self.Obj_CDQ.PID == self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText()))).filter(self.Obj_CDQ.DATASET == '%(date)s-%(PID)s'%{'date':self.dir.split('/')[-1],'PID':self.semester_ID%(str(self.dataQuality_ui.comboBox.currentText()))}).filter(self.Obj_CDQ.OBJECT == ctype[i])[:]
 			
 			for j in range(len(qq)):
 				
@@ -1483,16 +1483,16 @@ FROM FILE: {fimg}
 				note = self.dqStatus[int(qq[j].STATUS)]
 				cnote = ''
 				if len(qq[j].CONFIGNOTE) > 1:
-					note += '{0}'.format(Count[int(qq[j].STATUS)])
-					cnote = '{0}: {1}\n'.format(note,qq[j].CONFIGNOTE)
+					note += '%s'%(Count[int(qq[j].STATUS)])
+					cnote = '%s: %s\n'%(note,qq[j].CONFIGNOTE)
 					Count[int(qq[j].STATUS)] += 1
 		
 				if int(qq[j].STATUS) > 0:
 					_calNote = _calNote + cnote
-					_repo += '     {ctype}: {CONFIG} {NFILES} [{STAT}]\n'.format(CONFIG = config,
-												     NFILES = int(nf),
-												     STAT=note,
-												     ctype=str.upper(ctype[i]))
+					_repo += '     %(ctype)s: %(CONFIG)s %(NFILES)s [%(STAT)s]\n'%{'CONFIG' : config,
+												       'NFILES' : int(nf),
+												       'STAT'   :note,
+												       'ctype'  :str.upper(ctype[i])}
 
 
 		_repo +=self._separator
@@ -1507,22 +1507,22 @@ FROM FILE: {fimg}
 		for i in range(len(query)):
 			if int(query[i].FIELD) > 0:
 				_repo += '''
-- {OBJ}:
-\tFIELD: [{FLD}]
-'''.format(OBJ=query[i].OBJECT,FLD=self.dqStatus[int(query[i].FIELD)])
+- %(OBJ)s:
+\tFIELD: [%(FLD)s]
+'''%{'OBJ':query[i].OBJECT,'FLD':self.dqStatus[int(query[i].FIELD)]}
 				query2 = session.query(self.Obj_CDQ).filter(self.Obj_CDQ.DATASET == query[i].DATASET).filter(self.Obj_CDQ.OBJECT == query[i].OBJECT)[:]
 				for j in range(len(query2)):
 					if int(query2[j].STATUS) > 0:
 						note = self.dqStatus[int(query2[j].STATUS)]
 						if len(query2[j].CONFIGNOTE) > 1:
-							note += '{0}'.format(Count[int(query2[j].STATUS)])
-							_calNote = _calNote + '{0}: {1}\n'.format(note,query2[j].CONFIGNOTE)
+							note += '%s'%(Count[int(query2[j].STATUS)])
+							_calNote = _calNote + '%s: %s\n'%(note,query2[j].CONFIGNOTE)
 							Count[int(query2[j].STATUS)] += 1
 							
-						_repo += '\t{CFG} {NFLS} [{STAT}]\n'.format(CFG=query2[j].CONFIG,
-											    NFLS=query2[j].NCONF,
-											    STAT=note)
-				_repo += '\tSeeing = {0}" | E = {1}\n'.format(query[i].FWHM,query[i].E)
+						_repo += '\t%(CFG)s %(NFLS)S [%(STAT)s]\n'%{'CFG':query2[j].CONFIG,
+											    'NFLS':query2[j].NCONF,
+											    'STAT':note}
+				_repo += '\tSeeing = %s" | E = %s\n'%(query[i].FWHM,query[i].E)
 		_repo += self._separator
 
 		_repo += '''
@@ -1669,19 +1669,19 @@ Warning: If you are doing filename replacement do not delete any '?' in the user
 					workCol.append(sIndex[i])
 
 			if len(fcont) != len(workCol):
-				self.dataQuality_ui.textEdit_BatchDialog.setText('Size of input list \'{0}\'[{1}] and selected columns [{2}] does not match.'.format(os.path.basename(filename),len(fcont),len(workCol)))
+				self.dataQuality_ui.textEdit_BatchDialog.setText('Size of input list \'%s\'[%s] and selected columns [%s] does not match.'%(os.path.basename(filename),len(fcont),len(workCol)))
 			else:
-				mess = '''File {0} selected and successfuly readed. 
+				mess = '''File %s selected and successfuly readed. 
 
 {1}
 '''
-				self.dataQuality_ui.textEdit_BatchDialog.setText(mess.format(os.path.basename(filename),'Running...'))
+				self.dataQuality_ui.textEdit_BatchDialog.setText(mess%(os.path.basename(filename),'Running...'))
 				for i in range(len(workCol)):
 					logging.debug(fcont[i])
 					self.CommitDBTable(workCol[i],str(fcont[i]))
 					self.ui.tableDB.model().setData(workCol[i],str(fcont[i]),QtCore.Qt.DisplayRole)
 
-				self.dataQuality_ui.textEdit_BatchDialog.setText(mess.format(os.path.basename(filename),'Done...'))				
+				self.dataQuality_ui.textEdit_BatchDialog.setText(mess%(os.path.basename(filename),'Done...'))				
 
 		else:
 			logging.debug('No file selected')
@@ -1708,14 +1708,14 @@ Warning: If you are doing filename replacement do not delete any '?' in the user
 				if sIndex[i].column() == sIndex[0].column():
 					workCol.append(sIndex[i])
 
-			self.dataQuality_ui.textEdit_BatchDialog.setText('Saving {0} data from column {1} to {2}.'.format(len(workCol),
+			self.dataQuality_ui.textEdit_BatchDialog.setText('Saving %i data from column %s to %s.'%(len(workCol),
 															  str(self.tm.headerData(sIndex[0].column(),
 																	     QtCore.Qt.Horizontal,
 																	     QtCore.Qt.DisplayRole).toString())
 															  , filename))
 			fp = open(filename,'w')
 			for i in range(len(workCol)):
-				fp.write('{0}\n'.format(str(self.ui.tableDB.model().data(workCol[i]).toString() )))
+				fp.write('%s\n'%(str(self.ui.tableDB.model().data(workCol[i]).toString() )))
 			fp.close()
 
 		else:
@@ -1751,12 +1751,12 @@ Warning: If you are doing filename replacement do not delete any '?' in the user
 				tvalid += q_repo[i].TIMEVALID
 			fp.write(self._separator)
 			fp.write('''- Night summary
-  OBS-TIME: {OTIME}
-VALID-TIME: {VTIME}
- NProjects: {NPJT}
-'''.format(OTIME = '{hh:02d}:{mm:02d}'.format(hh=int(np.floor(tobs)),mm=int( (tobs - np.floor(tobs))*60.)),
-	   VTIME = '{hh:02d}:{mm:02d}'.format(hh=int(np.floor(tvalid)),mm=int( (tvalid - np.floor(tvalid))*60.)),
-	   NPJT  = len(q_repo)))
+  OBS-TIME: %(OTIME)s
+VALID-TIME: %(VTIME)s
+ NProjects: %(NPJT)s
+'''%{'OTIME': '%(hh)02d:%(mm)02d'%{'hh':int(np.floor(tobs))  ,'mm':int( (tobs - np.floor(tobs))*60.)},
+     'VTIME': '%(hh)02d:%(mm)02d'%{'hh':int(np.floor(tvalid)),'mm':int( (tvalid - np.floor(tvalid))*60.)},
+     'NPJT' : len(q_repo)})
 			fp.write(self._separator)
 			fp.write(self._separator)
 
@@ -1766,16 +1766,16 @@ VALID-TIME: {VTIME}
 			for i in range(len(q_repo)):
 				tm_h = q_repo[i].TIMESPENT
 				tm_m = int( (tm_h - np.floor(tm_h))*60.)
-				otime = '{hh:02d}:{mm:02d}'.format(hh=int(np.floor(tm_h)),mm=tm_m)
+				otime = '%(hh)02d:%(mm)02d'%{'hh':int(np.floor(tm_h)),'mm':tm_m}
 				tm_h = q_repo[i].TIMEVALID
 				tm_m = int( (tm_h - np.floor(tm_h))*60.)
-				vtime = '{hh:02d}:{mm:02d}'.format(hh=int(np.floor(tm_h)),mm=tm_m)
-				fp.write('''   PROJECT: {PID}
-        PI: {PI}
-INSTRUMENT: {INST}
-  OBS-TIME: {OTIME}
-VALID-TIME: {VTIME}
-'''.format(PID=q_repo[i].PID,PI=q_repo[i].PI,INST=q_repo[i].INSTRUME,OTIME=otime,VTIME=vtime))
+				vtime = '%(hh)02d:%(mm)02d'%{'hh':int(np.floor(tm_h)),'mm':tm_m}
+				fp.write('''   PROJECT: %(PID)s
+        PI: %(PI)s
+INSTRUMENT: %(INST)s
+  OBS-TIME: %(OTIME)s
+VALID-TIME: %(VTIME)s
+'''%{'PID':q_repo[i].PID,'PI':q_repo[i].PI,'INST':q_repo[i].INSTRUME,'OTIME':otime,'VTIME':vtime})
 
 				fp.write(self._separator)
 

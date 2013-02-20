@@ -159,7 +159,7 @@ class SOLogTableModel(QtCore.QAbstractTableModel):
 		    self.arraydata[index.row()][index.column()] = QtCore.QVariant(value)
 		    xvalue = QtCore.QVariant(value)
         except AttributeError:
-            logging.debug('Exception in setData {0}'.format(value))
+            logging.debug('Exception in setData %s'%(value))
 	    logging.debug(sys.exc_info()[1])
 		    
             try:

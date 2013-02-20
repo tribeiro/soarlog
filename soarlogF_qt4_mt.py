@@ -92,11 +92,11 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 	##########################################################
 	
 		self.dir = ''
-		self.logfile = 'SOARLOG_{0}.txt'
-		self.semester_ID = 'SO2013A-{0}'
+		self.logfile = 'SOARLOG_%s.txt'
+		self.semester_ID = 'SO2013A-%s'
 		self.dataCalib = '/data/data_calib/2013A/SO2013A-%s.txt'
-		self.dataStorage = '/data/data_{SID}/{PID}'
-		self.dbname = 'soarlog_{0}.db'
+		self.dataStorage = '/data/data_%(SID)s/%(PID)s'
+		self.dbname = 'soarlog_%s.db'
 		self.masterDBName = '/data/database/soarlog_database.db' # master database.
 		self.CommentColumn = 16
 		self.FilenameColumn = 12
@@ -106,8 +106,8 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 		self.AskFile2Watch()
 		self.dqStatus = ['','OK','WARN','FAIL']
 
-		self.logfile = self.logfile.format(self.dir.split('/')[-1])
-		self.dbname  = self.dbname.format(self.dir.split('/')[-1])
+		self.logfile = self.logfile%(self.dir.split('/')[-1])
+		self.dbname  = self.dbname%(self.dir.split('/')[-1])
 		soarDB.__init__(self,self.Queue)
 		#DataQuality.__init__()
 #		self.imageTYPE = ['','OBJECT','FLAT','DFLAT','BIAS','ZERO','DARK','COMP','FAILED','Object']
@@ -239,7 +239,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 					#mscred.mscdisplay(frame,1)
 						for iext in range(4):
 							data = pyfits.getdata(frame,ext=iext+1)
-						d.set('file mosaicimage wcs {0}'.format(frame))
+						d.set('file mosaicimage wcs %s'%(frame))
 						if self.ui.actionZoom_to_fit.isChecked():
 							d.set('zoom to fit')
 						if self.ui.actionZscale.isChecked():
@@ -255,12 +255,12 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 								#zoom = d.get('zoom')
 								d.set('frame clear')
 								d.set('zoom '+zoom)
-							d.set('file mosaic iraf {0}'.format(frame))
+							d.set('file mosaic iraf %s'%(frame))
 						elif query2.DETSERNO == '66':
 							zoom = d.get('zoom')
 							d.set('frame clear')
 							d.set('zoom '+zoom)
-							d.set('file {0}'.format(frame))
+							d.set('file %s'%(frame))
 						if self.ui.actionZoom_to_fit.isChecked():
 							d.set('zoom to fit')
 						if self.ui.actionZscale.isChecked():
@@ -270,9 +270,9 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 						return 0					
 					elif query.INSTRUME == 'OSIRIS':
 						data = pyfits.getdata(frame)
-						#logging.debug('array [xdim = {XDIM} ydim = {YDIM} bitpix=-32]'.format(XDIM=len(data[0]),YDIM=len(data)))
+
 						if d.set_np2arr(np.array(data,dtype=np.float))==1:
-							d.set('file {0}'.format(frame))
+							d.set('file %s'%(frame))
 						if self.ui.actionZoom_to_fit.isChecked():
 							d.set('zoom to fit')
 						if self.ui.actionZscale.isChecked():
@@ -281,7 +281,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 						return 0
 						
 					else:
-						d.set('file {0}'.format(frame))
+						d.set('file %s'%(frame))
 						if self.ui.actionZoom_to_fit.isChecked():
 							d.set('zoom to fit')
 						if self.ui.actionZscale.isChecked():
@@ -290,12 +290,12 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 						return 0
 				except:
 					logging.debug(sys.exc_info()[1])
-					logging.debug('Could not display file {0}'.format(frame))
+					logging.debug('Could not display file %s'%(frame))
 					return -1
 			
 				return 0
 			else:
-				print 'File {0} does not exists...'.format(frame)
+				print 'File %s does not exists...'%(frame)
 				return -1
 
 
@@ -496,7 +496,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 
 	def AddFrame(self,filename):
 	
-		logging.debug('AddFrame received {0}'.format(filename))
+		logging.debug('AddFrame received %s'%(filename))
 		
 		if not filename:
 			logging.debug('Filename is empty ...')
@@ -508,13 +508,13 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 
 		query = session.query(self.Obj_CID.FILENAME).filter(self.Obj_CID.FILENAME == os.path.basename(str(filename)))[:]
 		if len(query) > 0:
-			logging.debug('File {0} already in database...'.format(str(filename)))
+			logging.debug('File %s already in database...'%(str(filename)))
 			return -1
 			
 		infos = databaseF.frame_infos.GetFrameInfos(str(filename))
 
 		if infos == -1:
-			logging.debug(' Could not read file {0}... '.format(filename))
+			logging.debug(' Could not read file %s... '%(filename))
 			return -1
 		else:
 			#self.commitLock.acquire()
@@ -563,10 +563,10 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 	
 			
 				record = self.recordQueue.get()
-				logging.debug('Inserting {0} to main database'.format( record.value('FILENAME').toString() ))
+				logging.debug('Inserting %s to main database'%( record.value('FILENAME').toString() ))
 				self.model.insertRecord(-1,record)
 
-			logging.debug('Submiting changes to database ({0} new entries).'.format(lqueue))
+			logging.debug('Submiting changes to database (%s new entries).'%(lqueue))
 			self.model.submitAll()
 			
 		finally:
@@ -980,13 +980,13 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 		query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.IMAGETYP.like('OBJECT'))[:]
 		
 		logFRAME = '''
-{time}LT File:\t{FILENAME}
-\tOBJECT: {OBJECT} 
-\tNotes: {OBSNOTES}
-\tX={AIRMASS} Exptime:{EXPTIME} s sm= {SEEING}
+{time}LT File:\t%(FILENAME)s
+\tOBJECT: %(OBJECT)s
+\tNotes: %(OBSNOTES)s
+\tX=%(AIRMASS)s Exptime:%(EXPTIME)s s sm= %(SEEING)s
 '''
 		logNOTE = '''
-{time}LT Notes: {OBSNOTES}
+%(time)LT Notes: %(OBSNOTES)s
 '''
 
 		outlog = ''
@@ -1018,7 +1018,7 @@ Time Spent:
 			#
 			
 			timeSpent = self.calcTime(proj)
-			timeSpentLog += self.semester_ID.format(proj) + ': %02.0f:%02.0f\n' % timeSpent
+			timeSpentLog += self.semester_ID%(proj) + ': %02.0f:%02.0f\n' % timeSpent
 
 			#
 			# Get proj Header
@@ -1085,7 +1085,7 @@ Time Spent:
 						if frame2.DETSERNO != '66':
 							writeFlag = False						
 					except:
-						logging.debug('Error {0} on frame {1}...'.format(sys.exc_info()[1],frame.FILENAME))
+						logging.debug('Error %s on frame %s...'%(sys.exc_info()[1],frame.FILENAME))
 						writeFlag = False
 				try:
 					time = time.split(':')
@@ -1104,15 +1104,15 @@ Time Spent:
 				if frame.INSTRUME == 'NOTE':
 					log = logNOTE
 				if writeFlag:
-					outlog += log.format(time=time, FILENAME = os.path.basename(frame.FILENAME), OBJECT = frame.OBJECT, OBSNOTES = frame.OBSNOTES ,\
-										 AIRMASS = frame.AIRMASS, EXPTIME = frame.EXPTIME, SEEING = frame.SEEING)
+					outlog += log%{'time':time, 'FILENAME' : os.path.basename(frame.FILENAME), 'OBJECT' : frame.OBJECT, 'OBSNOTES' : frame.OBSNOTES ,\
+										 'AIRMASS' : frame.AIRMASS, 'EXPTIME' : frame.EXPTIME, 'SEEING' : frame.SEEING}
 				if frame.INSTRUME == 'Goodman Spectrograph':
 					#frame2 = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like(frame.FILENAME))[0]
-					logGS = '\tCONF: {0} SLIT: {1} OBSTYPE: {2}\n'.format(frame.SP_CONF,frame.SLIT,frame.IMAGETYP)
+					logGS = '\tCONF: %s SLIT: %s OBSTYPE: %s\n'%(frame.SP_CONF,frame.SLIT,frame.IMAGETYP)
 					outlog+=logGS
 
 				if frame.INSTRUME == 'Spartan IR Camera' and writeFlag:
-					logSP = '\tFILTER: {0} OBSTYPE: {1}\n'.format(frame2.FILTER,frame.IMAGETYP)
+					logSP = '\tFILTER: %s OBSTYPE: %s\n'%(frame2.FILTER,frame.IMAGETYP)
 					outlog+=logSP
 				
 	
@@ -1264,7 +1264,7 @@ Time Spent:
 						
 						
                     #print id, [ time[i] for i in time_start ], [time[i] for i in time_end], '%02.0f:%02.0f' %( np.floor(calcT), (calcT-np.floor(calcT))*60)
-                    logging.debug(self.semester_ID.format(id)+' {hora:02.0f}:{min:02.0f} (with {nsub} subblocks).'.format(nsub=len(time_start), hora=np.floor(calcT), min=(calcT-np.floor(calcT))*60))
+                    logging.debug(self.semester_ID%(id)+' %(hora)02.0f:%(min)02.0f (with %(nsub)i subblocks).'%{'nsub':len(time_start), 'hora':np.floor(calcT), 'min':(calcT-np.floor(calcT))*60})
 		except:
                     logging.debug('Failed to obtain program time')
 				
@@ -1401,7 +1401,7 @@ Time Spent:
 			try:
 				if query.INSTRUME == 'SOI':
 					#mscred.mscdisplay(frame,1)
-					d.set('file mosaicimage wcs {0}'.format(frame))
+					d.set('file mosaicimage wcs %s'%(frame))
 					if self.ui.actionZoom_to_fit.isChecked():
 						d.set('zoom to fit')
 					if self.ui.actionZscale.isChecked():
@@ -1420,7 +1420,7 @@ Time Spent:
                                                 #logging.debug(pan)
 						d.set('frame clear')
 						for nfile in range(len(query2)):
-							d.set('file mosaic iraf {0}'.format(query2[nfile].FILENAME))
+							d.set('file mosaic iraf %s'%(query2[nfile].FILENAME))
 						d.set('zoom '+zoom)
                                                 d.set('pan to '+pan)
                                                 #
@@ -1429,7 +1429,7 @@ Time Spent:
 						zoom = d.get('zoom')
 						d.set('frame clear')
 						d.set('zoom '+zoom)
-						d.set('file {0}'.format(frame))
+						d.set('file %s'%(frame))
 					if self.ui.actionZoom_to_fit.isChecked():
 						d.set('zoom to fit')
 					if self.ui.actionZscale.isChecked():
@@ -1438,7 +1438,7 @@ Time Spent:
 				elif query.INSTRUME == 'OSIRIS':
 					data = pyfits.getdata(frame)
 					if d.set_np2arr(np.array(data,dtype=np.float))==1:
-						d.set('file {0}'.format(frame))
+						d.set('file %'%s(frame))
 					if self.ui.actionZoom_to_fit.isChecked():
 						d.set('zoom to fit')
 					if self.ui.actionZscale.isChecked():
@@ -1446,7 +1446,7 @@ Time Spent:
 					#display(frame,1)
 					return 0
 				else:
-					d.set('file {0}'.format(frame))
+					d.set('file %'%(frame))
 					#display(frame,1)
 					if self.ui.actionZoom_to_fit.isChecked():
 						d.set('zoom to fit')
@@ -1454,12 +1454,12 @@ Time Spent:
 						d.set('scale mode zscale')
 					return 0
 			except:
-				logging.debug('Could not display file {0}'.format(frame))
+				logging.debug('Could not display file %s'%(frame))
 				return -1
 		
 			return 0
 		else:
-			logging.debug('File {0} does not exists...'.format(frame))
+			logging.debug('File %s does not exists...'%(frame))
 			return -1
 							
 #
@@ -1701,7 +1701,7 @@ Time Spent:
 	
 		if len(self.pid_ui.lineEdit.text()) == 3:
 			#print self.semester_ID.format(self.pid_ui.lineEdit.text())
-			self.addCommentLine(self.semester_ID.format(self.pid_ui.lineEdit.text()))
+			self.addCommentLine(self.semester_ID%(self.pid_ui.lineEdit.text()))
 		self.pid_ui.close()
 #
 #
@@ -1757,7 +1757,7 @@ Time Spent:
 		self.calibhelp_ui.Instrument.addItem('')	
 
 		for i in range(len(pid)):
-			self.calibhelp_ui.Instrument.addItem(self.semester_ID.format(pid[i]))
+			self.calibhelp_ui.Instrument.addItem(self.semester_ID%(pid[i]))
 
 		self.connect(self.calibhelp_ui.Instrument, QtCore.SIGNAL('currentIndexChanged(int)'), self.readDates)
 		#self.connect(self.calibhelp_ui.instConfig, QtCore.SIGNAL('currentIndexChanged(int)'), self.readDates)
@@ -1830,16 +1830,16 @@ Time Spent:
 				note = self.dqStatus[int(qq[j].STATUS)]
 				cnote = ''
 				if len(qq[j].CONFIGNOTE) > 1:
-					note += '{0}'.format(Count[int(qq[j].STATUS)])
-					cnote = '{0}: {1}\n'.format(note,qq[j].CONFIGNOTE)
+					note += '%s'%(Count[int(qq[j].STATUS)])
+					cnote = '%s: %s\n'%(note,qq[j].CONFIGNOTE)
 					Count[int(qq[j].STATUS)] += 1
 		
 				if int(qq[j].STATUS) > 0:
 					_calNote = _calNote + cnote
-					_repo += '     {ctype}: {CONFIG} {NFILES} [{STAT}]\n'.format(CONFIG = config,
-												     NFILES = int(nf),
-												     STAT=note,
-												     ctype=str.upper(ctype[i]))
+					_repo += '     %(ctype)s: %(CONFIG)s %(NFILES)s [%(STAT)s]\n'%{"CONFIG" : config,
+												     "NFILES" : int(nf),
+												     "STAT":note,
+												     "ctype":str.upper(ctype[i])}
 
 
 		_repo += self._separator
