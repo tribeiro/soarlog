@@ -506,9 +506,9 @@ class soarDB(threading.Thread):
 		if str(editFrame.INSTRUME) != 'NOTE': 
 			editFrameInst = session.query(self.Obj_INSTRUMENTS[editFrame.INSTRUME]).filter(self.Obj_INSTRUMENTS[editFrame.INSTRUME].FILENAME == os.path.join(editFrame.PATH,editFrame.FILENAME))[:]
 
-		if len(editFrameInst) == 0:
-			logging.debug('OPERATION ERROR: No Instrument frame found on database.')
-			raise IOError('OPERATION ERROR: No Instrument frame found on database.')
+			if len(editFrameInst) == 0:
+				logging.debug('OPERATION ERROR: No Instrument frame found on database.')
+				raise IOError('OPERATION ERROR: No Instrument frame found on database.')
 
 			#OLD_NOTES = editFrame.OBSNOTES
 			#

@@ -16,17 +16,20 @@ import logging
 
 # defines the image header parameter for instrument!
 
-_INSTRUME = {'OSIRIS':'INSTRUME','GOODMAN':'INSTRUME','SOI':'INSTRUME','SPARTAN':'INSTRUME','SBIG ST-L' : 'INSTRUME'}
+_INSTRUME = {'OSIRIS':'INSTRUME','GOODMAN':'INSTRUME','SOI':'INSTRUME','SPARTAN':'INSTRUME','SBIG ST-L' : 'INSTRUME',
+	     'BTFI':'INSTRUME'}
 
 instTemplates = {'Goodman Spectrograph' : os.path.join(os.path.dirname(__file__),'Resources/goodmanTemplate.fits'),
 'OSIRIS' : os.path.join(os.path.dirname(__file__),'Resources/osirisTemplate.fits'),
 'SOI' : os.path.join(os.path.dirname(__file__),'Resources/soiTemplate.fits'),
-'Spartan IR Camera' : os.path.join(os.path.dirname(__file__),'Resources/spartanTemplate.fits')}
+'Spartan IR Camera' : os.path.join(os.path.dirname(__file__),'Resources/spartanTemplate.fits'),
+'BTFI' : os.path.join(os.path.dirname(__file__),'Resources/btfiTemplate.fits')}
 
 instConfDict = {'Goodman Spectrograph' : instConfGoodman,
 'OSIRIS' : instConfOSIRIS,
 'SOI' : instConfSOI,
-'Spartan IR Camera' : instConfSPARTAN}
+'Spartan IR Camera' : instConfSPARTAN,
+'BTFI' : instConfBTFI}
 
 SPARTAN = 'Spartan IR Camera'
 
@@ -562,6 +565,49 @@ SBIG_ID  = {  'FILENAME'	: Column('FILENAME',String) ,\
 'BZERO' : Column('BZERO',String)       }
 
 ##################################################################################################################################
+#			
+# Infos particular to BTFi
+
+#
+# Translation of BTFI Common Information Database (CID) Header parameters
+#
+
+BTFI_TRANSLATE_CID = {'FILENAME' : 'FILENAME'	,\
+		'OBJECT' : 'OBJECT'		,\
+		'IMAGETYP' : 'OBJTYPE'	,\
+		'TIMEOBS' : 'TIME'	,\
+		'DATEOBS' : 'TIME'	,\
+		'EXPTIME'  : 'EXPTIME'	,\
+		'JD' : None				,\
+		'OBSERVER' : 'OBSERVER'	,\
+		'INSTRUME' : 'INSTRUME'	,\
+		'OBSERVAT' : 'OBSERVAT'	,\
+		'AIRMASS'  : None	,\
+		'RA' : 'MOUNTRA'				,\
+		'DEC' : 'MOUNTDEC'			,\
+		'EQUINOX': 'EPOCH'	,\
+		'SEEING' : 'SEEING'
+
+}
+
+		
+BTFI_TV = {	'FILTER'	:	'IMGLB'		,
+		'FILTER2'	:	'PUPLB'		,
+		'SLIT'		:	'MASKLB' 	,
+		'GRATING'	:	'VPH1NAME'		,
+		'FOCUS'		:	'FOCUS'		,
+		'CAM_ANGLE'	:	'IBCURANG'		,
+		'GRT_ANGLE'	:	'IBINIANG'		,
+		'RON_MODE'	:	'RON'	,
+		'BINNING'	:	'CCDSUM'		,
+		'PA'		:	'ROTPOSIT'		,
+		'SP_CONF'	:	None	 }
+
+#
+#
+##################################################################################################################################
+
+##################################################################################################################################
 #
 # Dictionaries of instrument translation
 
@@ -569,7 +615,8 @@ INSTRUMENT_TRANSLATE = { 'OSIRIS' : OSIRIS_TRANSLATE_CID ,\
 'Goodman Spectrograph' : GOODMAN_TRANSLATE_CID ,\
 'SOI' : SOI_TRANSLATE_CID ,\
 'Spartan IR Camera' : SPARTAN_TRANSLATE_CID,\
-'SBIG ST-L' : SBIG_TRANSLATE_CID}
+'SBIG ST-L' : SBIG_TRANSLATE_CID,
+'BTFI' : BTFI_TRANSLATE_CID}
 
 INSTRUMENT_DB = { 'OSIRIS' : OSIRIS_ID	,\
 'Goodman Spectrograph' : GOODMAN_ID	,\
@@ -581,14 +628,16 @@ INSTRUMENT_TV = { 'OSIRIS' : OSIRIS_TV	,\
 'Goodman Spectrograph' : GOODMAN_TV	,\
 'SOI' : SOI_TV ,\
 'Spartan IR Camera' : SPARTAN_TV,\
-'SBIG ST-L' : SBIG_TV}
+'SBIG ST-L' : SBIG_TV,\
+'BTFI' : BTFI_TV}
 
 #imageTYPE = ['','OBJECT','FLAT','DFLAT','BIAS','ZERO','DARK','COMP','FAILED','Object'] 
 
 imageTYPE = {'OSIRIS' : ['OBJECT','FLAT','ZERO','COMP','DARK','FAILED'],
 'Goodman Spectrograph' : ['OBJECT','COMP','FLAT','BIAS','FAILED'],
 'Spartan IR Camera' : ['Object','Flat-Field','Dark','FAILED'],
-'SOI' : ['ZERO','DFLAT','OBJECT','FAILED']}
+'SOI' : ['ZERO','DFLAT','OBJECT','FAILED'],
+'BTFI' : ['ZERO','DFLAT','OBJECT','FAILED']}
 
 #
 #

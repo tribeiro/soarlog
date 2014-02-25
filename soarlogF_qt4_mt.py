@@ -35,6 +35,7 @@ from soarlogF_DataTransfer import *
 import time
 
 import ds9 
+import pyinotify as inot
 
 #try:
 #	from pyraf.iraf import set as IrafSet
@@ -268,9 +269,11 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
                                                 d.set('pan to '+pan)
                                                         
 						return 0					
-					elif query.INSTRUME == 'OSIRIS':
+					else: # query.INSTRUME == 'OSIRIS':
 						data = pyfits.getdata(frame)
 						#logging.debug('array [xdim = {XDIM} ydim = {YDIM} bitpix=-32]'.format(XDIM=len(data[0]),YDIM=len(data)))
+                                                if len(data.shape) == 3:
+                                                    data = data[0]
 						if d.set_np2arr(np.array(data,dtype=np.float))==1:
 							d.set('file {0}'.format(frame))
 						if self.ui.actionZoom_to_fit.isChecked():
@@ -280,17 +283,9 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 						#display(frame,1)
 						return 0
 						
-					else:
-						d.set('file {0}'.format(frame))
-						if self.ui.actionZoom_to_fit.isChecked():
-							d.set('zoom to fit')
-						if self.ui.actionZscale.isChecked():
-							d.set('scale mode zscale')
-						#display(frame,1)
-						return 0
 				except:
-					logging.debug(sys.exc_info()[1])
-					logging.debug('Could not display file {0}'.format(frame))
+					logging.exception(sys.exc_info())
+					logging.debug('--> Could not display file {0}'.format(frame))
 					return -1
 			
 				return 0
@@ -506,7 +501,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 		
 		session = self.Session()
 
-		query = session.query(self.Obj_CID.FILENAME).filter(self.Obj_CID.FILENAME == os.path.basename(str(filename)))[:]
+		query = session.query(self.Obj_CID.FILENAME).filter(self.Obj_CID.FILENAME == os.path.basename(str(filename))).filter(self.Obj_CID.PATH == os.path.dirname(str(filename)))[:]
 		if len(query) > 0:
 			logging.debug('File {0} already in database...'.format(str(filename)))
 			return -1
@@ -585,7 +580,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 		#pref_ui = PrefMenu([ tbHeader[i] for i in self.ShowInfoOrder],self.ui.tableDB)
 		pref_ui = PrefMenu(tbHeader, self.ShowInfoOrder,self.ui.tableDB)
 		
-                self.initThreadLock.acquire()
+                self.commitLock.acquire()
 
                 try:
                     pref_ui.show()
@@ -635,7 +630,7 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
                 except: 
                     logging.debug('Exception in Preferences')
                 finally:
-                    self.initThreadLock.release()
+                    self.commitLock.release()
                     if self.Queue.qsize() > 0:
                         self.runQueue()
                     
@@ -799,7 +794,8 @@ class SoarLog(QtGui.QMainWindow,soarDB,DataQuality,DataTransfer):
 			
 			# Internally, 'handler' is a callable object which on new events will be called like this: handler(new_event)
 			#print self.dir
-			wdd = wm.add_watch(self.dir, mask, rec=True)
+			wdd = wm.add_watch(self.dir, inot.IN_CLOSE_WRITE | inot.IN_MOVED_TO | inot.IN_CREATE,auto_add=True,rec=True)
+                        
 			logging.debug('Watch initialized...')
 
 #
@@ -1435,9 +1431,21 @@ Time Spent:
 					if self.ui.actionZscale.isChecked():
 						d.set('scale mode zscale')
 					return 0					
-				elif query.INSTRUME == 'OSIRIS':
-					data = pyfits.getdata(frame)
+				else: #query.INSTRUME == 'OSIRIS':
+					try:	
+						data = pyfits.getdata(frame)
+					except IOError:
+						logging.debug('Problem readind file {0}'.format(frame))
+						logging.exception(sys.exc_info())
+						d.set('file {0}'.format(frame))
+						data = []
+						pass
+					except:
+						raise
+                                        if len(data.shape) == 3:
+                                            data = data[0]
 					if d.set_np2arr(np.array(data,dtype=np.float))==1:
+
 						d.set('file {0}'.format(frame))
 					if self.ui.actionZoom_to_fit.isChecked():
 						d.set('zoom to fit')
@@ -1445,17 +1453,10 @@ Time Spent:
 						d.set('scale mode zscale')
 					#display(frame,1)
 					return 0
-				else:
-					d.set('file {0}'.format(frame))
-					#display(frame,1)
-					if self.ui.actionZoom_to_fit.isChecked():
-						d.set('zoom to fit')
-					if self.ui.actionZscale.isChecked():
-						d.set('scale mode zscale')
-					return 0
 			except:
-				logging.debug('Could not display file {0}'.format(frame))
-				return -1
+                            logging.exception(sys.exc_info())
+                            logging.debug('Could not display file {0}'.format(frame))
+                            return -1
 		
 			return 0
 		else:

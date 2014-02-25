@@ -24,28 +24,31 @@ class DataTransfer():
                  'SOI',
                  'SPARTAN',
                  'SIFS',
-                 'SAM']
+                 'SAM',
+                 'BTFI']
 
 
-    instr2path = {'GOODMAN':'/home3/observer/today/',
-                  'OSIRIS':'/usr/remote/ic2home/observer/',
-                  'SOI':'/usr/remote/ic1home/images/BRAZIL/{yyyy}-{mm}-{dd}/',
-                  'SPARTAN':'/home3/observer/SPARTAN_DATA/Brazil/{yyyy}-{mm}-{dd}/',
-                  'SIFS':'/home2/images/SIFS/{yyyy}-{mm}-{dd}/',
-                  'SAM':'/home2/images/{yyyy}{mm}{dd}/'}
+    instr2path = {'GOODMAN':'/home3/observer/today/*.fits',
+                  'OSIRIS':'/usr/remote/ic2home/observer/*.fits',
+                  'SOI':'/usr/remote/ic1home/images/BRAZIL/{yyyy}-{mm}-{dd}/*.fits',
+                  'SPARTAN':'/home3/observer/SPARTAN_DATA/Brazil/{yyyy}-{mm}-{dd}/*.fits',
+                  'SIFS':'/home2/images/SIFS/{yyyy}-{mm}-{dd}/*.fits',
+                  'SAM':'/home2/images/{yyyy}{mm}{dd}/*.fits',
+                  'BTFI':'/storage/camera2/{yyyy}{mm}{dd}/'}
 
     instr2cpu = {'GOODMAN':'soaric7',
                  'OSIRIS':'soaric7',
                  'SOI':'soaric7',
                  'SPARTAN':'soaric7',
                  'SIFS':'soaric5',
-                 'SAM':'soarhrc'}
+                 'SAM':'soarhrc',
+                 'BTFI':'soarbr1'}
 
     ncopy = 0
 
     total_files = 0
 
-    cmdline = 'rsync -auvz {dryrun} --chmod=g+rw simager@{instrCpu}:{instrPath}*.fits {localPath}'
+    cmdline = 'rsync -auvz {dryrun} --chmod=g+rw observer@{instrCpu}:{instrPath} {localPath}'
     currentInstrument = 0
     verboseLine = ''
     STATUS = False
