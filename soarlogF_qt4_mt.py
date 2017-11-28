@@ -24,7 +24,6 @@ import os,sys,subprocess
 import numpy as np
 import pyfits
 
-
 from soarlogF_watch import *
 from soarlogF_watch import __FALSEWATCHER__
 
@@ -34,7 +33,7 @@ from soarlogF_DataTransfer import *
 
 import time
 
-import ds9 
+import pyds9 as ds9
 
 #try:
 #	from pyraf.iraf import set as IrafSet

@@ -26,9 +26,10 @@ else:
 class DataTransfer():
 
     instrList = [
-        'GOODMAN',
+        'GOODMAN_OLD',
+        'GOODMAN_BLUE',
         'GOODMAN_RED',
-        'OSIRIS',
+        # 'OSIRIS',
         'SOI',
         'SPARTAN',
         'SIFS',
@@ -36,9 +37,9 @@ class DataTransfer():
     ]
 
     instr2path = {
-        'GOODMAN': '/home3/observer/today/',
-        'GOODMAN_RED': '/home3/observer/today/',
-        'OSIRIS': '/usr/remote/ic2home/observer/',
+        'GOODMAN_OLD': '/home3/observer/today/',
+        'GOODMAN_BLUE': '/home3/observer/today/',
+        # 'OSIRIS': '/usr/remote/ic2home/observer/',
         'SOI': '/usr/remote/ic1home/images/' + str(partsoi) + '/%(yyyy)s-%(mm)s-%(dd)s/',
         'SPARTAN': '/home3/observer/SPARTAN_DATA/' + str(partspartan) + '/%(yyyy)s-%(mm)s-%(dd)s/',
         'SIFS': '/home2/images/SIFS/%(yyyy)s-%(mm)s-%(dd)s/',
@@ -46,9 +47,10 @@ class DataTransfer():
     }
 
     instr2cpu = {
-        'GOODMAN': 'soaric7',
+        'GOODMAN_OLD': 'soaric7',
+        'GOODMAN_BLUE': 'soaric7',
         'GOODMAN_RED': 'soaric7',
-        'OSIRIS': 'soaric7',
+        # 'OSIRIS': 'soaric7',
         'SOI': 'soaric7',
         'SPARTAN': 'soaric7',
         'SIFS': 'soaric5',

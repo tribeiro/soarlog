@@ -14,21 +14,27 @@ import logging
 # defines the image header parameter for instrument!
 _INSTRUME = {
     'OSIRIS': 'INSTRUME',
-    'GOODMAN': 'INSTRUME',
+    'GOODMAN_OLD': 'INSTRUME',
+    'GOODMAN_RED': 'INSTRUME',
+    'GOODMAN_BLUE': 'INSTRUME',
     'SOI': 'INSTRUME',
     'SPARTAN': 'INSTRUME',
     'SBIG ST-L': 'INSTRUME'
 }
 
 instrument_templates = {
-    'Goodman Spectrograph': os.path.join(os.path.dirname(__file__), 'Resources/goodmanTemplate.fits'),
-    'OSIRIS': os.path.join(os.path.dirname(__file__), 'Resources/osirisTemplate.fits'),
-    'SOI': os.path.join(os.path.dirname(__file__), 'Resources/soiTemplate.fits'),
-    'Spartan IR Camera': os.path.join(os.path.dirname(__file__), 'Resources/spartanTemplate.fits')
+    'Goodman Spectrograph - Old': os.path.join(os.path.dirname(__file__), 'Resources/template_goodman_old.fits'),
+    'Goodman Spectrograph - Blue Camera': os.path.join(os.path.dirname(__file__), 'Resources/template_goodman_blue.fits'),
+    'Goodman Spectrograph - Red Camera': os.path.join(os.path.dirname(__file__), 'Resources/template_goodman_red.fits'),
+    'OSIRIS': os.path.join(os.path.dirname(__file__), 'Resources/template_osiris.fits'),
+    'SOI': os.path.join(os.path.dirname(__file__), 'Resources/template_soi.fits'),
+    'Spartan IR Camera': os.path.join(os.path.dirname(__file__), 'Resources/template_spartan.fits')
 }
 
 instrument_configuration = {
-    'Goodman Spectrograph': instConfGoodman,
+    'Goodman Spectrograph - Old': instConfGoodman,
+    'Goodman Spectrograph - Red': instConfGoodman,
+    'Goodman Spectrograph - Blue': instConfGoodman,
     'OSIRIS': instConfOSIRIS,
     'SOI': instConfSOI,
     'Spartan IR Camera': instConfSPARTAN
@@ -53,7 +59,8 @@ CID = {
     'DEC': Column('DEC', String),
     'EQUINOX': Column('EQUINOX', String),
     'OBSNOTES': Column('OBSNOTES', TEXT),
-    'SEEING': Column('SEEING', String)}
+    'SEEING': Column('SEEING', String)
+}
 
 # Table View Database
 tvDB = {
@@ -558,81 +565,97 @@ imageTYPE = {'OSIRIS': ['OBJECT', 'FLAT', 'ZERO', 'COMP', 'DARK', 'FAILED'],
 
 ##################################################################################################################################
 #
-# Definitions of Table for viewing ExtraTableHeaders=[ 'FILTER' ,\
-'FILTER2',
-'SLIT',
-'GRATING',
-'FOC',
-'CAM ANG',
-'GRT ANG',
-'RD MODE',
-'BIN',
-'PA',
-'SP CONF']
-
-
-
-TableTranslate_GOODMAN = ['FILTER',
-'FILTER2',
-'SLIT',
-'GRATING',
-'CAM_FOC',
-'CAM_ANG',
-'GRT_ANG',\GOODMAN_RDMODE,
-'CCDSUM',
-'POSANGLE',\GOODMAN_SPCONF]
-
-TableTranslate_OSIRIS = ['FILTERID',
-'PREFLTID',
-'SLITID',
-'GRATNGID',
-'CAMFOCUS',
-None,
-'GRATTILT',
-None,
-'CAMERAID',\'DECPANGL',
-None]
-
-TableTranslate_SOI = ['FILTER1',
-'FILTER2',
-None,
-None,
-'TELFOCUS',
-None,
-None,
-None,
-'CCDSUM',\'DECPANG',
-None]
-
-TableTranslate_SPARTAN = ['FILTER',
-'MASK',
-None,
-None,
-'TELFOCUS',
-None,
-None,
-None,
-None,
-None,
-None]
-
-TableTranslate_SBIG = [None,
-None,
-None,
-None,
-None,
-None,
-None,
-None,
-None,
-None,
-None,
+# Definitions of Table for viewing
+ExtraTableHeaders = [
+    'FILTER',
+    'FILTER2',
+    'SLIT',
+    'GRATING',
+    'FOC',
+    'CAM ANG',
+    'GRT ANG',
+    'RD MODE',
+    'BIN',
+    'PA',
+    'SP CONF'
 ]
 
-dictTableHeaders = {'OSIRIS': TableTranslate_OSIRIS, 'Goodman Spectrograph': TableTranslate_GOODMAN,
-'SOI': TableTranslate_SOI,
-'Spartan IR Camera': TableTranslate_SPARTAN,
-'SBIG ST-L': TableTranslate_SBIG}
+TableTranslate_GOODMAN = [
+    'FILTER',
+    'FILTER2',
+    'SLIT',
+    'GRATING',
+    'CAM_FOC',
+    'CAM_ANG',
+    'GRT_ANG',
+    'GOODMAN_RDMODE',
+    'CCDSUM',
+    'POSANGLE',
+    'GOODMAN_SPCONF'
+]
+
+TableTranslate_OSIRIS = [
+    'FILTERID',
+    'PREFLTID',
+    'SLITID',
+    'GRATNGID',
+    'CAMFOCUS',
+    None,
+    'GRATTILT',
+    None,
+    'CAMERAID',
+    'DECPANGL',
+    None
+]
+
+TableTranslate_SOI = [
+    'FILTER1',
+    'FILTER2',
+    None,
+    None,
+    'TELFOCUS',
+    None,
+    None,
+    None,
+    'CCDSUM', 'DECPANG',
+    None
+]
+
+TableTranslate_SPARTAN = [
+    'FILTER',
+    'MASK',
+    None,
+    None,
+    'TELFOCUS',
+    None,
+    None,
+    None,
+    None,
+    None,
+    None
+]
+
+TableTranslate_SBIG = [
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+]
+
+dictTableHeaders = {
+    'OSIRIS': TableTranslate_OSIRIS,
+    'Goodman Spectrograph': TableTranslate_GOODMAN,
+    'SOI': TableTranslate_SOI,
+    'Spartan IR Camera': TableTranslate_SPARTAN,
+    'SBIG ST-L': TableTranslate_SBIG
+}
 
 
 #
