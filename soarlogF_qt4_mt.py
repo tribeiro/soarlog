@@ -57,14 +57,65 @@ def LongestCommonSubstring(S1, S2):
     return S1[x_longest - longest: x_longest]
 
 
-class SoarLog(QtGui.QMainWindow, soarDB, DataQuality, DataTransfer):
-    def __init__(self, *args):
+	def __init__(self,*args):
+	
+		super(SoarLog, self).__init__()
+		self.Queue = args[0]
+		self.recordQueue = args[1]
+		self.commitLock = threading.Lock()
+		#self.emmitFileEventLock = threading.Lock()
+		
+	##########################################################
+	# See if configuration directory exists. Create one 
+	# otherwise.
+	#
+		self._CFGFilePath_ = os.path.join(os.path.expanduser('~/'),'.soarlogGUI_v2')
+	
+		if not os.path.exists(self._CFGFilePath_):
+			os.mkdir(self._CFGFilePath_)
+		
+		self._CFGFiles_ = { 'OrderInfo' : 'orderInfo.txt'	,\
+							'ShowInfo' : 'showPar.txt'		,\
+							'LogHeader' : 'logheader.txt'	,\
+							'ColumnWidth' : 'colwidth.txt'}
+		
+	#
+	#
+	#
+	##########################################################
+	
+		self.dir = ''
+		self.logfile = 'SOARLOG_%s.txt'
+		self.semester_ID = 'SO2013A-%s'
+		self.dataCalib = '/data/data_calib/2013A/SO2013A-%s.txt'
+		self.dataStorage = '/data/data_%(SID)s/%(PID)s'
+		self.dbname = 'soarlog_%s.db'
+		self.masterDBName = '/data/database/soarlog_database.db' # master database.
+		self.CommentColumn = 16
+		self.FilenameColumn = 12
+		self.ImtypeColumn = 11
+		self.ExtraEditableColumns = [0,11,12,16]
+		self.LocalTime = -4
+		self.AskFile2Watch()
+		self.dqStatus = ['','OK','WARN','FAIL']
 
-        super(SoarLog, self).__init__()
-        self.Queue = args[0]
-        self.recordQueue = args[1]
-        self.commitLock = threading.Lock()
-        # self.emmitFileEventLock = threading.Lock()
+		self.logfile = self.logfile%(self.dir.split('/')[-1])
+		self.dbname  = self.dbname%(self.dir.split('/')[-1])
+		soarDB.__init__(self,self.Queue)
+		#DataQuality.__init__()
+#		self.imageTYPE = ['','OBJECT','FLAT','DFLAT','BIAS','ZERO','DARK','COMP','FAILED','Object']
+		self.imageTYPE = databaseF.frame_infos.imageTYPE
+		
+		self.header_CID = databaseF.frame_infos.tvDB.keys()
+		
+		self.header_dict = { 'OSIRIS' : databaseF.frame_infos.OSIRIS_ID.keys(),\
+							 'Goodman Spectrograph' : databaseF.frame_infos.GOODMAN_ID.keys() ,\
+							  'SOI' : databaseF.frame_infos.SOI_ID.keys()}
+		#self.__FileWeatherComments__ = '.weatherComments.txt'
+		#if not os.path.isfile(self.__FileWeatherComments__):
+		#	_file = open(self.__FileWeatherComments__,'w')
+		#	_file.write("No info available\n")
+		#self.__WeatherComments__ = "No info available\n"
 
         ##########################################################
         # See if configuration directory exists. Create one
@@ -188,13 +239,108 @@ class SoarLog(QtGui.QMainWindow, soarDB, DataQuality, DataTransfer):
             pass
             # finally:
             #    self.emmitFileEventLock.release()
-            #
-            #
-            ################################################################################################
+#
+#
+################################################################################################
+				
+################################################################################################
+#
+#
+	def reloadTable(self,frame):
+		
+		session_CID = self.Session()
+		
+		#self.model.select()
+				
+		if self.ui.actionGot_to_last_frame.isChecked():
+			scrollBar = self.ui.tableDB.verticalScrollBar();
+			scrollBar.setValue(scrollBar.maximum());
+		
+		if self.ui.actionDisplay_last_frame.isChecked() and frame != -1:
+			d = None
+			_targets = ds9.ds9_targets()
+		
+			# Check if ds9 is opened
+			if not _targets == 0:
+				try:
+					d = ds9.ds9()
+				except:
+					return -1
+			else: 
+				d = ds9.ds9(_targets[1].split(' ')[1])
+			d.set('preserve regions yes')
+                        d.set('preserve pan yes')
+                        d.set('preserve scale yes')
+		
+			if os.path.isfile(frame):
+				
+				try:
+					query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME == os.path.basename(frame))[0]
+				except:
+					return -1
+				try:
+					if query.INSTRUME == 'SOI':
+					#mscred.mscdisplay(frame,1)
+						for iext in range(4):
+							data = pyfits.getdata(frame,ext=iext+1)
+						d.set('file mosaicimage wcs %s'%(frame))
+						if self.ui.actionZoom_to_fit.isChecked():
+							d.set('zoom to fit')
+						if self.ui.actionZscale.isChecked():
+							d.set('scale mode zscale')
+						return 0
+					elif query.INSTRUME == 'Spartan IR Camera':
+						query2 = session_CID.query(self.Obj_INSTRUMENTS['Spartan IR Camera']).filter(self.Obj_INSTRUMENTS['Spartan IR Camera'].FILENAME.like(frame))[0]
+						zoom = d.get('zoom')
+                                                pan = d.get('pan')
 
-            ################################################################################################
-            #
-            #
+						if self.ui.actionSpartan_showall.isChecked():
+							if query2.DETSERNO == '102':
+								#zoom = d.get('zoom')
+								d.set('frame clear')
+								d.set('zoom '+zoom)
+							d.set('file mosaic iraf %s'%(frame))
+						elif query2.DETSERNO == '66':
+							zoom = d.get('zoom')
+							d.set('frame clear')
+							d.set('zoom '+zoom)
+							d.set('file %s'%(frame))
+						if self.ui.actionZoom_to_fit.isChecked():
+							d.set('zoom to fit')
+						if self.ui.actionZscale.isChecked():
+							d.set('scale mode zscale')
+                                                d.set('pan to '+pan)
+                                                        
+						return 0					
+					elif query.INSTRUME == 'OSIRIS':
+						data = pyfits.getdata(frame)
+
+						if d.set_np2arr(np.array(data,dtype=np.float))==1:
+							d.set('file %s'%(frame))
+						if self.ui.actionZoom_to_fit.isChecked():
+							d.set('zoom to fit')
+						if self.ui.actionZscale.isChecked():
+							d.set('scale mode zscale')
+						#display(frame,1)
+						return 0
+						
+					else:
+						d.set('file %s'%(frame))
+						if self.ui.actionZoom_to_fit.isChecked():
+							d.set('zoom to fit')
+						if self.ui.actionZscale.isChecked():
+							d.set('scale mode zscale')
+						#display(frame,1)
+						return 0
+				except:
+					logging.debug(sys.exc_info()[1])
+					logging.debug('Could not display file %s'%(frame))
+					return -1
+			
+				return 0
+			else:
+				print 'File %s does not exists...'%(frame)
+				return -1
 
     def reloadTable(self, frame):
 
@@ -466,19 +612,55 @@ class SoarLog(QtGui.QMainWindow, soarDB, DataQuality, DataTransfer):
 
         return 0
 
-    #
-    #
-    ################################################################################################
+	def AddFrame(self,filename):
+	
+		logging.debug('AddFrame received %s'%(filename))
+		
+		if not filename:
+			logging.debug('Filename is empty ...')
+			return -1
+		
+		# Checa se esta no banco de dados
+		
+		session = self.Session()
 
-    ################################################################################################
-    #
-    #
-    def enableDisableTableEdit(self):
+		query = session.query(self.Obj_CID.FILENAME).filter(self.Obj_CID.FILENAME == os.path.basename(str(filename)))[:]
+		if len(query) > 0:
+			logging.debug('File %s already in database...'%(str(filename)))
+			return -1
+			
+		infos = databaseF.frame_infos.GetFrameInfos(str(filename))
 
-        if self.actionEnable_Disable_Table_Edit.isChecked():
-            self.ui.tableDB.model().sourceModel().changeEditableColumns(self.ExtraEditableColumns)
-        else:
-            self.ui.tableDB.model().sourceModel().changeEditableColumns([self.CommentColumn])
+		if infos == -1:
+			logging.debug(' Could not read file %s... '%(filename))
+			return -1
+		else:
+			#self.commitLock.acquire()
+			instKey = infos[0]['INSTRUME']
+			
+			entry = self.Obj_INSTRUMENTS[instKey](**infos[0])
+			entry_CID = self.Obj_CID(**infos[1])
+			
+			iinfo = ['']*len(self.header_CID)
+			for i in range(len(iinfo)):
+				iinfo[i] = infos[1][self.header_CID[i]]
+			self.updateTable(iinfo)
+			
+			try:
+				session.add(entry_CID)
+				session.add(entry)
+				session.commit()
+			except:
+				logging.debug(sys.exc_info()[1])
+				logging.debug('Could not commit to instrument specific database. Will do it later.')
+				pass
+			#finally:
+			#	self.commitLock.release()
+		
+		return 0
+#
+#
+################################################################################################
 
         #
         # Reset search engine when user modify editable role.
@@ -496,9 +678,23 @@ class SoarLog(QtGui.QMainWindow, soarDB, DataQuality, DataTransfer):
             #
             #
 
-    def AddFrame(self, filename):
+		try:
+			self.model.submitAll()
+			while not self.recordQueue.empty():
+	
+			
+				record = self.recordQueue.get()
+				logging.debug('Inserting %s to main database'%( record.value('FILENAME').toString() ))
+				self.model.insertRecord(-1,record)
 
-        logging.debug('AddFrame received %s' % (filename))
+			logging.debug('Submiting changes to database (%s new entries).'%(lqueue))
+			self.model.submitAll()
+			
+		finally:
+			self.commitLock.release()
+#
+#
+################################################################################################
 
         if not filename:
             logging.debug('Filename is empty ...')
@@ -952,34 +1148,20 @@ class SoarLog(QtGui.QMainWindow, soarDB, DataQuality, DataTransfer):
             return [], [], 0
         mask = np.array([len(proj_id[i]) > 0 for i in range(len(proj_id))])
 
-        proj_id = proj_id[mask]
-        proj_id2 = proj_id
-
-        for i in range(len(proj_id)):
-            id01 = proj_id[i].rfind('-')
-            proj_id[i] = proj_id[i][id01 + 1:]
-
-        nframes = []
-        for i in range(len(proj_id2)):
-            query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like('%-' + proj_id2[i] + '%'))[:]
-            nframes.append(len(query))
-
-        return proj_id, proj_id2, nframes
-
-    ################################################################################################
-    #
-    #
-    def GetFrameLog(self, sproj=None):
-        session_CID = self.Session()
-        query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.IMAGETYP.like('OBJECT'))[:]
-
-        logFRAME = '''
+################################################################################################
+#
+#
+	def GetFrameLog(self,sproj=None):
+		session_CID = self.Session()
+		query = session_CID.query(self.Obj_CID).filter(self.Obj_CID.IMAGETYP.like('OBJECT'))[:]
+		
+		logFRAME = '''
 {time}LT File:\t%(FILENAME)s
 \tOBJECT: %(OBJECT)s
 \tNotes: %(OBSNOTES)s
 \tX=%(AIRMASS)s Exptime:%(EXPTIME)s s sm= %(SEEING)s
 '''
-        logNOTE = '''
+		logNOTE = '''
 %(time)LT Notes: %(OBSNOTES)s
 '''
 
@@ -1007,9 +1189,12 @@ Time Spent:
         for i in range(len(proj_id)):
             proj = proj_id[i]
 
-            #
-            # Calculate spended time
-            #
+			#
+			# Calculate spended time
+			#
+			
+			timeSpent = self.calcTime(proj)
+			timeSpentLog += self.semester_ID%(proj) + ': %02.0f:%02.0f\n' % timeSpent
 
             timeSpent = self.calcTime(proj)
             timeSpentLog += self.semester_ID % (proj) + ': %02.0f:%02.0f\n' % timeSpent
@@ -1034,27 +1219,54 @@ Time Spent:
 
             logging.debug(obj_list)
 
-            nlines = 3
-            end_hdr = 0
-            for j in range(len(proj_hdr)):
-                if proj_hdr[j][0] == '-':
-                    nlines -= 1
-                if proj_hdr[j].find('TIME') >= 0:
-                    proj_hdr[j] = 'TIME SPENT: %02.0f:%02.0f\n' % timeSpent
-                if proj_hdr[j].find('OBJECTS') >= 0:
-                    obj_list = self.getObjects(query)
-                    proj_hdr[j] = proj_hdr[j][:-1]
-                    for iobj in range(len(obj_list)):
-                        proj_hdr[j] += obj_list[iobj] + ' '
-                    proj_hdr[j] += '\n'
-                outlog += proj_hdr[j]
-                if nlines == 0:
-                    break
+				frame = query[sort[itr]]
+				time = frame.TIMEOBS
+				log = logFRAME
+				writeFlag = True
+				frame2 = None
+				if frame.INSTRUME == 'Spartan IR Camera':
+					try:
+						frame2 = session_CID.query(self.Obj_INSTRUMENTS['Spartan IR Camera']).filter(self.Obj_INSTRUMENTS['Spartan IR Camera'].FILENAME.like(os.path.join(frame.PATH,frame.FILENAME)))[0]
+						if frame2.DETSERNO != '66':
+							writeFlag = False						
+					except:
+						logging.debug('Error %s on frame %s...'%(sys.exc_info()[1],frame.FILENAME))
+						writeFlag = False
+				try:
+					time = time.split(':')
+				except:
+					time = [0,0,0]
+				hrs = int(time[0].split('T')[-1])+sumLT
+				if hrs > 23:
+					hrs -= 24
+				if hrs < 0:
+					hrs += 24
+				try:
+					time = '%02i:%02i' % (hrs,int(time[1]))
+				except:
+					time = frame.TIMEOBS
 
-            hour = np.array([str(ff.TIMEOBS) for ff in query])
-            day = np.array([str(ff.DATEOBS) for ff in query])
+				if frame.INSTRUME == 'NOTE':
+					log = logNOTE
+				if writeFlag:
+					outlog += log%{'time':time, 'FILENAME' : os.path.basename(frame.FILENAME), 'OBJECT' : frame.OBJECT, 'OBSNOTES' : frame.OBSNOTES ,\
+										 'AIRMASS' : frame.AIRMASS, 'EXPTIME' : frame.EXPTIME, 'SEEING' : frame.SEEING}
+				if frame.INSTRUME == 'Goodman Spectrograph':
+					#frame2 = session_CID.query(self.Obj_CID).filter(self.Obj_CID.FILENAME.like(frame.FILENAME))[0]
+					logGS = '\tCONF: %s SLIT: %s OBSTYPE: %s\n'%(frame.SP_CONF,frame.SLIT,frame.IMAGETYP)
+					outlog+=logGS
 
-            time = np.array([day[i] + 'T' + hour[i] for i in range(len(hour))])
+				if frame.INSTRUME == 'Spartan IR Camera' and writeFlag:
+					logSP = '\tFILTER: %s OBSTYPE: %s\n'%(frame2.FILTER,frame.IMAGETYP)
+					outlog+=logSP
+				
+	
+		outlog += '-'*63 + '\n'
+		outlog += timeSpentLog
+		return outlog
+#
+#
+################################################################################################
 
             sumLT = self.LocalTime
             for i in range(len(time)):
@@ -1121,9 +1333,26 @@ Time Spent:
     #
     #
 
-    def SaveLogThreaded(self):
-        rthread = threading.Thread(target=self.SaveLog)
-        rthread.start()
+                        
+                        start = float(hr1)/24.+float(min1)/24./60.
+                        end = float(hr2)/24.+float(min2)/24./60.
+                        if ano1 != ano2 or mes1 != mes2 or dia1 != dia2:
+                            end += 1.
+                        
+                        calcT += (end-start)*24.0 + exptime[time_end[i]]/60./60.
+                        #print 'START = ', ano1,mes1,dia1,hr1,min1,sec1,' ->',start
+                        #print 'END = ', ano2,mes2,dia2,hr2,min2,sec2,' ->',end
+                        #print 'TIME = ',(end-start)*24.0 
+						
+						
+                    #print id, [ time[i] for i in time_start ], [time[i] for i in time_end], '%02.0f:%02.0f' %( np.floor(calcT), (calcT-np.floor(calcT))*60)
+                    logging.debug(self.semester_ID%(id)+' %(hora)02.0f:%(min)02.0f (with %(nsub)i subblocks).'%{'nsub':len(time_start), 'hora':np.floor(calcT), 'min':(calcT-np.floor(calcT))*60})
+		except:
+                    logging.debug('Failed to obtain program time')
+				
+				
+				
+		#print calcT
 
         # threading.Thread(target=self.SaveLog).start()
 
@@ -1220,13 +1449,73 @@ Time Spent:
 
         time.sort()
 
-        calcT = 0
-        try:
+			try:
+				if query.INSTRUME == 'SOI':
+					#mscred.mscdisplay(frame,1)
+					d.set('file mosaicimage wcs %s'%(frame))
+					if self.ui.actionZoom_to_fit.isChecked():
+						d.set('zoom to fit')
+					if self.ui.actionZscale.isChecked():
+						d.set('scale mode zscale')
+					return 0
+				elif query.INSTRUME == 'Spartan IR Camera':
+                                    
+					if self.ui.actionSpartan_showall.isChecked():
+						detIndex = frame.rfind('.fits')
+						#frame2 = frame#[detIndex-1]='%'
+						frame2 = frame[:detIndex-1]+'%.fits'
+						query2 = session_CID.query(self.Obj_INSTRUMENTS['Spartan IR Camera']).filter(self.Obj_INSTRUMENTS['Spartan IR Camera'].FILENAME.like(frame2))[::]
 
-            for i in range(len(time_start)):
+						zoom = d.get('zoom')
+                                                pan = d.get('pan')
+                                                #logging.debug(pan)
+						d.set('frame clear')
+						for nfile in range(len(query2)):
+							d.set('file mosaic iraf %s'%(query2[nfile].FILENAME))
+						d.set('zoom '+zoom)
+                                                d.set('pan to '+pan)
+                                                #
 
-                dia_start, hora_start = time[time_start[i]].split('T')
-                dia_end, hora_end = time[time_end[i]].split('T')
+					else:
+						zoom = d.get('zoom')
+						d.set('frame clear')
+						d.set('zoom '+zoom)
+						d.set('file %s'%(frame))
+					if self.ui.actionZoom_to_fit.isChecked():
+						d.set('zoom to fit')
+					if self.ui.actionZscale.isChecked():
+						d.set('scale mode zscale')
+					return 0					
+				elif query.INSTRUME == 'OSIRIS':
+					data = pyfits.getdata(frame)
+					if d.set_np2arr(np.array(data,dtype=np.float))==1:
+						d.set('file %'%s(frame))
+					if self.ui.actionZoom_to_fit.isChecked():
+						d.set('zoom to fit')
+					if self.ui.actionZscale.isChecked():
+						d.set('scale mode zscale')
+					#display(frame,1)
+					return 0
+				else:
+					d.set('file %'%(frame))
+					#display(frame,1)
+					if self.ui.actionZoom_to_fit.isChecked():
+						d.set('zoom to fit')
+					if self.ui.actionZscale.isChecked():
+						d.set('scale mode zscale')
+					return 0
+			except:
+				logging.debug('Could not display file %s'%(frame))
+				return -1
+		
+			return 0
+		else:
+			logging.debug('File %s does not exists...'%(frame))
+			return -1
+							
+#
+#
+################################################################################################
 
                 ano1, mes1, dia1 = dia_start.split('-')
                 hr1, min1, sec1 = hora_start.split(':')
@@ -1640,7 +1929,18 @@ Time Spent:
                     #
                     #
 
-    def askForCommentLinePID(self):
+################################################################################################
+#
+#
+	def handleCommentLine(self):
+	
+		if len(self.pid_ui.lineEdit.text()) == 3:
+			#print self.semester_ID.format(self.pid_ui.lineEdit.text())
+			self.addCommentLine(self.semester_ID%(self.pid_ui.lineEdit.text()))
+		self.pid_ui.close()
+#
+#
+################################################################################################
 
         class askPID_UI(QtGui.QDialog):
             ########################################################################################
@@ -1682,10 +1982,8 @@ Time Spent:
     #
     ################################################################################################
 
-    ################################################################################################
-    #
-    #
-    def handleCommentLine(self):
+		for i in range(len(pid)):
+			self.calibhelp_ui.Instrument.addItem(self.semester_ID%(pid[i]))
 
         if len(self.pid_ui.lineEdit.text()) == 3:
             # print self.semester_ID.format(self.pid_ui.lineEdit.text())
@@ -1817,7 +2115,19 @@ Time Spent:
                 self.Obj_CDQ.DATASET == str(self.calibhelp_ui.date.currentText())).filter(
                 self.Obj_CDQ.OBJECT == ctype[i])[:]
 
-            for j in range(len(qq)):
+				note = self.dqStatus[int(qq[j].STATUS)]
+				cnote = ''
+				if len(qq[j].CONFIGNOTE) > 1:
+					note += '%s'%(Count[int(qq[j].STATUS)])
+					cnote = '%s: %s\n'%(note,qq[j].CONFIGNOTE)
+					Count[int(qq[j].STATUS)] += 1
+		
+				if int(qq[j].STATUS) > 0:
+					_calNote = _calNote + cnote
+					_repo += '     %(ctype)s: %(CONFIG)s %(NFILES)s [%(STAT)s]\n'%{"CONFIG" : config,
+												     "NFILES" : int(nf),
+												     "STAT":note,
+												     "ctype":str.upper(ctype[i])}
 
                 config = qq[j].CONFIG
                 nf = qq[j].NCONF

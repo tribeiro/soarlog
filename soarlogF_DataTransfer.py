@@ -105,7 +105,6 @@ class DataTransfer():
             yyyy = '%04d'%(int(yyyy)) 
             mm =   '%02d'%(int(mm))
             dd =   '%02d'%(int(dd))
-
         except:
             logging.exception(sys.exc_info()[1])
             yyyy = 'yyyy'
@@ -113,6 +112,12 @@ class DataTransfer():
             dd = 'dd'
             pass
         self.currentInstrument = self.dataTransfer_ui.select_instrument.currentIndex()
+        self.dataTransfer_ui.path_instrument.setText(self.instr2path[str(self.dataTransfer_ui.select_instrument.currentText())]%{'yyyy':yyyy,
+                                                                                                                                 'mm':mm,
+                                                                                                                                 'dd':dd})
+#
+#
+################################################################################################
 
         self.dataTransfer_ui.path_instrument.setText(
             self.instr2path[str(
@@ -138,11 +143,11 @@ class DataTransfer():
 
     def py_rsync(self):
 
-        cmd = self.cmdline%{
-            'instrCpu':self.instr2cpu[str(self.dataTransfer_ui.select_instrument.currentText())],
-            'instrPath':self.dataTransfer_ui.path_instrument.text(),
-            'localPath':self.dataTransfer_ui.local_data_path.text()+'/',
-            'dryrun': '--stats --dry-run' }
+        
+        cmd = self.cmdline%{'instrCpu':self.instr2cpu[str(self.dataTransfer_ui.select_instrument.currentText())],
+                            'instrPath':self.dataTransfer_ui.path_instrument.text(),
+                            'localPath':self.dataTransfer_ui.local_data_path.text()+'/',
+                            'dryrun': '--stats --dry-run' }
 
         self.verboseLine = cmd
         self.dataTransfer_ui.verbose_text.setText(cmd)
@@ -189,7 +194,15 @@ class DataTransfer():
         rthread = threading.Thread(target=self.execute)
         rthread.start()
 
-    def update_copied_files(self, nfiles, totfiles):
+#
+#
+################################################################################################
+
+################################################################################################
+#
+#
+
+    def updateCopiedFiles(self,nfiles,totfiles):
         self.dataTransfer_ui.label_transfer.setText('NFiles: (%i/%i)'%(nfiles,totfiles))
         return 0
 

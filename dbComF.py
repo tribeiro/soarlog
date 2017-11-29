@@ -50,13 +50,13 @@ class soarDB(threading.Thread):
             Set up database.
         '''
 
-        #####################################################
-        # Setup database
-        #
-        #
-        # Database engine, section and metadata definition
-        #
-        logging.debug('Initializing SOAR Database ...')
+		self.Queue = queue
+		self.wake = threading.Event()
+		self.daemon = True 
+		#self.initThreadLock = threading.RLock()
+		
+		self.engine = create_engine('sqlite:///%s'%(self.dbname) )
+		self.masterEngine = create_engine('sqlite:///%s'%(self.masterDBName) )
 
         threading.Thread.__init__(self)
 
@@ -93,11 +93,9 @@ class soarDB(threading.Thread):
             def __getitem__(self, index):
                 return self.__dict__[index]
 
-            #				for foreignRelation in databaseF.frame_infos.instTemplates.keys():
-            #					self.__dict__[foreignRelation.replace(' ','')] = databaseF.relationship(	foreignRelation, uselist=False,
-            #																								backref='SoarLogTVDB')
-            #				dqId = Column(Integer, ForeignKey('dataQualityDB.id'))
-            #				dataQualityDB = relationship("dataQualityDB")
+			self.Obj_INSTRUMENTS[_inst] = type(FrameINST(**instTemplate.__dict__))
+			
+			#'addresses' : relationship(Address, backref='user', order_by=address.c.id)
 
         self.Obj_CID = type(FrameUI(**databaseF.frame_infos.tvDB))
 
@@ -185,10 +183,11 @@ class soarDB(threading.Thread):
                 for info in template.keys():
                     self.__dict__[info] = template[info]
 
-            def clone(self, source, table):
-                for c in table.c:
-                    if not c.name.endswith('id'):
-                        setattr(self, c.name, getattr(source, c.name))
+		try:
+			self.metadata.create_all(self.masterEngine)	
+			self.MasterSession = sessionmaker(bind=self.masterEngine)
+		except:
+			pass
 
         self.Obj_DQ = type(dataQualityUI(**databaseF.frame_infos.dataQualityDB))
 
@@ -225,7 +224,13 @@ class soarDB(threading.Thread):
                     if not c.name.endswith('id'):
                         setattr(self, c.name, getattr(source, c.name))
 
-        self.Obj_FLDQ = type(frameListDataQualityUI(**databaseF.frame_infos.frameListDataQualityDB))
+		if infos == -1:
+			logging.debug('# Could not read file %s... '%(filename))
+			return -1
+		else:
+			entry_CID = self.Obj_CID(**infos[1])
+			
+			session.add(entry_CID)
 
         self.file_table_CDQ = Table('SoarConfigDataQualityDB', self.metadata, Column('id', Integer, primary_key=True))
 
@@ -293,7 +298,22 @@ class soarDB(threading.Thread):
         #	session.commit()
         #	#winfo.wi_ui.weatherInfo.setPlainText("No weather comment.")
 
-        self.file_table_CID = file_table_TVDB
+				logging.debug('Starting queue')
+			
+				fframe = ''
+				query = session.query(self.Obj_CID)[:]
+				if len(query) > 0:
+					fframe = os.path.join(query[-1].PATH,query[-1].FILENAME)
+				while not self.Queue.empty():
+				
+					cframe = self.Queue.get()
+					logging.debug('--> Working on %s'%(cframe))
+					info = self.AddFrame(cframe)
+					if info == 0:
+						fframe = cframe
+					logging.debug('Done')
+				
+				logging.debug('Ended queue. Preparing reloadTable')
 
         self.rthread = None
 
@@ -345,13 +365,53 @@ class soarDB(threading.Thread):
     #
     ################################################################################################
 
-    ################################################################################################
-    #
-    #
+			#OLD_NOTES = editFrame.OBSNOTES
+			#
+			#print '---------------'
+			#print OLD_NOTES
+			#print '---------------'
+			#print OBSNOTES
+			#print '---------------'		
+		if index.column() == 16:
+			editFrame.OBSNOTES = '%s'%(OBSNOTES)
+		if index.column() == 0:
+			editFrame.OBJECT = '%s'%(OBSNOTES)
+			editFrameInst[0].OBJECT = '%s'%(OBSNOTES)
+			logging.debug(os.path.join(str(editFrame.PATH),str(editFrame.FILENAME)))
+			hdu = pyfits.open(os.path.join(str(editFrame.PATH),str(editFrame.FILENAME)),mode='update')
+			if editFrame.INSTRUME == 'Goodman Spectrograph':
+				hdu[0].header.update('PARAM0', hdu[0].header['PARAM0'],"CCD Temperature, C")
+				hdu[0].header.update('PARAM61',hdu[0].header['PARAM61'],"Low Temp Limit, C")
+				hdu[0].header.update('PARAM62',hdu[0].header['PARAM62'],"CCD Temperature Setpoint, C")
+				hdu[0].header.update('PARAM63',hdu[0].header['PARAM63'],"Operational Temp, C")        
 
     def __del__(self):
 
-        session = self.Session()
+				#hdu.verify('fix')
+			hdu[0].header.update('OBJECT', '%s'%(OBSNOTES))
+			#pyfits.writeto(os.path.join(str(rr.PATH),str(rr.FILENAME)),hdu[0].data,hdu[0].header)
+			hdu.close(output_verify='silentfix')
+		if index.column() == 11:
+			editFrame.IMAGETYP = '%s'%(OBSNOTES)
+			try:
+				hdu = pyfits.open(os.path.join(str(editFrame.PATH),str(editFrame.FILENAME)),mode='update')
+				#hdu.verify('fix')
+				hdu[0].header.update(databaseF.frame_infos.INSTRUMENT_TRANSLATE[editFrame.INSTRUME]['IMAGETYP'], '%s'%(OBSNOTES))
+				#pyfits.writeto(os.path.join(str(rr.PATH),str(rr.FILENAME)),hdu[0].data,hdu[0].header)
+				hdu.close(output_verify='silentfix')
+			except:
+				pass
+		if index.column() == 12:
+			oldfile = editFrame.FILENAME
+			editFrameInst[0].FILENAME = os.path.join(editFrame.PATH,str(OBSNOTES))
+			try:
+				editFrame.FILENAME = '%s'%(OBSNOTES)
+				self.commitLock.acquire()
+				try:
+					shutil.copy2(os.path.join(editFrame.PATH,oldfile),os.path.join(editFrame.PATH,str(OBSNOTES)))
+				finally:
+					session.commit()
+					self.commitLock.release()
 
         session.commit()
 
