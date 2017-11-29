@@ -15,7 +15,7 @@ try:
 
     # The watch manager stores the watches and provides operations on watches
     wm = pyinotify.WatchManager()
-    print(dir(pyinotify))
+
     mask = pyinotify.IN_CLOSE_WRITE #| pyinotify.IN_CLOSE_NOWRITE # watched events
 
     class EventHandler(pyinotify.ProcessEvent):

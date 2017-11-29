@@ -178,7 +178,6 @@ class soarDB(threading.Thread):
         self.file_table_DQ = Table('SoarDataQuality_v1', self.metadata, Column('id', Integer, primary_key=True))
 
         for keys in databaseF.frame_infos.dataQualityDB.keys():
-            # print keys
             self.file_table_DQ.append_column(databaseF.frame_infos.dataQualityDB[keys])
 
         class dataQualityUI(object):
@@ -196,7 +195,6 @@ class soarDB(threading.Thread):
         self.file_table_frameDQ = Table('SoarFrameDataQuality', self.metadata, Column('id', Integer, primary_key=True))
 
         for keys in databaseF.frame_infos.frameDataQualityDB.keys():
-            # print keys
             self.file_table_frameDQ.append_column(databaseF.frame_infos.frameDataQualityDB[keys])
 
         class frameDataQualityUI(object):
@@ -215,7 +213,6 @@ class soarDB(threading.Thread):
                                             Column('id', Integer, primary_key=True))
 
         for keys in databaseF.frame_infos.frameListDataQualityDB.keys():
-            # print keys
             self.file_table_frameListDQ.append_column(databaseF.frame_infos.frameListDataQualityDB[keys])
 
         class frameListDataQualityUI(object):
@@ -233,7 +230,6 @@ class soarDB(threading.Thread):
         self.file_table_CDQ = Table('SoarConfigDataQualityDB', self.metadata, Column('id', Integer, primary_key=True))
 
         for keys in databaseF.frame_infos.configDataQualityDB.keys():
-            # print keys
             self.file_table_CDQ.append_column(databaseF.frame_infos.configDataQualityDB[keys])
 
         class configDataQualityUI(object):
@@ -251,7 +247,6 @@ class soarDB(threading.Thread):
         self.file_table_RDB = Table('SoarReportDB', self.metadata, Column('id', Integer, primary_key=True))
 
         for keys in databaseF.frame_infos.reportDB.keys():
-            # print keys
             self.file_table_RDB.append_column(databaseF.frame_infos.reportDB[keys])
 
         class reportUI(object):
@@ -499,13 +494,6 @@ class soarDB(threading.Thread):
             logging.debug('OPERATION ERROR: No Instrument frame found on database.')
             raise IOError('OPERATION ERROR: No Instrument frame found on database.')
 
-        # OLD_NOTES = editFrame.OBSNOTES
-        #
-        # print '---------------'
-        # print OLD_NOTES
-        # print '---------------'
-        # print OBSNOTES
-        # print '---------------'
         if index.column() == 16:
             editFrame.OBSNOTES = '%s' % (OBSNOTES)
         if index.column() == 0:

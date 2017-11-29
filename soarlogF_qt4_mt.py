@@ -1,7 +1,8 @@
 # Author				version		Up-date			Description
 # ------------------------------------------------------------------------
 # T. Ribeiro (SOAR)		0.0			09 Jun 2011     Creation
-
+# B. Quint (SOAR)       0.1         29 Nov 2017     Updated to Goodman (Blue)
+#
 '''
 soarlogF - This file provide class definition for SoarLog, a GUI based 
 application for in-site automated production of observations log.
@@ -30,7 +31,6 @@ from soarlogF_DataTransfer import DataTransfer
 from soarlogF_TableModel import SOLogTableModel, ComboBoxDelegate, uic
 from soarlogF_watch import databaseF, logging, EventHandler, ThreadedNotifier, wm, mask
 from soarlogF_watch import __FALSEWATCHER__
-
 
 import time
 
@@ -528,6 +528,8 @@ class SoarLog(QtGui.QMainWindow, soarDB, DataQuality, DataTransfer):
             # self.commitLock.acquire()
             instKey = infos[0]['INSTRUME']
 
+            print instKey
+
             entry = self.Obj_INSTRUMENTS[instKey](**infos[0])
             entry.COMMENT = str(entry.COMMENT)
             entry_CID = self.Obj_CID(**infos[1])
@@ -603,29 +605,19 @@ class SoarLog(QtGui.QMainWindow, soarDB, DataQuality, DataTransfer):
             pref_ui.show()
 
             if pref_ui.exec_():
-                #			print 'Changes will be performed'
-                #
-                # Change order of table headers
-                #
-                #			print [tbHeader.index(pref_ui.listSort.model().getData(i,0)) for i in range(len(tbHeader))]
 
+                # Change order of table headers
                 for i in range(len(tbHeader)):
-                    #				print i,tbHeader.index(pref_ui.listSort.model().getData(i,0))
                     self.MoveColumn([tbHeader.index(pref_ui.listSort.model().getData(i, 0)), i])
 
-                #
                 # Show/hide Table columns
-                #
                 for i in range(len(tbHeader)):
                     if not pref_ui.listVis.isRowHidden(i):
                         self.ui.tableDB.showColumn(i)
                     if not pref_ui.listHide.isRowHidden(i):
                         self.ui.tableDB.hideColumn(i)
 
-                        #
-                        # Save changes
-                        #
-
+                # Save changes
                 if len(self.OrderInfoDict.keys()) > 0:
                     np.savetxt(os.path.join(self._CFGFilePath_, self._CFGFiles_['OrderInfo']),
                                zip(self.OrderInfoDict.keys(), self.OrderInfoDict.values()), fmt='%i %i')
@@ -675,7 +667,6 @@ class SoarLog(QtGui.QMainWindow, soarDB, DataQuality, DataTransfer):
     #
     def ShowHideCol(self, colId):
 
-        # print colName
         if not self.ActionArray[colId].isChecked():
             self.ui.tableDB.hideColumn(colId)
         else:
@@ -690,17 +681,10 @@ class SoarLog(QtGui.QMainWindow, soarDB, DataQuality, DataTransfer):
 
     def MoveColumn(self, move):
 
-        # print self.ShowInfoOrder
         index = [i for i, x in enumerate(self.ShowInfoOrder) if x == move[0]][0]
-
-        # print move
-        # print index
-        # print move
 
         table_header = self.ui.tableDB.horizontalHeader()
         table_header.moveSection(index, move[1])
-
-        # print self.ShowInfoOrder
 
         self.ShowInfoOrder.insert(move[1], self.ShowInfoOrder.pop(index))
 
@@ -708,16 +692,7 @@ class SoarLog(QtGui.QMainWindow, soarDB, DataQuality, DataTransfer):
 
         # self.ShowInfoOrder = tmp[:move[1]] + [self.ShowInfoOrder[index]] + tmp[move[1]:]
 
-
         self.OrderInfoDict[move[0]] = move[1]
-
-        # print [self.ShowInfoOrder[i] for i in move]
-
-        # print move
-        # print move[0], 'is in ',self.ShowInfoOrder[move[0]]
-        # print move
-        # print move[0],self.ShowInfoOrder[move[0]]
-        # print self.ShowInfoOrder
 
     #
     #
@@ -814,7 +789,6 @@ class SoarLog(QtGui.QMainWindow, soarDB, DataQuality, DataTransfer):
             self.notifier.start()
 
             # Internally, 'handler' is a callable object which on new events will be called like this: handler(new_event)
-            # print self.dir
             self.wdd = wm.add_watch(self.dir, mask, rec=False)
             logging.debug('Watch initialized...')
 
@@ -833,7 +807,6 @@ class SoarLog(QtGui.QMainWindow, soarDB, DataQuality, DataTransfer):
         colWidth = np.zeros(len(tbHeader))
         for i in range(len(tbHeader)):
             colWidth[i] = self.ui.tableDB.columnWidth(i)
-        # print self.ui.tableDB.columnWidth(i)
         np.savetxt(os.path.join(self._CFGFilePath_, self._CFGFiles_['ColumnWidth']), X=colWidth, fmt='%f')
 
         return 0
@@ -923,7 +896,6 @@ class SoarLog(QtGui.QMainWindow, soarDB, DataQuality, DataTransfer):
             winfo.wi_ui.weatherInfo.setPlainText(query[0].Comment)
         winfo.show()
         if winfo.exec_():
-            #			print winfo.wi_ui.weatherInfo.toPlainText()
 
             query = session.query(self.Obj_WC)[0]
             logging.debug(query.Comment)
@@ -1227,8 +1199,6 @@ Time Spent:
         obj = np.array([str(ff.OBJECT) for ff in query])
         exptime = np.array([float(ff.EXPTIME) for ff in query])
 
-        # print obj
-
         time = np.array([day[i] + 'T' + hour[i] for i in range(len(hour))])
 
         for i in range(len(time)):
@@ -1237,29 +1207,16 @@ Time Spent:
 
         sort = time.argsort()
 
-        # print time, time[sort]
-
         fnames = fnames[sort]
 
         find_proj = np.array([i for i in range(len(fnames)) if fnames[i].find('-' + id + '_') > 0])
 
         iddiff = fid[find_proj[1:]] - fid[find_proj[:-1]]
-        # for i in range(len(find_proj)-1):
-        #    print fid[find_proj[i]],fnames[find_proj[i]],iddiff[i]
 
-        # time_start = np.append([int(find_proj[0])], np.array( [ find_proj[i+1] for i in range(1,len(find_proj)-1) if not fid[i] == fid[i+1]-1 ] ) )
-        # time_end = np.append( np.array( [ find_proj[i] for i in range(1,len(find_proj)-2) if fid[i] != fid[i+1]-1 ] ), [int(find_proj[-1])] )
         time_start = np.append([int(find_proj[0])], find_proj[1:][iddiff != 1])
         time_end = np.append(find_proj[:-1][iddiff != 1], [int(find_proj[-1])])
-        # print find_proj
 
         time_tmp = np.append(time_start, time_end)
-
-        #               print time_tmp
-        #               print time_tmp[1]
-
-        #               time_start = time_tmp[0]
-        #               time_end = time_tmp[1]
 
         time.sort()
 

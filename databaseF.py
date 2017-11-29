@@ -53,7 +53,6 @@ class CommonFrame(object):
             if i in frame_infos.CID.keys():
                 cmd = 'self.%s = \'%s\'' % (i, str(header_par[i]).replace('\'', ''))
                 exec cmd
-                # print cmd
                 self.infos[i] = header_par[i]
 
                 # self.infos[i] = header_par[i]

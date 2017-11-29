@@ -21,7 +21,7 @@ _INSTRUME = {
 }
 
 instrument_templates = {
-    'Goodman Spectrograph (Blue)': os.path.join(os.path.dirname(__file__), 'Resources/template_goodman_blue.fits'),
+    'Goodman Spectro': os.path.join(os.path.dirname(__file__), 'Resources/template_goodman_blue.fits'),
     'SOI': os.path.join(os.path.dirname(__file__), 'Resources/template_soi.fits'),
     'Spartan IR Camera': os.path.join(os.path.dirname(__file__), 'Resources/template_spartan.fits')
 }
@@ -29,7 +29,7 @@ instrument_templates = {
 instrument_configuration = {
     # 'Goodman Spectrograph - Old': instConfGoodman,
     # 'Goodman Spectrograph - Red': instConfGoodman,
-    'Goodman Spectrograph - Blue': instConfGoodman,
+    'Goodman Spectro': instConfGoodman,
     # 'OSIRIS': instConfOSIRIS,
     'SOI': instConfSOI,
     'Spartan IR Camera': instConfSPARTAN
