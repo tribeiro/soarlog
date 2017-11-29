@@ -1,6 +1,5 @@
-
-from PyQt4 import QtCore,QtGui,uic,QtSql
-from sqlalchemy import Column,Integer,String,TEXT
+from PyQt4 import QtCore, QtGui, uic, QtSql
+from sqlalchemy import Column, Integer, String, TEXT
 from sqlalchemy import FLOAT as REAL
 import numpy as np
 
@@ -10,36 +9,37 @@ def SPARTAN_OBSTIME(query):
 
 
 def GOODMAN_RDMODE(query):
-    RD = {330 : '100kHz', 130 : '200kHz' , 30 : '400kHz'}
-    return RD[query['PARAM26']] + ' ATT' + '%s'%(query['PARAM27'])
+    RD = {330: '100kHz', 130: '200kHz', 30: '400kHz'}
+    return RD[query['PARAM26']] + ' ATT' + '%s' % (query['PARAM27'])
+
 
 def GOODMAN_SPCONF(query):
     """GOODMAN SP configuration."""
 
-    _GconfMap_300  = {
-        '': [ 5. , 11.]
+    _GconfMap_300 = {
+        '': [5., 11.]
     }
 
-    _GconfMap_400  = {
-        'b': [6.5 , 13.],
-        'r': [ 8. , 16.]
-    } # Check the 400r configuration!
+    _GconfMap_400 = {
+        'b': [6.5, 13.],
+        'r': [8., 16.]
+    }  # Check the 400r configuration!
 
-    _GconfMap_600  = {
-        'b': [ 7. , 17.],
-        'm': [10. , 20.],
-        'r': [12. , 27.]
+    _GconfMap_600 = {
+        'b': [7., 17.],
+        'm': [10., 20.],
+        'r': [12., 27.]
     }
 
     _GconfMap_1200 = {
-        'm0': [16.3,26.0],
-        'm1': [16.3,29.5],
-        'm2': [18.7,34.4],
-        'm3': [20.2,39.4],
-        'm4': [22.2,44.4],
-        'm5': [24.8,49.6],
-        'm6': [27.4,54.8],
-        'm7': [30.1,60.2]
+        'm0': [16.3, 26.0],
+        'm1': [16.3, 29.5],
+        'm2': [18.7, 34.4],
+        'm3': [20.2, 39.4],
+        'm4': [22.2, 44.4],
+        'm5': [24.8, 49.6],
+        'm6': [27.4, 54.8],
+        'm7': [30.1, 60.2]
     }
 
     _Gratings = {
@@ -66,13 +66,13 @@ def GOODMAN_SPCONF(query):
 
     spcfg = ''
 
-    grt_a,cam_a = float(query['GRT_ANG']),float(query['CAM_ANG'])
-    grt_d,cam_d = grt_a,cam_a
+    grt_a, cam_a = float(query['GRT_ANG']), float(query['CAM_ANG'])
+    grt_d, cam_d = grt_a, cam_a
     Gconf = _Gratings[grt]
     for key in Gconf.keys():
-        dg = np.abs(grt_a-Gconf[key][0])
-        dc = np.abs(cam_a-Gconf[key][1])
-        if dg+dc < grt_d+cam_d:
+        dg = np.abs(grt_a - Gconf[key][0])
+        dc = np.abs(cam_a - Gconf[key][1])
+        if dg + dc < grt_d + cam_d:
             spcfg = key
             grt_d = dg
             cam_d = dc
@@ -80,7 +80,7 @@ def GOODMAN_SPCONF(query):
     if grt_d > 1.0 or cam_d > 1.0:
         spcfg = spcfg + 'C'
 
-    return grt+spcfg+filter
+    return grt + spcfg + filter
 
 
 def instConfGoodman(query):
@@ -95,12 +95,11 @@ def instConfGoodman(query):
         ffilter = query.FILTER
     elif query.FILTER2 != '<NO FILTER>':
         ffilter = query.FILTER2
-    
-    return spconf+' '+ffilter+' '+binn+' '+rdmode+' '+slit
+
+    return spconf + ' ' + ffilter + ' ' + binn + ' ' + rdmode + ' ' + slit
 
 
 def instConfOSIRIS(query):
-
     slit = query.SLIT
     spconf = query.SP_CONF
     binn = query.BINNING
@@ -110,27 +109,25 @@ def instConfOSIRIS(query):
     elif query.FILTER2 != 'Open':
         ffilter = query.FILTER2
     grt = query.GRATING
-    
+
     if spconf == 'ACQ':
-        return spconf+' '+ffilter+' '+binn
+        return spconf + ' ' + ffilter + ' ' + binn
     elif spconf == 'SP':
-        return slit+' '+ffilter+' '+binn
+        return slit + ' ' + ffilter + ' ' + binn
     else:
-        return ffilter+' '+binn
- 
+        return ffilter + ' ' + binn
+
     return 'None'
 
 
 def instConfSOI(query):
-
     binn = query.BINNING
     ffilter = query.FILTER
     if ffilter.find('Open') >= 0:
         ffilter = query.FILTER2
 
-    return ffilter+' '+binn
+    return ffilter + ' ' + binn
 
 
 def instConfSPARTAN(query):
-    
-    return query.FILTER+' '+query.FILTER2+' '+query.SLIT
+    return query.FILTER + ' ' + query.FILTER2 + ' ' + query.SLIT

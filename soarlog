@@ -11,8 +11,11 @@ Author				version		Up-date			Description
 T. Ribeiro (SOAR)		0.0			09 Jun 2011     Creation
 """
 
-from soarlogF_qt4_mt import *
+from PyQt4 import QtGui
+from soarlogF_qt4_mt import SoarLog
+
 import sys
+import Queue
 
 MasterQueue = Queue.Queue()
 recordQueue = Queue.Queue()

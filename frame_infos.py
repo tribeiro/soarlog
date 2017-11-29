@@ -8,34 +8,29 @@ from instConf import *
 import logging
 
 '''
-	Basic definition of header parameters contained in each database.
+    Basic definition of header parameters contained in each database.
 '''
 
 # defines the image header parameter for instrument!
 _INSTRUME = {
-    'OSIRIS': 'INSTRUME',
-    'GOODMAN_OLD': 'INSTRUME',
-    'GOODMAN_RED': 'INSTRUME',
-    'GOODMAN_BLUE': 'INSTRUME',
+    # 'OSIRIS': 'INSTRUME',
+    'GOODMAN': 'INSTRUME',
     'SOI': 'INSTRUME',
     'SPARTAN': 'INSTRUME',
-    'SBIG ST-L': 'INSTRUME'
+    # 'SBIG ST-L': 'INSTRUME'
 }
 
 instrument_templates = {
-    'Goodman Spectrograph - Old': os.path.join(os.path.dirname(__file__), 'Resources/template_goodman_old.fits'),
-    'Goodman Spectrograph - Blue Camera': os.path.join(os.path.dirname(__file__), 'Resources/template_goodman_blue.fits'),
-    'Goodman Spectrograph - Red Camera': os.path.join(os.path.dirname(__file__), 'Resources/template_goodman_red.fits'),
-    'OSIRIS': os.path.join(os.path.dirname(__file__), 'Resources/template_osiris.fits'),
+    'Goodman Spectrograph (Blue)': os.path.join(os.path.dirname(__file__), 'Resources/template_goodman_blue.fits'),
     'SOI': os.path.join(os.path.dirname(__file__), 'Resources/template_soi.fits'),
     'Spartan IR Camera': os.path.join(os.path.dirname(__file__), 'Resources/template_spartan.fits')
 }
 
 instrument_configuration = {
-    'Goodman Spectrograph - Old': instConfGoodman,
-    'Goodman Spectrograph - Red': instConfGoodman,
+    # 'Goodman Spectrograph - Old': instConfGoodman,
+    # 'Goodman Spectrograph - Red': instConfGoodman,
     'Goodman Spectrograph - Blue': instConfGoodman,
-    'OSIRIS': instConfOSIRIS,
+    # 'OSIRIS': instConfOSIRIS,
     'SOI': instConfSOI,
     'Spartan IR Camera': instConfSPARTAN
 }
@@ -239,8 +234,8 @@ GOODMAN_ID = {
     'CCDSIZE': Column('CCDSIZE', String),
     'CCDSUM': Column('CCDSUM', String),
     'WCSDIM': Column('WCSDIM', String),
-    'PARAM26': Column('PARAM26', String),
-    'PARAM27': Column('PARAM27', String)
+    # 'PARAM26': Column('PARAM26', String),
+    # 'PARAM27': Column('PARAM27', String)
 }
 
 # Translation of GOODMAN Common Information Database (CID) Header parameters
@@ -535,27 +530,25 @@ SBIG_ID = {'FILENAME': Column('FILENAME', String),
 # Dictionaries of instrument translation
 
 INSTRUMENT_TRANSLATE = {'OSIRIS': OSIRIS_TRANSLATE_CID,
-                        'Goodman Spectrograph': GOODMAN_TRANSLATE_CID,
+                        'Goodman Spectro': GOODMAN_TRANSLATE_CID,
                         'SOI': SOI_TRANSLATE_CID,
                         'Spartan IR Camera': SPARTAN_TRANSLATE_CID,
                         'SBIG ST-L': SBIG_TRANSLATE_CID}
 
 INSTRUMENT_DB = {'OSIRIS': OSIRIS_ID,
-                 'Goodman Spectrograph': GOODMAN_ID,
+                 'Goodman Spectro': GOODMAN_ID,
                  'SOI': SOI_ID,
                  'Spartan IR Camera': SPARTAN_ID,
                  'SBIG ST-L': SBIG_ID}
 
 INSTRUMENT_TV = {'OSIRIS': OSIRIS_TV,
-                 'Goodman Spectrograph': GOODMAN_TV,
+                 'Goodman Spectro': GOODMAN_TV,
                  'SOI': SOI_TV,
                  'Spartan IR Camera': SPARTAN_TV,
                  'SBIG ST-L': SBIG_TV}
 
-# imageTYPE = ['','OBJECT','FLAT','DFLAT','BIAS','ZERO','DARK','COMP','FAILED','Object']
-
 imageTYPE = {'OSIRIS': ['OBJECT', 'FLAT', 'ZERO', 'COMP', 'DARK', 'FAILED'],
-             'Goodman Spectrograph': ['OBJECT', 'COMP', 'FLAT', 'BIAS', 'FAILED'],
+             'Goodman Spectro': ['OBJECT', 'COMP', 'FLAT', 'BIAS', 'FAILED'],
              'Spartan IR Camera': ['Object', 'Flat-Field', 'Dark', 'FAILED'],
              'SOI': ['ZERO', 'DFLAT', 'OBJECT', 'FAILED']}
 
@@ -651,7 +644,7 @@ TableTranslate_SBIG = [
 
 dictTableHeaders = {
     'OSIRIS': TableTranslate_OSIRIS,
-    'Goodman Spectrograph': TableTranslate_GOODMAN,
+    'Goodman Spectro': TableTranslate_GOODMAN,
     'SOI': TableTranslate_SOI,
     'Spartan IR Camera': TableTranslate_SPARTAN,
     'SBIG ST-L': TableTranslate_SBIG

@@ -10,8 +10,10 @@ queue on SOAR, as well as to aid data quality and data sharing procedures.
 Ribeiro, T., June 2011.
 """
 
-from soarlogF_qt4_mt import Queue, QtGui, SoarLog
+from soarlogF_qt4_mt import QtGui, SoarLog
+
 import sys
+import Queue
 
 MasterQueue = Queue.Queue()
 recordQueue = Queue.Queue()
