@@ -123,7 +123,7 @@ class DataQuality():
 		self.connect(self.dataQuality_ui.lineEdit_7,QtCore.SIGNAL('editingFinished()'), self.commitDataQuality)
 		self.connect(self.dataQuality_ui.lineEdit_8,QtCore.SIGNAL('editingFinished()'), self.commitDataQuality)
 		self.connect(self,QtCore.SIGNAL('copyProgress(int)'), self.updateCopyProgress)
-		self.connect(self,QtCore.SIGNAL('copyDone()'), self.enableCopyButton)
+		self.connect(self,QtCore.SIGNAL('copy_done()'), self.enableCopyButton)
 
 		self.dataQuality_ui.lineEditSemesterID.setText(self.semester_ID[:-4])
 		self.dataQuality_ui.lineEditPathToData.setText(self.dataStorage%{'SID':self.semester_ID[:-4],'PID':self.semester_ID%('123')})
@@ -1105,7 +1105,7 @@ which handles the query and return a string with the instrument configuration.
 
 		for i in range(len(query)):
 
-			conf = frame_infos.instConfDict[query[i].INSTRUME](query[i])
+			conf = frame_infos.instrument_configuration[query[i].INSTRUME](query[i])
 			if obj:
 				conf += ' ' 
 				conf += str(query[i].OBJECT)
@@ -1397,7 +1397,7 @@ FROM FILE: {fimg}
 
 		self.cthread_stop.clear()
 		logging.debug('Copy done')
-		self.emit(QtCore.SIGNAL("copyDone()"))    
+		self.emit(QtCore.SIGNAL("copy_done()"))
 
 		
 #

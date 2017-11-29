@@ -56,9 +56,7 @@ class ComboBoxDelegate(QtGui.QItemDelegate):
 
 		editor.setGeometry(option.rect)
 
-
-
-class SOLogTableModel(QtCore.QAbstractTableModel): 
+class SOLogTableModel(QtCore.QAbstractTableModel):
 
     def __init__(self, datain, headerdata, parent=None, *args,**argv): 
         """ 
@@ -167,7 +165,7 @@ class SOLogTableModel(QtCore.QAbstractTableModel):
             except:
                 self.arraydata[index.row()][index.column()] = ''
 		
-        self.dataChanged.emit(index, index)
+        #self.dataChanged.emit(index, index)
 
         if role == QtCore.Qt.EditRole:
 		self.commitDB(index)

@@ -5,62 +5,67 @@ Created on Thu May 10 10:39:00 2012
 @author: tiago
 """
 
-from PyQt4 import QtCore,QtGui,uic,QtSql
-import os,sys,re,subprocess
-import Queue,threading,logging
+from PyQt4 import QtCore, QtGui, uic, QtSql
+import os, sys, re, subprocess
+import getpass
+import Queue, threading, logging
 import datetime,time
 
 uipath = os.path.dirname(__file__)
 
-################################################################################################
-################################################################################################
-#
-#
+partsoi = str(getpass.getuser()[5:]).upper()
+
+if getpass.getuser() == 'soar_brazil':
+    partspartan = str(getpass.getuser()[5:]).title()
+elif getpass.getuser() == 'soar_chile':
+    partspartan = str(getpass.getuser()[5:]).title()
+else:
+    partspartan = str(getpass.getuser()[5:]).upper()
+
 
 class DataTransfer():
 
-    instrList = ['GOODMAN',
-                 'OSIRIS',
-                 'SOI',
-                 'SPARTAN',
-                 'SIFS',
-                 'SAM']
+    instrList = [
+        'GOODMAN',
+        'SOI',
+        'SPARTAN',
+        'SIFS',
+        'SAM'
+    ]
 
+    instr2path = {
+        'GOODMAN': '/home3/observer/today/',
+        'SOI': '/usr/remote/ic1home/images/' + str(partsoi) + '/%(yyyy)s-%(mm)s-%(dd)s/',
+        'SPARTAN': '/home3/observer/SPARTAN_DATA/' + str(partspartan) + '/%(yyyy)s-%(mm)s-%(dd)s/',
+        'SIFS': '/home2/images/SIFS/%(yyyy)s-%(mm)s-%(dd)s/',
+        'SAM': '/home2/images/%(yyyy)s-%(mm)s-%(dd)s/'
+    }
 
-    instr2path = {'GOODMAN':'/home3/observer/today/',
-                  'OSIRIS':'/usr/remote/ic2home/observer/',
-                  'SOI':'/usr/remote/ic1home/images/BRAZIL/{yyyy}-{mm}-{dd}/',
-                  'SPARTAN':'/home3/observer/SPARTAN_DATA/Brazil/{yyyy}-{mm}-{dd}/',
-                  'SIFS':'/home2/images/SIFS/{yyyy}-{mm}-{dd}/',
-                  'SAM':'/home2/images/{yyyy}{mm}{dd}/'}
-
-    instr2cpu = {'GOODMAN':'soaric7',
-                 'OSIRIS':'soaric7',
-                 'SOI':'soaric7',
-                 'SPARTAN':'soaric7',
-                 'SIFS':'soaric5',
-                 'SAM':'soarhrc'}
+    instr2cpu = {
+        'GOODMAN': 'soaric7',
+        'SOI': 'soaric7',
+        'SPARTAN': 'soaric7',
+        'SIFS': 'soaric5',
+        'SAM': 'soarhrc'
+    }
 
     ncopy = 0
 
     total_files = 0
 
-    cmdline = 'rsync -auvz {dryrun} --chmod=g+rw simager@{instrCpu}:{instrPath}*.fits {localPath}'
+    cmdline = 'rsync -auvz %(dryrun)s --chmod=g+rw %(instrPath)s*.fits %(localPath)s'
     currentInstrument = 0
     verboseLine = ''
     STATUS = False
-#
-#
-################################################################################################
 
-################################################################################################
-#
-#
-    def startDataTransfer(self):
+    def __init__(self):
+        pass
+
+    def start_data_transfer(self):
 
         self.dataTransfer_ui = DataTransferUI()
-
         self.dataTransfer_ui.local_data_path.setText(self.dir)
+
         if self.total_files == 0:
             self.dataTransfer_ui.label_transfer.setText('NFiles: (waiting)')
         else:
@@ -74,33 +79,24 @@ class DataTransfer():
         for instr in self.instrList:
             self.dataTransfer_ui.select_instrument.addItem(instr)
 
-        self.connect(self.dataTransfer_ui.select_instrument, QtCore.SIGNAL('currentIndexChanged(int)'), self.readInstrument)
+        self.connect(self.dataTransfer_ui.select_instrument, QtCore.SIGNAL('currentIndexChanged(int)'), self.read_instrument)
         self.connect(self.dataTransfer_ui.execute_button, QtCore.SIGNAL('clicked()'), self.py_rsync_threaded)
-        self.connect(self.dataTransfer_ui.stop_button, QtCore.SIGNAL('clicked()'), self.stopTransfer)
-        self.connect(self,QtCore.SIGNAL('stopFileTransfer()'), self.stopTransfer)
-        self.connect(self,QtCore.SIGNAL('copiedFiles(int,int)'), self.updateCopiedFiles)
-        self.connect(self,QtCore.SIGNAL('copyDone()'), self.copyDone)
+        self.connect(self.dataTransfer_ui.stop_button, QtCore.SIGNAL('clicked()'), self.stop_transfer)
+        self.connect(self, QtCore.SIGNAL('stopFileTransfer()'), self.stop_transfer)
+        self.connect(self, QtCore.SIGNAL('copiedFiles(int,int)'), self.update_copied_files)
+        self.connect(self, QtCore.SIGNAL('copy_done()'), self.copy_done)
 
         self.dataTransfer_ui.select_instrument.setCurrentIndex(self.currentInstrument)
-        self.readInstrument()
-
-
+        self.read_instrument()
         self.dataTransfer_ui.show()
-		
         self.dataTransfer_ui.exec_()
 
         return 0
 
-#
-#
-################################################################################################
+    def read_instrument(self):
 
-################################################################################################
-#
-#      self.
-    def readInstrument(self):
         try:
-            yyyy,mm,dd = self.dir.split('/')[-1].split('-')
+            yyyy, mm, dd = self.dir.split('/')[-1].split('-')
             if self.dataTransfer_ui.select_instrument.currentText() == 'SPARTAN':
                 obsdate = datetime.date(int(yyyy),int(mm),int(dd)) + datetime.timedelta(days=1)
                 yyyy = obsdate.year
@@ -110,7 +106,7 @@ class DataTransfer():
             mm =   '%02d'%(int(mm))
             dd =   '%02d'%(int(dd))
         except:
-            logging.debug(sys.exc_info()[1])
+            logging.exception(sys.exc_info()[1])
             yyyy = 'yyyy'
             mm = 'mm'
             dd = 'dd'
@@ -123,9 +119,9 @@ class DataTransfer():
 #
 ################################################################################################
 
-################################################################################################
-#
-#
+        self.dataTransfer_ui.path_instrument.setText(
+            self.instr2path[str(
+                self.dataTransfer_ui.select_instrument.currentText())]%{'yyyy':yyyy, 'mm':mm, 'dd':dd})
 
     def execute(self):
         dtime = self.dataTransfer_ui.loop_delta_time.value()
@@ -137,27 +133,13 @@ class DataTransfer():
 
         while self.STATUS:
 
-            #logging.debug('Running rsync...')
-
             self.py_rsync()
 
             ctime = datetime.datetime.now()
-            
             if ctime > time_stop:
-                #logging.debug('Stoping...')
                 self.emit(QtCore.SIGNAL('stopFileTransfer()'))
-                
 
             time.sleep(dtime)
-
-#
-#
-################################################################################################
-
-################################################################################################
-#
-#
-
 
     def py_rsync(self):
 
@@ -183,6 +165,7 @@ class DataTransfer():
         if len(mn) > 0:
             self.total_files = int(mn[0])
         
+        self._dtproc = None
 
         if self.total_files > 0:
 
@@ -193,44 +176,23 @@ class DataTransfer():
                                 'localPath':self.dataTransfer_ui.local_data_path.text()+'/',
                                 'dryrun': '--progress' }
 
-            proc = subprocess.Popen(cmd,
-                                    shell=True,
-                                    stdin=subprocess.PIPE,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE)
-        #output = proc.communicate()[0]
-        #logging.debug(output)
-        #return 0
+            logging.debug('Starting copy')
+            self._dtproc = subprocess.Popen(cmd,
+                                            shell=True,
+                                            stdin=subprocess.PIPE,
+                                            stdout=subprocess.PIPE,
+                                            stderr=subprocess.PIPE)
 
-            while True:
+            self._dtproc.wait()
+            logging.debug('Copy done')
+            self.emit(QtCore.SIGNAL('copy_done()'))
 
-                output = proc.stdout.readline()
-                #logging.debug(output)
-
-                if output == '':
-                    self.emit(QtCore.SIGNAL('copyDone()'))
-                    break
-                elif 'to-check' in output:
-                    mn = re.findall(r'to-check=(\d+)/(\d+)',output)
-                    self.ncopy = self.total_files - int(mn[0][0]) + 1
-                    self.emit(QtCore.SIGNAL('copiedFiles(int,int)'),self.ncopy,self.total_files)
-                    if mn[0][0] == 0:
-                        self.emit(QtCore.SIGNAL('copyDone()'))
-                        break
-                  
-#
-#
-################################################################################################
-
-################################################################################################
-#
-#
     def py_rsync_threaded(self):
+        #self.wdd = wm.add_watch(str(self.dataTransfer_ui.path_instrument.text()),mask,rec=True)
         self.dataTransfer_ui.select_instrument.setEnabled(False)
         self.dataTransfer_ui.execute_button.setEnabled(False)
         rthread = threading.Thread(target=self.execute)
         rthread.start()
-            
 
 #
 #
@@ -243,72 +205,26 @@ class DataTransfer():
     def updateCopiedFiles(self,nfiles,totfiles):
         self.dataTransfer_ui.label_transfer.setText('NFiles: (%i/%i)'%(nfiles,totfiles))
         return 0
-#
-#
-################################################################################################
 
-################################################################################################
-#
-#
-
-    def copyDone(self):
+    def copy_done(self):
         self.ncopy = 0
         self.total_files = 0
         self.dataTransfer_ui.label_transfer.setText('NFiles: (waiting)')
         return 0
-        
-#
-#
-################################################################################################
 
-################################################################################################
-#
-#
-    def stopTransfer(self):
-        #logging.debug('Stoping...')
+    def stop_transfer(self):
+
+        logging.debug('Stoping...')
+
+        if self._dtproc:
+            self._dtproc.terminate()
+
         self.dataTransfer_ui.select_instrument.setEnabled(True)
         self.dataTransfer_ui.execute_button.setEnabled(True)
         self.STATUS = False
-        
-#
-#
-################################################################################################
-
-################################################################################################
-#
-#
-
-        
-#
-#
-################################################################################################
-
-#
-#
-################################################################################################
-################################################################################################
 
 
 class DataTransferUI(QtGui.QDialog):
-	
-################################################################################################
-#
-#	
-	
     def __init__(self):
-		
         QtGui.QDialog.__init__(self)
-        
-        ##########################################################
-	#
-	#
- 
         self.dq_ui = uic.loadUi(os.path.join(uipath,'datatransfer.ui'),self)
-
-        #
-        #
-        ##########################################################
-
-#
-#
-################################################################################################
